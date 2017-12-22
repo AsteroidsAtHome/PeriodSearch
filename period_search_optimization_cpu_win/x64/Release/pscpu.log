@@ -1,0 +1,58 @@
+﻿Build started 7.8.2013 16:54:34.
+     1>Project "C:\pscpu\pscpu.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "x64\Release\pscpu.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /IC:\boinc\lib /IC:\boinc\api /Zi /nologo /W3 /WX- /O2 /Ob2 /Oi /Ot /Oy /GL /D _USE_MATH_DEFINES /D _CRT_SECURE_NO_WARNINGS /D WIN32 /D NDEBUG /D _WINDOWS /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc100.pdb" /Gd /TP /errorReport:prompt period_search\areanorm.c period_search\blmatrix.c period_search\bright.c period_search\conv.c period_search\covsrt.c period_search\curv.c period_search\dot_product.c period_search\ellfit.c period_search\gauss_errc.c period_search\lubksb.c period_search\ludcmp.c period_search\matrix.c period_search\memory.c period_search\mrqcof.c period_search\mrqmin.c period_search\period_search_BOINC.cpp period_search\phasec.c period_search\sphfunc.c period_search\trifac.c
+         areanorm.c
+         blmatrix.c
+         bright.c
+         conv.c
+         covsrt.c
+         curv.c
+         dot_product.c
+         ellfit.c
+         gauss_errc.c
+         lubksb.c
+         ludcmp.c
+         matrix.c
+         memory.c
+         mrqcof.c
+         mrqmin.c
+         period_search_BOINC.cpp
+         phasec.c
+         sphfunc.c
+         trifac.c
+       Link:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"C:\pscpu\x64\Release\pscpu.exe" /INCREMENTAL:NO /NOLOGO libcmt.lib libcpmt.lib libboinc_staticcrt.lib libboincapi_staticcrt.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /NODEFAULTLIB /MANIFEST /ManifestFile:"x64\Release\pscpu.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /PDB:"C:\pscpu\x64\Release\pscpu.pdb" /SUBSYSTEM:WINDOWS /STACK:"10000000" /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\pscpu\x64\Release\pscpu.lib" /MACHINE:X64 x64\Release\areanorm.obj
+         x64\Release\blmatrix.obj
+         x64\Release\bright.obj
+         x64\Release\conv.obj
+         x64\Release\covsrt.obj
+         x64\Release\curv.obj
+         x64\Release\dot_product.obj
+         x64\Release\ellfit.obj
+         x64\Release\gauss_errc.obj
+         x64\Release\lubksb.obj
+         x64\Release\ludcmp.obj
+         x64\Release\matrix.obj
+         x64\Release\memory.obj
+         x64\Release\mrqcof.obj
+         x64\Release\mrqmin.obj
+         x64\Release\period_search_BOINC.obj
+         x64\Release\phasec.obj
+         x64\Release\sphfunc.obj
+         x64\Release\trifac.obj
+         Generating code
+         Finished generating code
+         pscpu.vcxproj -> C:\pscpu\x64\Release\pscpu.exe
+       Manifest:
+         c:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"C:\pscpu\x64\Release\pscpu.exe;#1" /manifest x64\Release\pscpu.exe.intermediate.manifest
+       FinalizeBuildStatus:
+         Deleting file "x64\Release\pscpu.unsuccessfulbuild".
+         Touching "x64\Release\pscpu.lastbuildstate".
+     1>Done Building Project "C:\pscpu\pscpu.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:07.34
