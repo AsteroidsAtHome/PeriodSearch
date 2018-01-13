@@ -50,6 +50,11 @@ bld/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/packages/repositories.config
 
+# Debuger symbol files
+/*/*.pdb
+
 # Addition localDB files
 /*/*.VC.db
 /*/*.VC.VC.opendb
+/period_search_optimization_sse3_win/boinc_lockfile
+/period_search_optimization_sse3_win/stderr.txt
