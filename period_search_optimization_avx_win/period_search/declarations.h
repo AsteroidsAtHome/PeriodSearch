@@ -1,3 +1,4 @@
+#pragma once
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, 
               double at[], double af[]);
@@ -15,13 +16,13 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
 void curv(double cg[]);
 void blmatrix(double bet, double lam);
 double conv(int nc, double dres[], int ma);
-void gauss_1(double **aa, int n, double b[]);
+//void gauss_1(double **aa, int n, double b[]);
 void covsrt(double **covar, int ma, int ia[], int mfit);
 void phasec(double dcdp[], double alpha, double p[]);
 void matrix(double omg, double t, double tmat[][4], double dtm[][4][4]);
 double bright(double ee[], double ee0[], double t, double cg[], 
             double dyda[], int ncoef);
-void shell(int n, double a[], int index[]);
+//void shell(int n, double a[], int index[]);
 
 double *vector_double(int length);
 int *vector_int(int length);
@@ -33,9 +34,10 @@ void deallocate_vector(void *p_x);
 void deallocate_matrix_double(double **p_x, int rows);
 void aligned_deallocate_matrix_double(double **p_x, int rows);
 void deallocate_matrix_int(int **p_x, int rows);
-void deallocate_matrix_3(void ***p_x, int n_1, int n_2);
+//void deallocate_matrix_3(void ***p_x, int n_1, int n_2);
 
 double dot_product(double a[], double b[]);
+/*
 double hapke(double mi0, double mi, double alfa, double sc_param[]);
 
 void sph2cart(double *vektor);
@@ -66,7 +68,9 @@ int mrqmin_ell(double **x1, double **x2, double x3[], double y[],
 double mrqcof_ell(double **x1, double **x2, double x3[], double y[], 
               double sig[], double a[], int ia[], int ma, 
 	      double **alpha, double beta[], double (*funcs)());
+*/
 int gauss_errc(double **aa, int n, double b[]);
+/*
 void matrix_ell(double omg, double fi0, double t, double tmat[][4], double dtm[][4][4]);
 double bright_ell(double ee[], double ee0[], double t, double cg[], 
             double dyda[], int ncoef);
@@ -74,3 +78,4 @@ double bright_ell(double ee[], double ee0[], double t, double cg[],
 double bright_ell_YORP(double ee[], double ee0[], double t, double cg[], 
             double dyda[], int ncoef);
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
+*/

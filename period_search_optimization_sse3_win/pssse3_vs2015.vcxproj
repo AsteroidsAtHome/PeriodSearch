@@ -184,7 +184,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\api;D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\win_build\Build\x64\Release%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\api;D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\win_build\Build\x64\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <CompileAs>CompileAsCpp</CompileAs>
