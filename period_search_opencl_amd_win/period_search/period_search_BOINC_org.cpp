@@ -33,6 +33,10 @@
 #include "declarations.h"
 #include "constants.h"
 #include "globals.h"
+#include <algorithm>
+#include <algorithm>
+#include <functional>
+#include <array>
 
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
@@ -53,6 +57,7 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
+
 #else
 #include "config.h"
 #include <cstdio>
@@ -100,6 +105,38 @@ int do_checkpoint(MFILE& mf, int nlines, int newconw, double conwr, double sumda
     return 0;
 }
 
+void _sort(double *pointer, int size) {
+    for (double *i = pointer; i < pointer + size; i++) {
+        for (double *j = i + 1; j < pointer + size; j++) {
+            if (*j < *i) {
+                double temp = *j;
+                *j = *i;
+                *i = temp;
+            }
+        }
+    }
+}
+
+void SortArray(double *pArray, int ArrayLength)
+{
+    int i, j, flag = 1;    // set flag to 1 to begin initial pass
+    double temp;             // holding variable orig with no *
+    for (i = ArrayLength; i > 0 && flag; i--)
+    {
+        flag = 0;
+        for (j = 0; j < i; j++)
+        {
+            if (pArray[j] > pArray[j + 1])      // ascending order simply changes to <
+            {
+                temp = pArray[j];             // swap elements
+                pArray[j] = pArray[j + 1];
+                pArray[j + 1] = temp;
+                flag = 1;               // indicates that a swap occurred.
+            }
+        }
+    }
+}
+
 #ifdef APP_GRAPHICS
 void update_shmem() {
     if (!shmem) return;
@@ -133,50 +170,39 @@ Lpoints[MAX_LC + 1], Inrel[MAX_LC + 1],
 Deallocate, n_iter;
 
 double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
-Sclnw[MAX_LC + 1],
+Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1], Sclnw[MAX_LC + 1],
 Yout[MAX_N_OBS + 1],
 Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1],
 Tc[MAX_N_FAC + 1][MAX_LM + 1], Ts[MAX_N_FAC + 1][MAX_LM + 1],
-Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1],
-Blmat[4][4],
+Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+Nor[MAX_N_FAC + 1][4], Blmat[4][4],
 Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
-Weight[MAX_N_OBS + 1],
-Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1],
-Nor[MAX_N_FAC + 1][4], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
-
-//#ifdef __GNUC__
-//double Nor[3][MAX_N_FAC + 4] __attribute__((aligned(32))),
-//Area[MAX_N_FAC + 4] __attribute__((aligned(32))),
-//Darea[MAX_N_FAC + 4] __attribute__((aligned(32))),
-//Dg[MAX_N_FAC + 8][MAX_N_PAR + 4] __attribute__((aligned(32)));
-//#else
-//__declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4]; //Nor,Dg ARE ZERO INDEXED
-//#endif
+Weight[MAX_N_OBS + 1];
 
 /*--------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-    int /*c,*/ nchars = 0, retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
+    int /*c,*/ nchars = 0, nlines, ntestperiods, checkpoint_exists, n_start_from;
     //    double fsize, fd;
     char input_path[512], output_path[512], chkpt_path[512], buf[256];
     MFILE out;
-    FILE* state, *infile;
 
-    int i, j, l, m, k, n, nrows, ndata, k2, ndir, i_temp, onlyrel,
+    int i, j, l, m, k, n, nrows, onlyrel, ndata, k2, ndir, i_temp,
         n_iter_max, n_iter_min,
-        *ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, //ia is zero indexed
+        *ia, ial0, ial0_abs, ia_beta_pole, ia_prd, ia_par[4], ia_cl,
         lc_number,
-        **ifp, new_conw, max_test_periods;
+        **ifp,
+        new_conw;  // new conwexity weight
 
     double per_start, per_step_coef, per_end,
-        freq, freq_start, freq_step, freq_end, jd_min, jd_max,
+        freq, jd_min, jd_max,
         dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
         totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-        *t, *f, *at, *af, sum_dark_facet, ave_dark_facet;
+        *t, *f, *at, *af, sum_dark_facet;
 
     double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
-        prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
+        prd, cl, al0, al0_abs, ave, e0len, elen,
         dth, dph, rfit, escl,
         *brightness, e[4], e0[4], **ee,
         **ee0, *cg, *cg_first, **covar,
@@ -192,8 +218,6 @@ int main(int argc, char **argv) {
     ee0 = matrix_double(MAX_N_OBS, 3);
     covar = matrix_double(MAX_N_PAR, MAX_N_PAR);
     aalpha = matrix_double(MAX_N_PAR, MAX_N_PAR);
-    /*covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
-    aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 4);*/
     ifp = matrix_int(MAX_N_FAC, 4);
 
     tim = vector_double(MAX_N_OBS);
@@ -219,9 +243,9 @@ int main(int argc, char **argv) {
     lambda_pole[9] = 180;  beta_pole[9] = -60;
     lambda_pole[10] = 300; beta_pole[10] = -60;
 
-    ia_lambda_pole = ia_beta_pole = 1;
+    int ia_lambda_pole = ia_beta_pole = 1;
 
-    retval = boinc_init();
+    int retval = boinc_init();
     if (retval) {
         fprintf(stderr, "%s boinc_init returned %d\n",
             boinc_msg_prefix(buf, sizeof(buf)), retval
@@ -232,7 +256,7 @@ int main(int argc, char **argv) {
     // open the input file (resolve logical name first)
     //
     boinc_resolve_filename(INPUT_FILENAME, input_path, sizeof(input_path));
-    infile = boinc_fopen(input_path, "r");
+    FILE *infile = boinc_fopen(input_path, "r");
     if (!infile) {
         fprintf(stderr,
             "%s Couldn't find input file, resolved name %s.\n",
@@ -249,7 +273,7 @@ int main(int argc, char **argv) {
         // If so seek input file and truncate output file
         //
     boinc_resolve_filename(CHECKPOINT_FILE, chkpt_path, sizeof(chkpt_path));
-    state = boinc_fopen(chkpt_path, "r");
+    FILE * state = boinc_fopen(chkpt_path, "r");
     if (state) {
         n = fscanf(state, "%d %d %lf %lf %d", &nlines, &new_conw, &conw_r, &sum_dark_facet, &ntestperiods);
         fclose(state);
@@ -371,6 +395,12 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2);
         }
 
+
+        if (boinc_is_standalone())
+        {
+            printf("Lpoint \te0len \t\telen\n");
+        }
+
         /* loop over one lightcurve */
         for (j = 1; j <= Lpoints[i]; j++)
         {
@@ -390,8 +420,15 @@ int main(int argc, char **argv) {
             if (tim[ndata] > jd_max) jd_max = tim[ndata];
 
             /* normals of distance vectors */
-            e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
-            elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
+            e0len = sqrt(host_dot_product(e0, e0));
+            elen = sqrt(host_dot_product(e, e));
+            if (boinc_is_standalone())
+            {
+                printf("%d \t%.12f \t%.12f\n", j, e0len, elen);
+            }
+
+            //e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
+            //elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
 
             ave += brightness[ndata];
 
@@ -404,7 +441,7 @@ int main(int argc, char **argv) {
 
             if (j == 1)
             {
-                cos_alpha = host_dot_product(e, e0) / (elen * e0len);
+                double cos_alpha = host_dot_product(e, e0) / (elen * e0len);
                 al[i] = acos(cos_alpha); /* solar phase angle */
                 /* Find the smallest solar phase al0 (not important, just for info) */
                 if (al[i] < al0)
@@ -451,7 +488,7 @@ int main(int argc, char **argv) {
        lowest JD in the data */
     if (jd_0 <= 0)
     {
-        jd_0 = (int)jd_min;
+        jd_0 = int(jd_min);
         if (boinc_is_standalone())
             printf("\nNew epoch of zero time  %f\n", jd_0);
     }
@@ -504,6 +541,7 @@ int main(int argc, char **argv) {
     Lpoints[Lcurves] = 3;
     Inrel[Lcurves] = 0;
 
+
     /* optimization of the convexity weight **************************************************************/
     if (!checkpoint_exists)
     {
@@ -511,7 +549,21 @@ int main(int argc, char **argv) {
         new_conw = 0;
     }
 
-    while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
+    double freq_start = 1.0 / per_start;
+    double freq_end = 1.0 / per_end;
+    double freq_step = 0.5 / (jd_max - jd_min) / 24.0 * per_step_coef;
+    n_iter = int((freq_start - freq_end) / freq_step) + 1;
+
+    int max_test_periods = 10;
+    double ave_dark_facet = 0.0;
+
+    if (n_iter < max_test_periods)
+        max_test_periods = n_iter;
+
+    // temp
+    //new_conw = 1;
+    double escl_sqr = escl * escl;
+    while (new_conw != 1 && conw_r * escl_sqr < 10.0)
     {
         for (j = 1; j <= 3; j++)
         {
@@ -566,7 +618,9 @@ int main(int argc, char **argv) {
 
         if (Numfac > MAX_N_FAC)
         {
-            fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n"); fflush(stderr); exit(2);
+            fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n");
+            fflush(stderr);
+            exit(2);
         }
 
         /* makes indices to triangle vertices */
@@ -578,37 +632,30 @@ int main(int argc, char **argv) {
 
         ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
 
-        freq_start = 1 / per_start;
-        freq_end = 1 / per_end;
-        freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
-
         /* Give ia the value 0/1 if it's fixed/free */
-        ia[Ncoef + 1 - 1] = ia_beta_pole;
-        ia[Ncoef + 2 - 1] = ia_lambda_pole;
-        ia[Ncoef + 3 - 1] = ia_prd;
+        ia[Ncoef + 1] = ia_beta_pole;
+        ia[Ncoef + 2] = ia_lambda_pole;
+        ia[Ncoef + 3] = ia_prd;
         /* phase function parameters */
         Nphpar = 3;
         /* shape is free to be optimized */
-        for (i = 0; i < Ncoef; i++)
+        for (i = 1; i <= Ncoef; i++)
             ia[i] = 1;
         /* The first shape param. fixed for relative br. fit */
         if (onlyrel == 1)
-            ia[0] = 0;
-        ia[Ncoef + 3 + Nphpar + 1 - 1] = ia_cl;
+            ia[1] = 0;
+        ia[Ncoef + 3 + Nphpar + 1] = ia_cl;
         /* Lommel-Seeliger part is fixed */
-        ia[Ncoef + 3 + Nphpar + 2 - 1] = 0;
+        ia[Ncoef + 3 + Nphpar + 2] = 0;
 
         if ((Ncoef + 3 + Nphpar + 1) > MAX_N_PAR)
         {
-            fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
+            fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR);
+            fflush(stderr);
+            exit(2);
         }
 
-        max_test_periods = 10;
-        ave_dark_facet = 0.0;
-        n_iter = (int)((freq_start - freq_end) / freq_step) + 1;
-        if (n_iter < max_test_periods)
-            max_test_periods = n_iter;
-
+        // TODO: ------ Paralelize this -------> 
         if (checkpoint_exists)
         {
             n = ntestperiods + 1;
@@ -620,18 +667,33 @@ int main(int argc, char **argv) {
             n = 1;
         }
 
+        if (boinc_is_standalone())
+        {
+            printf("\nconw_r: %.8f\t", conw_r);
+            //printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
+        }
+
         for (; n <= max_test_periods; n++)
         {
-            boinc_fraction_done(n / 10000.0 / max_test_periods);
-
+            boinc_fraction_done(n / 10000.0 / max_test_periods); // signalize start
             freq = freq_start - (n - 1) * freq_step;
 
             /* initial poles */
             per_best = dark_best = la_best = be_best = 0;
             dev_best = 1e40;
+
+            prd = 1.0 / freq;
+            /* Use omega instead of period */
+            cg[Ncoef + 3] = 24.0 * 2.0 * PI / prd;
+
+            if (boinc_is_standalone())
+            {
+                printf(".");
+                //printf("%d \t%.8f \t%.8f \t%.8f \t%.8f\n", n, freq, prd, cg[Ncoef + 3], dark_best);
+            }
+
             for (m = 1; m <= N_POLES; m++)
             {
-                prd = 1 / freq;
 
                 /* starts from the initial ellipsoid */
                 for (i = 1; i <= Ncoef; i++)
@@ -646,13 +708,10 @@ int main(int argc, char **argv) {
                 cg[Ncoef + 1] = DEG2RAD * cg[Ncoef + 1];
                 cg[Ncoef + 2] = DEG2RAD * cg[Ncoef + 2];
 
-                /* Use omega instead of period */
-                cg[Ncoef + 3] = 24 * 2 * PI / prd;
-
                 for (i = 1; i <= Nphpar; i++)
                 {
                     cg[Ncoef + 3 + i] = par[i];
-                    ia[Ncoef + 3 + i - 1] = ia_par[i];
+                    ia[Ncoef + 3 + i] = ia_par[i];
                 }
                 /* Lommel-Seeliger part */
                 cg[Ncoef + 3 + Nphpar + 2] = 1;
@@ -694,7 +753,7 @@ int main(int argc, char **argv) {
                         {
                             chck[i] = 0;
                             for (j = 1; j <= Numfac; j++)
-                                chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
+                                 chck[i] = chck[i] + Area[j] * Nor[j][i];
                         }
                         rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                     }
@@ -715,7 +774,7 @@ int main(int argc, char **argv) {
 
                 totarea = 0;
                 for (i = 1; i <= Numfac; i++)
-                    totarea = totarea + Area[i - 1];
+                     totarea = totarea + Area[i];
                 sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
                 dark = sqrt(sum);
 
@@ -758,13 +817,22 @@ int main(int argc, char **argv) {
         } /* period loop */
 
         ave_dark_facet = sum_dark_facet / max_test_periods;
+        
+        if (boinc_is_standalone())
+            printf("\tave_dark_facet: %0.8f", ave_dark_facet);
 
         if (ave_dark_facet < 1.0)
             new_conw = 1; /* new correct conwexity weight */
         if (ave_dark_facet >= 1.0)
             conw_r = conw_r * 2; /* still not good */
-        ndata = ndata - 3;
 
+        if (boinc_is_standalone() && ave_dark_facet > 1.0)
+            printf("\tconw_r -> %0.8f\n", conw_r);
+
+        if (boinc_is_standalone())
+            printf("\n");
+
+        ndata = ndata - 3;
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
             retval = do_checkpoint(out, 0, new_conw, conw_r, 0.0, 0); //zero lines,zero sum dark facets, zero testperiods
@@ -773,6 +841,7 @@ int main(int argc, char **argv) {
         }
 
     }
+
     /*end optimizing conw *********************************************************************************/
 
 
@@ -847,27 +916,29 @@ int main(int argc, char **argv) {
     freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
 
     /* Give ia the value 0/1 if it's fixed/free */
-    ia[Ncoef + 1 - 1] = ia_beta_pole;
-    ia[Ncoef + 2 - 1] = ia_lambda_pole;
-    ia[Ncoef + 3 - 1] = ia_prd;
+    ia[Ncoef + 1] = ia_beta_pole;
+    ia[Ncoef + 2] = ia_lambda_pole;
+    ia[Ncoef + 3] = ia_prd;
     /* phase function parameters */
     Nphpar = 3;
     /* shape is free to be optimized */
-    for (i = 0; i < Ncoef; i++)
+    for (i = 1; i <= Ncoef; i++)
         ia[i] = 1;
     /* The first shape param. fixed for relative br. fit */
     if (onlyrel == 1)
-        ia[0] = 0;
-    ia[Ncoef + 3 + Nphpar + 1 - 1] = ia_cl;
+        ia[1] = 0;
+    ia[Ncoef + 3 + Nphpar + 1] = ia_cl;
     /* Lommel-Seeliger part is fixed */
-    ia[Ncoef + 3 + Nphpar + 2 - 1] = 0;
+    ia[Ncoef + 3 + Nphpar + 2] = 0;
 
     if ((Ncoef + 3 + Nphpar + 1) > MAX_N_PAR)
     {
         fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
     }
 
-    for (n = n_start_from; n <= (int)((freq_start - freq_end) / freq_step) + 1; n++)
+    int count = int((freq_start - freq_end) / freq_step) + 1;
+    n = n_start_from;
+    for (n; n <= count; n++)
     {
         fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
         boinc_fraction_done(fraction_done);
@@ -877,9 +948,12 @@ int main(int argc, char **argv) {
         /* initial poles */
         per_best = dark_best = la_best = be_best = 0;
         dev_best = 1e40;
+        double period = double(1) / freq;
+
         for (m = 1; m <= N_POLES; m++)
         {
-            prd = 1 / freq;
+            prd = period;
+
             /* starts from the initial ellipsoid */
             for (i = 1; i <= Ncoef; i++)
                 cg[i] = cg_first[i];
@@ -894,12 +968,12 @@ int main(int argc, char **argv) {
             cg[Ncoef + 2] = DEG2RAD * cg[Ncoef + 2];
 
             /* Use omega instead of period */
-            cg[Ncoef + 3] = 24 * 2 * PI / prd;
+            cg[Ncoef + 3] = 24.0 * 2.0 * PI / prd;
 
             for (i = 1; i <= Nphpar; i++)
             {
                 cg[Ncoef + 3 + i] = par[i];
-                ia[Ncoef + 3 + i - 1] = ia_par[i];
+                ia[Ncoef + 3 + i] = ia_par[i];
             }
             /* Lommel-Seeliger part */
             cg[Ncoef + 3 + Nphpar + 2] = 1;
@@ -941,7 +1015,7 @@ int main(int argc, char **argv) {
                     {
                         chck[i] = 0;
                         for (j = 1; j <= Numfac; j++)
-                            chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
+                            chck[i] = chck[i] + Area[j] * Nor[j][i];
                     }
                     rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                 }
@@ -962,12 +1036,12 @@ int main(int argc, char **argv) {
 
             totarea = 0;
             for (i = 1; i <= Numfac; i++)
-                totarea = totarea + Area[i - 1];
+                totarea = totarea + Area[i];
             sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
             dark = sqrt(sum);
 
             /* period solution */
-            prd = 2 * PI / cg[Ncoef + 3];
+            prd = 2.0 * PI / cg[Ncoef + 3];
 
             /* pole solution */
             la_tmp = RAD2DEG * cg[Ncoef + 2];
@@ -994,11 +1068,16 @@ int main(int argc, char **argv) {
             dark_best = 1.0;
 #endif
 
+        double conw_r_escl_sqr = conw_r * escl_sqr;
         /* output file */
         if (n == 1)
-            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best);
+        {
+            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24.0 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r_escl_sqr, la_best, be_best);
+        }
         else
-            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best);
+        {
+            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24.0 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best);
+        }
 
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone())
@@ -1008,16 +1087,22 @@ int main(int argc, char **argv) {
             boinc_checkpoint_completed();
         }
 
+
         if (boinc_is_standalone())
         {
             if (n == 1)
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
+            {
+                printf("escl: %.8f\tescl * escl: %.8f\n", escl, escl_sqr);
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24.0 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r_escl_sqr, la_best, be_best, fraction_done);
+            }
             else
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
+            {
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24.0 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
+            }
         }
-
 #ifdef _DEBUG
-        break;
+        if (n == 2)
+            break;
 #endif
     } /* period loop */
 
@@ -1027,8 +1112,6 @@ int main(int argc, char **argv) {
     deallocate_matrix_double(ee0, MAX_N_OBS);
     deallocate_matrix_double(covar, MAX_N_PAR);
     deallocate_matrix_double(aalpha, MAX_N_PAR);
-    /*aligned_deallocate_matrix_double(covar, MAX_N_PAR);
-    aligned_deallocate_matrix_double(aalpha, MAX_N_PAR);*/
     deallocate_matrix_int(ifp, MAX_N_FAC);
 
     deallocate_vector(tim);
@@ -1049,6 +1132,7 @@ int main(int argc, char **argv) {
 #ifdef APP_GRAPHICS
     update_shmem();
 #endif
+    system("PAUSE");
     boinc_finish(0);
 }
 

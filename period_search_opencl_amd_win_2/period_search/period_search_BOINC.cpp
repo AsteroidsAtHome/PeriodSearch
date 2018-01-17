@@ -167,13 +167,13 @@ int main(int argc, char **argv) {
         n_iter_max, n_iter_min,
         *ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, //ia is zero indexed
         lc_number,
-        **ifp, new_conw, max_test_periods;
+        **ifp, new_conw;
 
     double per_start, per_step_coef, per_end,
-        freq, freq_start, freq_step, freq_end, jd_min, jd_max,
+        freq, jd_min, jd_max,
         dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
         totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-        *t, *f, *at, *af, sum_dark_facet, ave_dark_facet;
+        *t, *f, *at, *af, sum_dark_facet;
 
     double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
         prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
@@ -393,6 +393,11 @@ int main(int argc, char **argv) {
             e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
             elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
 
+            if (boinc_is_standalone())
+            {
+                printf("%d \t%.12f \t%.12f\n", j, e0len, elen);
+            }
+
             ave += brightness[ndata];
 
             /* normalization of distance vectors */
@@ -511,6 +516,17 @@ int main(int argc, char **argv) {
         new_conw = 0;
     }
 
+    double freq_start = 1 / per_start;
+    double freq_end = 1 / per_end;
+    double freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
+
+    int max_test_periods = 10;
+    double ave_dark_facet = 0.0;
+    n_iter = int((freq_start - freq_end) / freq_step) + 1;
+
+    if (n_iter < max_test_periods)
+        max_test_periods = n_iter;
+    
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
         for (j = 1; j <= 3; j++)
@@ -577,11 +593,7 @@ int main(int argc, char **argv) {
         sphfunc(Numfac, at, af);
 
         ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
-
-        freq_start = 1 / per_start;
-        freq_end = 1 / per_end;
-        freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
-
+        
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
         ia[Ncoef + 2 - 1] = ia_lambda_pole;
@@ -603,12 +615,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
         }
 
-        max_test_periods = 10;
-        ave_dark_facet = 0.0;
-        n_iter = (int)((freq_start - freq_end) / freq_step) + 1;
-        if (n_iter < max_test_periods)
-            max_test_periods = n_iter;
-
+        // TODO: Parelelize this 
         if (checkpoint_exists)
         {
             n = ntestperiods + 1;
@@ -620,6 +627,12 @@ int main(int argc, char **argv) {
             n = 1;
         }
 
+        if (boinc_is_standalone())
+        {
+            //printf("\nconw_r: %.8f\t", conw_r);
+            printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
+        }
+        
         for (; n <= max_test_periods; n++)
         {
             boinc_fraction_done(n / 10000.0 / max_test_periods);
@@ -648,6 +661,12 @@ int main(int argc, char **argv) {
 
                 /* Use omega instead of period */
                 cg[Ncoef + 3] = 24 * 2 * PI / prd;
+
+                if (boinc_is_standalone())
+                {
+                    //printf(".");
+                    printf("%d \t%.8f \t%.8f \t%.8f \t%.8f\n", n, freq, prd, cg[Ncoef + 3], dark_best);
+                }
 
                 for (i = 1; i <= Nphpar; i++)
                 {
@@ -694,7 +713,7 @@ int main(int argc, char **argv) {
                         {
                             chck[i] = 0;
                             for (j = 1; j <= Numfac; j++)
-                                chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
+                                chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
                         }
                         rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                     }
@@ -763,6 +782,13 @@ int main(int argc, char **argv) {
             new_conw = 1; /* new correct conwexity weight */
         if (ave_dark_facet >= 1.0)
             conw_r = conw_r * 2; /* still not good */
+
+        if (boinc_is_standalone() && ave_dark_facet > 1.0)
+            printf("\tconw_r -> %0.8f\n", conw_r);
+
+        if (boinc_is_standalone())
+            printf("\n");
+
         ndata = ndata - 3;
 
 
@@ -941,7 +967,7 @@ int main(int argc, char **argv) {
                     {
                         chck[i] = 0;
                         for (j = 1; j <= Numfac; j++)
-                            chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
+                            chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
                     }
                     rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                 }
@@ -1049,6 +1075,8 @@ int main(int argc, char **argv) {
 #ifdef APP_GRAPHICS
     update_shmem();
 #endif
+
+    system("PAUSE");
     boinc_finish(0);
 }
 
