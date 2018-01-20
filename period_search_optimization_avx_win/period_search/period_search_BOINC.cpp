@@ -70,6 +70,7 @@
 #include "boinc_api.h"
 #include "mfile.h"
 #include "graphics2.h"
+#include "../arrayHelpers.hpp"
 
 #ifdef APP_GRAPHICS
 #include "uc2.h"
@@ -163,7 +164,8 @@ int main(int argc, char **argv) {
 
     int i, j, l, m, k, n, nrows, ndata, k2, ndir, i_temp, onlyrel,
         n_iter_max, n_iter_min,
-        *ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, //ia is zero indexed
+        *ia, //ia is zero indexed
+        ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, 
         lc_number,
         **ifp, new_conw, max_test_periods;
 
@@ -416,7 +418,13 @@ int main(int argc, char **argv) {
             }
         } /* j, one lightcurve */
 
+        // For Unit test reference only
+        /*printArray(ee, ndata, 3, "ee");
+        printArray(ee0, ndata, 3, "ee0");*/
+
         ave /= Lpoints[i];
+        // For unit test reference only
+        //printf("ave: %.30f\n", ave);
 
         /* Mean brightness of lcurve
            Use the mean brightness as 'sigma' to renormalize the
@@ -456,6 +464,9 @@ int main(int argc, char **argv) {
     for (i = 1; i <= ndata; i++)
         tim[i] = tim[i] - jd_0;
 
+    // For Unit test reference only
+    //printArray(tim, ndata, "tim");
+
     Phi_0 = Phi_0 * DEG2RAD;
 
     k = 0;
@@ -472,12 +483,18 @@ int main(int argc, char **argv) {
     for (i = 1; i <= 3; i++)
         Weight[k + i] = 1;
 
+    // For Unit tests reference only
+    //printArray(Weight, 122, "Weight");
+
     /* use calibrated data if possible */
     if (onlyrel == 0)
     {
         al0 = al0_abs;
         ial0 = ial0_abs;
     }
+
+    // For unit test reference only
+    //printf("al0: %.30f\tial0 %d\n", al0, ial0);
 
     /* Initial shape guess */
     rfit = sqrt(2 * sig[ial0] / (0.5 * PI * (1 + cos(al0))));
@@ -500,6 +517,9 @@ int main(int argc, char **argv) {
     Lpoints[Lcurves] = 3;
     Inrel[Lcurves] = 0;
 
+    // For Unit test reference only
+    //printArray(Inrel, 10, "Inrel");
+
     /* optimization of the convexity weight **************************************************************/
     if (!checkpoint_exists)
     {
@@ -515,6 +535,9 @@ int main(int argc, char **argv) {
             brightness[ndata] = 0;
             sig[ndata] = 1 / conw_r;
         }
+
+        // For Unit tests reference only
+        //printArray(sig, 130, "sig");
 
         /* the ordering of the coeffs. of the Laplace series */
         Ncoef = 0; /* number of coeffs. */
@@ -567,6 +590,10 @@ int main(int argc, char **argv) {
 
         /* makes indices to triangle vertices */
         trifac(nrows, ifp);
+
+        // NOTE: For unit tests arrange only
+        //printArray(f, ndir, "f");
+        
         /* areas and normals of the triangulated Gaussian image sphere */
         areanorm(t, f, ndir, Numfac, ifp, at, af);
         /* Precompute some function values at each normal direction*/
@@ -655,6 +682,10 @@ int main(int argc, char **argv) {
                 /* Use logarithmic formulation for Lambert to keep it positive */
                 cg[Ncoef + 3 + Nphpar + 1] = log(cl);
 
+                // For Unit tests reference only
+                //printArray(cg, 24, "cg");
+                //printArray(ia, 24, "ia");
+
                 /* Levenberg-Marquardt loop */
                 n_iter_max = 0;
                 iter_diff_max = -1;
@@ -677,9 +708,16 @@ int main(int argc, char **argv) {
                 dev_new = 0;
                 Lastcall = 0;
 
+                // For Unit tests reference only
+                //printArray(brightness, ndata, "brightness[ndata] -> brightness");
+
                 while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
                 {
                     mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
+                    // For Unite test reference only
+                    //printArray(covar, 25, 25, "covar");
+                    //printArray(aalpha, 25, 25, "aaplha");
+
                     Niter++;
 
                     if ((Niter == 1) || (Chisq < Ochisq))
@@ -1043,6 +1081,9 @@ int main(int argc, char **argv) {
 #ifdef APP_GRAPHICS
     update_shmem();
 #endif
+
+    system("PAUSE");
+
     boinc_finish(0);
 }
 

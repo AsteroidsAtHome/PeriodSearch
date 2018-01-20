@@ -58,3 +58,4 @@ bld/
 /*/*.VC.VC.opendb
 /period_search_optimization_sse3_win/boinc_lockfile
 /period_search_optimization_sse3_win/stderr.txt
+/*/ipch

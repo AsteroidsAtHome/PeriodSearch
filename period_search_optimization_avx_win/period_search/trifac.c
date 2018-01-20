@@ -77,6 +77,18 @@ void trifac(int nrows, int **ifp)
             ifp[ntri][3] = nod[j1-1][j2+(j3-1)];
          }
       }
-      
+
+
+   // NOTE: For unit tests reference only
+   /*for (int ik = 1; ik <= 3; ik++) {
+       printf("\nifp[x][%d]:\n", ik);
+       for (int ii = 1; ii < ntri; ii++)
+       {
+           printf("%d, ", ifp[ii][ik]);
+           if (ii % 20 == 0)
+               printf("\n");
+       }
+   }*/
+
    deallocate_matrix_int(nod, 2*nrows);      
 }
