@@ -6,35 +6,7 @@
 #include <math.h>
 #include "globals.h"
 #include "declarations.h"
-
-// NOTE: For unit tests reference only
-void printData(int nfac, double at[], double af[], double Darea[])
-{
-    int i;
-    printf("\nat[x]:\n");
-    for (i = 0; i <= nfac; i++)
-    {
-        printf("%.30f, ", at[i]);
-        if (i % 9 == 0)
-            printf("\n");
-    }
-
-    printf("\naf[x]:\n");
-    for (i = 0; i <= nfac; i++)
-    {
-        printf("%.30f, ", af[i]);
-        if (i % 9 == 0)
-            printf("\n");
-    }
-
-    printf("\nDarea[x]:\n");
-    for (i = 0; i <= nfac; i++)
-    {
-        printf("%.30f, ", Darea[i]);
-        if (i % 9 == 0)
-            printf("\n");
-    }
-}
+#include "../period_search/arrayHelpers.hpp"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
@@ -84,6 +56,8 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
     }
 
     // NOTE: For unit tests reference only
+    /*printArray(at, i - 1, "at");
+    printArray(af, i - 1, "af");*/
     //printData(nfac, at, af, Darea);
 
     deallocate_vector((void *)x);

@@ -19,7 +19,7 @@
 #include "../period_search/mrqcof.c"
 #include "../period_search/bright.c"
 #include "../period_search/conv.c"
-#include "../period_search/dot_product.c"
+#include "../period_search/host_dot_product.c"
 #include "../period_search/gauss_errc.c"
 #include "../period_search/blmatrix.c"
 #include "../period_search/curv.c"
@@ -52,9 +52,14 @@ double _dsph[MAX_N_FAC + 1][MAX_N_PAR + 1];
 double Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 double _pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 
-__declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4],
-_nor[3][MAX_N_FAC + 4], _area[MAX_N_FAC + 4], _darea[MAX_N_FAC + 4], _dg[MAX_N_FAC + 8][MAX_N_PAR + 4],
-Dyda[MAX_N_PAR + 8], _dyda[MAX_N_PAR + 8]; //Zero indexed for aligned memory access
+double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1],Nor[MAX_N_FAC + 1][4], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+       _area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[MAX_N_FAC + 1][4], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+       Dyda[MAX_N_PAR + 1], _dyda[MAX_N_PAR + 1];
+
+// Dyda[MAX_N_PAR + 8], _dyda[MAX_N_PAR + 8];
+// __declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4],
+// _nor[3][MAX_N_FAC + 4], _area[MAX_N_FAC + 4], _darea[MAX_N_FAC + 4], _dg[MAX_N_FAC + 8][MAX_N_PAR + 4],
+// Dyda[MAX_N_PAR + 8], _dyda[MAX_N_PAR + 8]; //Zero indexed for aligned memory access
 
 namespace UnitTest_avx_win
 {
@@ -92,10 +97,10 @@ namespace UnitTest_avx_win
             _cg = vector_double(MAX_N_PAR);
             ia = vector_int(MAX_N_PAR);
             _ia = vector_int(MAX_N_PAR);
-            covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
-            _covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
-            aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 4);
-            _aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 4);
+            covar = matrix_double(MAX_N_PAR, MAX_N_PAR);
+            _covar = matrix_double(MAX_N_PAR, MAX_N_PAR);
+            aalpha = matrix_double(MAX_N_PAR, MAX_N_PAR + 4);
+            _aalpha = matrix_double(MAX_N_PAR, MAX_N_PAR + 4);
             beta = vector_double(24);
             da = vector_double(24);
 
@@ -136,10 +141,10 @@ namespace UnitTest_avx_win
             deallocate_matrix_double(_ee0, MAX_N_OBS);
             deallocate_vector(ia);
             deallocate_vector(_ia);
-            aligned_deallocate_matrix_double(covar, MAX_N_PAR);
-            aligned_deallocate_matrix_double(_covar, MAX_N_PAR);
-            aligned_deallocate_matrix_double(aalpha, MAX_N_PAR);
-            aligned_deallocate_matrix_double(_aalpha, MAX_N_PAR);
+            deallocate_matrix_double(covar, MAX_N_PAR);
+            deallocate_matrix_double(_covar, MAX_N_PAR);
+            deallocate_matrix_double(aalpha, MAX_N_PAR);
+            deallocate_matrix_double(_aalpha, MAX_N_PAR);
             deallocate_vector((void *)beta);
             deallocate_vector((void *)da);
 
@@ -677,7 +682,7 @@ namespace UnitTest_avx_win
 
             get_xx1();
             get_xx2();
-            cos_alpha = dot_product(_xx1, _xx2);
+            cos_alpha = host_dot_product(_xx1, _xx2);
             alpha = acos(cos_alpha);
             ncoef0 = ncoef - 2 - Nphpar;
             for (i = 1; i <= Nphpar; i++)
@@ -827,7 +832,10 @@ namespace UnitTest_avx_win
             ymod = bright(Xx1, Xx2, t, cg, Dyda, Ncoef);
 
             // Assert
-            Assert::IsTrue(_ymod - ymod < DBL_EPSILON);
+            sprintf_s(cmsg, "Element _ymod<%.30f>; element ymod<%.30f>", _ymod, ymod);
+            std::wstring wide = converter.from_bytes(cmsg);
+            wmsg = wide.c_str();
+            Assert::IsTrue(_ymod - ymod < DBL_EPSILON, wmsg);
 
             for (i = 0; i <= k; i++)
             {

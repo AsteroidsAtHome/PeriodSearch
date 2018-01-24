@@ -195,8 +195,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="arrayHelpers.cpp" />
     <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\arrayHelpers.cpp" />
     <ClCompile Include="period_search\blmatrix.c" />
     <ClCompile Include="period_search\bright.c" />
     <ClCompile Include="period_search\conv.c" />
@@ -217,7 +217,7 @@
     <ClCompile Include="period_search\trifac.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="arrayHelpers.hpp" />
+    <ClInclude Include="period_search\arrayHelpers.hpp" />
     <ClInclude Include="period_search\constants.h" />
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />

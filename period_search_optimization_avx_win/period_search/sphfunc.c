@@ -7,7 +7,7 @@
 #include <math.h>
 #include "globals.h"
 #include "declarations.h"
-#include "../arrayHelpers.hpp"
+#include "../period_search/arrayHelpers.hpp"
 
 void sphfunc(int ndir, double at[], double af[])
 {
@@ -89,6 +89,32 @@ void sphfunc(int ndir, double at[], double af[])
     // NOTE: For unit tests reference only
     //printData(ndir, k, "ndir");
 
+    /*printf("Fc[%d][%d]:\n", ndir, Mmax);
+    for (int q = 0; q <= Mmax; q++)
+    {
+        printf("_fc_%d[] = { ", q);
+        for (int p = 0; p <= ndir; p++)
+        {
+            printf("%.30f, ", Fc[p][q]);
+            if (p % 9 == 0)
+                printf("\n");
+        }
+        printf("};\n");
+    }*/
+
+    /*printf("Fs[%d][%d]:\n", ndir, Mmax);
+    for (int q = 0; q <= Mmax; q++)
+    {
+        printf("_fs_%d[] = { ", q);
+        for (int p = 0; p <= ndir; p++)
+        {
+            printf("%.30f, ", Fs[p][q]);
+            if (p % 9 == 0)
+                printf("\n");
+        }
+        printf("};\n");
+    }*/
+
     /*printf("\nPleg[%d][%d][%d]:\n", i - 1, l - 1, m - 1);
     for (int r = 0; r <= m - 1; r++)
     {
@@ -99,7 +125,7 @@ void sphfunc(int ndir, double at[], double af[])
             {
 
                 printf("%.30f, ", Pleg[p][q][r]);
-                if (i % 9 == 0)
+                if (i % (i-1) == 0)
                     printf("\n");
             }
 

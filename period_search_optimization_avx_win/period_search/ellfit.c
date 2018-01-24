@@ -7,7 +7,7 @@
 #include <math.h>
 #include "globals.h"
 #include "declarations.h"
-#include "../arrayHelpers.hpp"
+#include "../period_search/arrayHelpers.hpp"
 
 
 void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])

@@ -63,10 +63,10 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
    double lmu,lmu0,dsmu,dsmu0;
    for (i = 0; i < Numfac; i++)
    {
-       lmu = e[1] * Nor[1][i] + e[2] * Nor[2][i] + e[3] * Nor[3][i];
-       lmu0 = e0[1] * Nor[1][i] + e0[2] * Nor[2][i] + e0[3] * Nor[3][i];
-      /*lmu = e[1] * Nor[i][1] + e[2] * Nor[i][2] + e[3] * Nor[i][3];
-      lmu0 = e0[1] * Nor[i][1] + e0[2] * Nor[i][2] + e0[3] * Nor[i][3];*/
+       /*lmu = e[1] * Nor[1][i] + e[2] * Nor[2][i] + e[3] * Nor[3][i];
+       lmu0 = e0[1] * Nor[1][i] + e0[2] * Nor[2][i] + e0[3] * Nor[3][i];*/
+      lmu = e[1] * Nor[i][1] + e[2] * Nor[i][2] + e[3] * Nor[i][3];
+      lmu0 = e0[1] * Nor[i][1] + e0[2] * Nor[i][2] + e0[3] * Nor[i][3];
       if((lmu > TINY) && (lmu0 > TINY)) 
       {
          dnom = lmu + lmu0;
