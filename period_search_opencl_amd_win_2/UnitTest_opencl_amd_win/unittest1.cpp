@@ -52,8 +52,11 @@ double _dsph[MAX_N_FAC + 1][MAX_N_PAR + 1];
 double Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 double _pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 
-double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1],Nor[MAX_N_FAC + 1][4], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
-       _area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[MAX_N_FAC + 1][4], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1], 
+//Nor[MAX_N_FAC + 1][3], 
+Nor[3][MAX_N_FAC + 4],
+Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+       _area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[MAX_N_FAC + 1][3], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
        Dyda[MAX_N_PAR + 1], _dyda[MAX_N_PAR + 1];
 
 // Dyda[MAX_N_PAR + 8], _dyda[MAX_N_PAR + 8];
@@ -545,7 +548,7 @@ namespace UnitTest_avx_win
             Ncoef = 16;
             const int ndir = 288;
             int nrows = 6;          // nr.of triangulation rows per octant
-            Numfac = 8 * nrows * nrows;
+            Numfac = 8 * nrows * nrows; //288
             //int Lpoints[MAX_LC + 1];
             double a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis;
 
@@ -814,6 +817,7 @@ namespace UnitTest_avx_win
             get_tim(ndata, tim);
             int np = 1;
             double t = tim[np];
+            double tolerance = 0.1;
 
             //get_tmat(true);     // tmat[4][4]
             //get_dtm(true);      // dtm[4][4][4]
@@ -825,8 +829,8 @@ namespace UnitTest_avx_win
 
             //Scale = 1.214621163362573641464337015350;
             _ymod = 0.34207493045125292;
-            k = (MAX_N_PAR + 8) - 1;
-            get_dyda(false);
+            k = (MAX_N_PAR + 1) - 1;
+            get_dyda();    // _dyda[]
 
             // Act
             ymod = bright(Xx1, Xx2, t, cg, Dyda, Ncoef);
@@ -842,7 +846,7 @@ namespace UnitTest_avx_win
                 sprintf_s(cmsg, "Element _dyda[%d]<%.30f>; element Dyda[%d]<%.30f>", i, _dyda[i], i, Dyda[i]);
                 std::wstring wide = converter.from_bytes(cmsg);
                 wmsg = wide.c_str();
-                Assert::AreEqual(_dyda[i], Dyda[i], DBL_EPSILON, wmsg);
+                Assert::AreEqual(_dyda[i], Dyda[i], 1e-9, wmsg);
             }
 
         }
@@ -860,8 +864,7 @@ namespace UnitTest_avx_win
 
             get_t(t);
             get_f(f);
-
-
+            
             // Act
             // makes indices to triangle vertices
             trifac(nrows, ifp);
@@ -905,8 +908,8 @@ namespace UnitTest_avx_win
             get_blmat_m();              // Blmat[4][4]
             get_dblm_m();               // Dblm[3][4][4]
             get_area(true);             // Area[288]
-            get_dyda_after_conv();      // _dyda[208]
-            get_dyda_before_conv(true); // Dyda[208]
+            get_dyda_after_conv();      // _dyda[201]
+            get_dyda_before_conv(true); // Dyda[201]
             get_dg_curv(true);          // Dg[288][16]
             get_nor_0(true);            // Nor[0][288]        
             get_darea(true);            // Darea[288]
@@ -918,7 +921,7 @@ namespace UnitTest_avx_win
 
             Assert::AreEqual(_ymod, ymod, DBL_EPSILON);
 
-            for(i = 0; i < 208; i++)
+            for(i = 0; i < 201; i++)
             {
                 sprintf_s(cmsg, "Element _dyda[%d]<%.30f>; element Dyda[%d]<%.30f>", i, _dyda[i], i, Dyda[i]);
                 std::wstring wide = converter.from_bytes(cmsg);
@@ -947,7 +950,7 @@ namespace UnitTest_avx_win
         //    
         //    // Act
         //    mrqcof(ee, ee0, tim, brightness, sig, cg, ia, ma, aalpha, beta, mfit, lastone, lastma);
-
+        //
         //    // Assert
         //    Assert::AreEqual(_chisq, Chisq, DBL_EPSILON);
         //}
@@ -962,19 +965,19 @@ namespace UnitTest_avx_win
         //    int nrows = 6;          // nr.of triangulation rows per octant
         //    Numfac = 8 * nrows * nrows;
         //    double a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis;
-
+        //
         //    a = a0; b = b0; c_axis = c0;
         //    double ave = 0.382008772881355651573898057904;
         //    double al0 = 0.069555451868686835048549710336;
         //    int ial0 = 1;
         //    Lpoints[1] = 118;
-
+        //
         //    for (int j = 1; j <= Lpoints[1]; j++)
         //    {
         //        k2++;
         //        sig[k2] = ave;
         //    }
-
+        //
         //    /* Initial shape guess */
         //    double rfit = sqrt(2 * sig[ial0] / (0.5 * PI * (1 + cos(al0))));
         //    double escl = rfit / sqrt((a * b + b * c_axis + a * c_axis) / 3);
@@ -984,10 +987,10 @@ namespace UnitTest_avx_win
         //    b = b * escl;
         //    c_axis = c_axis * escl;
         //    Niter = 0;
-
+        //
         //    get_t(t);
         //    get_f(f);
-
+        //
         //    int ndata = 118;
         //    int n = 22;
         //    Alamda = -1;
@@ -1003,25 +1006,25 @@ namespace UnitTest_avx_win
         //    Lcurves = Lcurves + 1;
         //    Lpoints[Lcurves] = 3;
         //    brightness[1] = 3.452391e-01;
-
-
+        //
+        //
         //    get_ee(ndata, ee);
         //    get_ee0(ndata, ee0);
         //    get_tim(ndata, tim);
-
+        //
         //    // makes indices to triangle vertices
         //    trifac(nrows, ifp);
-
+        //
         //    // areas and normals of the triangulated Gaussian image sphere
         //    areanorm(t, f, ndir, Numfac, ifp, at, af);
-
+        //
         //    // Precompute some function values at each normal direction
         //    sphfunc(Numfac, at, af);
-
+        //
         //    //get_dsph();
-
+        //
         //    ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
-
+        //
         //    // Act
         //    get_cg24(cg);
         //    get_ia24(ia);
@@ -1032,19 +1035,19 @@ namespace UnitTest_avx_win
         //    get_pleg();
         //    get_dsph2();
         //    get_sig(sig);
-
+        //
         //    mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
-
+        //
         //    // Assert
         //    Assert::AreEqual(_Chisq, Chisq);
-
+        //
         //    for (int j = 0; j <= n; j++) {
         //        for (int i = 0; i <= n; i++)
         //        {
         //            Assert::IsTrue(_covar[i][j] - covar[i][j] < DBL_EPSILON);
         //        }
         //    }
-
+        //
         //    for (int j = 0; j <= n; j++) {
         //        for (int i = 0; i <= n; i++)
         //        {

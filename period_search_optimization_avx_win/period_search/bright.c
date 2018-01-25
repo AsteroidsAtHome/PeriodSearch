@@ -280,7 +280,9 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
     dyda[ncoef0 - 3 + 3 - 1] = g[0];
     /* Ders. of br. w.r.t. cl, cls */
     avx_d = _mm256_hadd_pd(avx_d, avx_d1);
-    avx_d = _mm256_add_pd(avx_d, _mm256_permute2f128_pd(avx_d, avx_d, 1));
+    __m256d avx_dperm = _mm256_permute2f128_pd(avx_d, avx_d, 1);
+    avx_d = _mm256_add_pd(avx_d, avx_dperm);
+    //avx_d = _mm256_add_pd(avx_d, _mm256_permute2f128_pd(avx_d, avx_d, 1));
     avx_d = _mm256_mul_pd(avx_d, avx_Scale);
     avx_d = _mm256_mul_pd(avx_d, avx_cl1);
     _mm256_store_pd(g, avx_d);

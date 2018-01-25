@@ -143,7 +143,10 @@ Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1],
 Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1],
-Nor[MAX_N_FAC + 1][4], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
+Nor[3][MAX_N_FAC + 4],
+Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
+
+//Nor[MAX_N_FAC + 1][3], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 
 //#ifdef __GNUC__
 //double Nor[3][MAX_N_FAC + 4] __attribute__((aligned(32))),
@@ -630,7 +633,7 @@ int main(int argc, char **argv) {
         if (boinc_is_standalone())
         {
             //printf("\nconw_r: %.8f\t", conw_r);
-            printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
+            //printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
         }
         
         for (; n <= max_test_periods; n++)
@@ -665,7 +668,7 @@ int main(int argc, char **argv) {
                 if (boinc_is_standalone())
                 {
                     //printf(".");
-                    printf("%d \t%.8f \t%.8f \t%.8f \t%.8f\n", n, freq, prd, cg[Ncoef + 3], dark_best);
+                    //printf("%d \t%.8f \t%.8f \t%.8f \t%.8f\n", n, freq, prd, cg[Ncoef + 3], dark_best);
                 }
 
                 for (i = 1; i <= Nphpar; i++)
@@ -712,8 +715,10 @@ int main(int argc, char **argv) {
                         for (i = 1; i <= 3; i++)
                         {
                             chck[i] = 0;
-                            for (j = 1; j <= Numfac; j++)
-                                chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
+                            for (j = 1; j <= Numfac; j++) {
+                                chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
+                                //chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
+                            }
                         }
                         rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                     }
@@ -783,11 +788,11 @@ int main(int argc, char **argv) {
         if (ave_dark_facet >= 1.0)
             conw_r = conw_r * 2; /* still not good */
 
-        if (boinc_is_standalone() && ave_dark_facet > 1.0)
+        /*if (boinc_is_standalone() && ave_dark_facet > 1.0)
             printf("\tconw_r -> %0.8f\n", conw_r);
 
         if (boinc_is_standalone())
-            printf("\n");
+            printf("\n");*/
 
         ndata = ndata - 3;
 
@@ -967,7 +972,7 @@ int main(int argc, char **argv) {
                     {
                         chck[i] = 0;
                         for (j = 1; j <= Numfac; j++)
-                            chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
+                            chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
                     }
                     rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
                 }

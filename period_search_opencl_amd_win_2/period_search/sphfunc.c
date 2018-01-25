@@ -86,7 +86,7 @@ void sphfunc(int ndir, double at[], double af[])
     }
 
     // For Unit tests reference only
-    printf("\nPleg[%d][%d][%d]:\n", i - 1, l - 1, m - 1);
+    /*printf("\nPleg[%d][%d][%d]:\n", i - 1, l - 1, m - 1);
     for (int r = 0; r <= m - 1; r++)
     {
         for (int q = 0; q <= l - 1; q++)
@@ -102,6 +102,6 @@ void sphfunc(int ndir, double at[], double af[])
 
             printf("};\n");
         }
-    }
+    }*/
 }
 
