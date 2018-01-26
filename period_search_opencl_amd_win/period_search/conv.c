@@ -18,11 +18,15 @@ double conv(int nc, double dres[], int ma)
    res = 0;
    for (j = 1; j <= ma; j++)
       dres[j] = 0;
-   for (i = 1; i <= Numfac; i++)
+   for (i = 0; i < Numfac; i++)
    {
-      res += Area[i] * Nor[i][nc];
+       res += Area[i] * Nor[nc - 1][i];
+       for (j = 0; j < Ncoef; j++)
+           dres[j] += Darea[i] * Dg[i][j] * Nor[nc - 1][i];
+
+      /*res += Area[i] * Nor[i][nc];
       for (j = 1; j <= Ncoef; j++)
-         dres[j] += Darea[i] * Dg[i][j] * Nor[i][nc];
+         dres[j] += Darea[i] * Dg[i][j] * Nor[i][nc];*/
    }
    
    return(res);

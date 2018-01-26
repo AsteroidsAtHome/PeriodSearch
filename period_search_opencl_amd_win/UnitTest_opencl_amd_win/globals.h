@@ -24,9 +24,9 @@ php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1], _dphp[N_PHOT_PAR + 1],
 
 Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1], 
 //Nor[MAX_N_FAC + 1][3], 
-Nor[3][MAX_N_FAC + 4],
+Nor[3][MAX_N_FAC + 1],
 Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
-_area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[MAX_N_FAC + 1][3], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+_area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[3][MAX_N_FAC + 1], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
 Dyda[MAX_N_PAR + 1], _dyda[MAX_N_PAR + 1];
 
 //#ifdef __GNUC__

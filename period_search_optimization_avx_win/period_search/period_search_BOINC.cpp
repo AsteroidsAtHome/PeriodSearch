@@ -606,8 +606,8 @@ int main(int argc, char **argv) {
         freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
 
         // For Unit tests ref only
-        printf("jd_max: %.30f", jd_max);
-        printf("jd_min: %.30f", jd_min);
+        //printf("jd_max: %.30f", jd_max);
+        //printf("jd_min: %.30f", jd_min);
 
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
@@ -717,8 +717,6 @@ int main(int argc, char **argv) {
 
                 while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
                 {
-                    printArray(brightness, 121, "brightness");
-
                     mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
                     // For Unite test reference only
                     //printArray(covar, 25, 25, "covar");

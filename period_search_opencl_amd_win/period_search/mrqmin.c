@@ -16,7 +16,7 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
    int j, k, l, err_code;
    static int mfit,lastone,lastma; /* it is set in the first call*/
 
-   static double *atry, *beta, *da;
+   static double *atry, *beta, *da; //beta, da are zero indexed
 
    double temp;
 
@@ -40,7 +40,7 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
          /* number of fitted parameters */
          mfit=0;
 		 lastma=0;
-		 for (j = 1; j <= ma; j++)
+		 for (j = 0; j < ma; j++)
 		 {
 		  if (ia[j]) 
 		  {
@@ -48,8 +48,8 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
 			lastma=j;
 		  }
 		 }
-		 lastone=1;
-		 for (j = 2; j <=lastma; j++) //ia[1] is skipped because ia[1]=0 is acceptable inside mrqcof
+		 lastone=0;
+		 for (j = 1; j <=lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
 		 {
 		  if (!ia[j]) break; 
 		  lastone=j;
@@ -62,9 +62,9 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
          for (j = 1; j <= ma; j++)
             atry[j] = a[j];
       }
-      for (j = 1; j <= mfit; j++)
+      for (j = 0; j < mfit; j++)
       {
-         for (k = 1; k <= mfit; k++)
+         for (k = 0; k < mfit; k++)
             covar[j][k] = alpha[j][k];
          covar[j][j] = alpha[j][j] * (1 + Alamda);
          da[j] = beta[j];
@@ -77,11 +77,13 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
       
       j = 0;
       for (l = 1; l <= ma; l++)
-        if(ia[l]) 
-	{
-           j++;
-           atry[l] = a[l] + da[j];
-        }
+      {
+          if (ia[l - 1])
+          {
+              atry[l] = a[l] + da[j];
+              j++;
+          }
+      }
    } /* Lastcall != 1 */
    
    if (Lastcall == 1)
@@ -103,9 +105,9 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
    if (temp < Ochisq)
    {
       Alamda = Alamda / Alamda_incr;
-      for (j = 1; j <= mfit; j++)
+      for (j = 0; j < mfit; j++)
       {
-         for (k = 1; k <= mfit; k++)
+         for (k = 0; k < mfit; k++)
             alpha[j][k] = covar[j][k];
          beta[j] = da[j];
       }

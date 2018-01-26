@@ -54,10 +54,10 @@ double _pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 
 double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1], 
 //Nor[MAX_N_FAC + 1][3], 
-Nor[3][MAX_N_FAC + 4],
+Nor[3][MAX_N_FAC + 1],
 Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
-       _area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[MAX_N_FAC + 1][3], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
-       Dyda[MAX_N_PAR + 1], _dyda[MAX_N_PAR + 1];
+_area[MAX_N_FAC + 1], _darea[MAX_N_FAC + 1], _nor[3][MAX_N_FAC + 1], _dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+Dyda[MAX_N_PAR + 1], _dyda[MAX_N_PAR + 1];
 
 // Dyda[MAX_N_PAR + 8], _dyda[MAX_N_PAR + 8];
 // __declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4],
@@ -1062,13 +1062,13 @@ namespace UnitTest_avx_win
             bool period_match = true, rms_match = true, chisq_match = true;
             double tol_per = 0.1, tol_rms = 0.1, tol_chisq = 0.5;
             // From avx app : 17.20899774  0.167425  3.307656  1.6   96   59
-            // From cpu app : 17.20794966  0.168685  3.357645  0.8  360   22
+            // From cpu app : 17.20899838  0.167423  3.307587  1.6   96   59
             const double per_1 = 17.20899774;
-            const double per_2 = 17.20794966;
+            const double per_2 = 17.20899838;
             const double rms_1 = 0.167425;
-            const double rms_2 = 0.168685;
+            const double rms_2 = 0.167423;
             const double chisq_1 = 3.307656;
-            const double chisq_2 = 3.357645;
+            const double chisq_2 = 3.307587;
 
             // Act
             double period_result = fabs((per_1 - per_2) / (per_1 + per_2)) / 2;
