@@ -4,6 +4,7 @@
    8.11.2006
 */
 
+#include <CL/cl.hpp>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,7 +12,7 @@
 #include "declarations.h"
 #include "constants.h"
 
-double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[], int ncoef)
 {
     int ncoef0, i, j, k,
         incl[MAX_N_FAC], //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED

@@ -4,11 +4,13 @@
    8.11.2006
 */
 
+#include <CL/cl.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
+#include "OpenClWorker.hpp"
 
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -16,10 +18,10 @@
 /* comment the following line if no YORP */
 /*#define YORP*/
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-dyda[MAX_N_PAR + 1],                                            //is zero indexed for aligned memory access
 ytemp[POINTS_MAX + 1], dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
-dave[MAX_N_PAR + 1],
 coef, ave = 0, trial_chisq, wght;                               //moved here due to 64 debugger bug in vs2010
+
+cl_double dyda[MAX_N_PAR + 1], dave[MAX_N_PAR + 1];             //is zero indexed for aligned memory access
 
 double mrqcof(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
@@ -76,6 +78,8 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
             if (Inrel[i]/* == 1*/)
             {
                 ave = ave + ymod;
+                daveCl(dave, dyda);
+
                 for (l = 1; l <= ma; l++)   //last odd value is not problems
                 {
                     dave[l] = dave[l] + dyda[l - 1];

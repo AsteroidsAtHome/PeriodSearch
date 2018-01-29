@@ -290,6 +290,7 @@
     <ClInclude Include="period_search\constants.h" />
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
+    <ClInclude Include="period_search\OpenClWorker.hpp" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
     <ClInclude Include="period_search\uc2.h" />
@@ -308,8 +309,9 @@
     <ClCompile Include="period_search\ludcmp.c" />
     <ClCompile Include="period_search\matrix.c" />
     <ClCompile Include="period_search\memory.c" />
-    <ClCompile Include="period_search\mrqcof.c" />
+    <ClCompile Include="period_search\mrqcof.cpp" />
     <ClCompile Include="period_search\mrqmin.c" />
+    <ClCompile Include="period_search\OpenClWorker.cpp" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\phasec.c" />
     <ClCompile Include="period_search\sphfunc.c" />
@@ -322,6 +324,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="period_search\trifac.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dave.cl" />
+    <None Include="period_search\curv.cl">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -4,9 +4,15 @@
    8.11.2006
 */
 
+#include <chrono>
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
+#include <iostream>
+
+using namespace std::chrono;
+using std::cout;
+using std::endl;
 
 int mrqmin(double **x1, double **x2, double x3[], double y[], 
             double sig[], double a[], int ia[], int ma, 
@@ -56,7 +62,11 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
 		 }
          Alamda = Alamda_start; /* initial alambda */
 
+         //auto t1 = high_resolution_clock::now();
          temp = mrqcof(x1,x2,x3,y,sig,a,ia,ma,alpha,beta,mfit,lastone,lastma);
+         //auto t2 = high_resolution_clock::now();
+         //auto duration = duration_cast<microseconds>(t2 - t1).count();
+         //cout << "'curvCl()' Duration: " << duration << endl;
 
          Ochisq = temp;
          for (j = 1; j <= ma; j++)

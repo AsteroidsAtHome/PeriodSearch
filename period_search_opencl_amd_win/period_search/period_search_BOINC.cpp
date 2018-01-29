@@ -22,6 +22,8 @@
 
 */
 
+#include <CL/cl.hpp>
+#include "OpenClWorker.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -125,6 +127,24 @@ void update_shmem() {
     boinc_get_status(&shmem->status);
 }
 #endif
+// OpenCL
+std::vector<cl::Platform> platforms;
+cl::Context context;
+std::vector<cl::Device> devices;
+cl::Program program;
+cl::Kernel kernel;
+cl::CommandQueue queue;
+cl::Buffer bufCg, bufArea, bufDarea, bufDg, bufFc, bufFs, bufDsph, bufPleg, bufMmax, bufLmax, bufX, bufY, bufZ;
+cl::Buffer bufDave, bufDyda;
+// kernel files
+string kernelCurv, kernelDave;
+
+// Globals for size of matrices
+unsigned int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
+// Thread block size
+#define BLOCK_SIZE 16
+
+
 
 /* global parameters */
 int Lmax, Mmax, Niter, Lastcall,
@@ -142,7 +162,9 @@ Blmat[4][4],
 Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1],
-Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1],
+Area[MAX_N_FAC + 1], 
+tmpArea[MAX_N_FAC + 1],
+Darea[MAX_N_FAC + 1],
 Nor[3][MAX_N_FAC + 1],
 Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 
@@ -529,6 +551,9 @@ int main(int argc, char **argv) {
 
     if (n_iter < max_test_periods)
         max_test_periods = n_iter;
+
+    Numfac = 8 * nrows * nrows;
+    Init();
     
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
@@ -581,7 +606,7 @@ int main(int argc, char **argv) {
 
         t[ndir] = PI;
         f[ndir] = 0;
-        Numfac = 8 * nrows * nrows;
+        
 
         if (Numfac > MAX_N_FAC)
         {
@@ -618,7 +643,9 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
         }
 
-        // TODO: Parelelize this 
+        // TODO: Parelelize this >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+
         if (checkpoint_exists)
         {
             n = ntestperiods + 1;
@@ -645,6 +672,7 @@ int main(int argc, char **argv) {
             /* initial poles */
             per_best = dark_best = la_best = be_best = 0;
             dev_best = 1e40;
+
             for (m = 1; m <= N_POLES; m++)
             {
                 prd = 1 / freq;
