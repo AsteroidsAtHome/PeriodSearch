@@ -6,7 +6,7 @@
 
 #include <math.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 
 void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])
 {

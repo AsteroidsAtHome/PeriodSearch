@@ -7,6 +7,7 @@
 #include "declarations.h"
 #include "constants.h"
 #include "globals.h"
+#include <CL/cl.hpp>
 //#include "../period_search/arrayHelpers.hpp"
 #include "../period_search/memory.c"
 #include "../period_search/areanorm.c"

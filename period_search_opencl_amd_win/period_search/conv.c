@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 
 double conv(int nc, double dres[], int ma)
 {

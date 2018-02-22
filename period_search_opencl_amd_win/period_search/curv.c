@@ -8,7 +8,7 @@
 #include "globals.h"
 #include "constants.h"
 #include <iostream>
-#include "OpenClWorker.hpp"
+//#include "OpenClWorker.hpp"
 //using namespace worker;
 using namespace std::chrono;
 using std::cout;

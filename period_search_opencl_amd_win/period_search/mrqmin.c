@@ -6,7 +6,7 @@
 
 #include <chrono>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 #include "constants.h"
 #include <iostream>
 

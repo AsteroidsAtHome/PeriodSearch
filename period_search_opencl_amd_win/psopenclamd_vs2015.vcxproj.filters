@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.c" />
     <ClCompile Include="period_search\blmatrix.c" />
-    <ClCompile Include="period_search\bright.c" />
     <ClCompile Include="period_search\conv.c" />
     <ClCompile Include="period_search\covsrt.c" />
     <ClCompile Include="period_search\host_dot_product.c" />
@@ -21,14 +20,20 @@
     <ClCompile Include="period_search\trifac.c" />
     <ClCompile Include="period_search\curv.c" />
     <ClCompile Include="period_search\mrqcof.cpp" />
+    <ClCompile Include="period_search\bright.cpp" />
+    <ClCompile Include="period_search\Curv1D.cpp" />
+    <ClCompile Include="period_search\Array2D.cpp" />
+    <ClCompile Include="period_search\Array3D.cpp" />
+    <ClCompile Include="period_search\OpenClWorker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h" />
-    <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
     <ClInclude Include="period_search\uc2.h" />
+    <ClInclude Include="period_search\OpenClWorker.hpp" />
+    <ClInclude Include="period_search\declarations.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="period_search\ReadMe.txt" />
@@ -40,11 +45,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <None Include="period_search\dave.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\sig2iwght.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
     <None Include="period_search\curv.cl">
       <Filter>Kernel Files</Filter>
     </None>
-    <None Include="dave.cl">
-      <Filter>Kernel Files</Filter>
-    </None>
+    <None Include="period_search\clear_files.bat" />
+    <None Include="period_search\period_search_in" />
   </ItemGroup>
 </Project>

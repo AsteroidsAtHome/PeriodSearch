@@ -1,12 +1,27 @@
+class Data {
+    double cg;
+    //double *Area;
+    //double *Darea;
+    //double *Fc;
+};
+
 //#pragma OPENCL EXTENSION cl_khr_printf : enable
-__kernel void curv(const __global float *cg, __global double *Area, const __global double *Darea, 
-    const __global double *Fc, const int maxFcX, const int maxFcY,
-    const __global double *Fs, const int maxFsX, const int maxFsY,
-    const __global double *Pleg, const int maxPlegX, const int maxPlegY, const int maxPlegZ,
-    const int Mmax, const int Lmax,
-    __global double *Dg, const int maxDgX, const int maxDgY,
-    const __global double *Dsph, const int maxDsphX, const int msxDsphY)
+kernel void curv(__global Data *d)
+    //const __global float *cg, __global double *Area, const __global double *Darea, 
+    //const __global double *Fc, const __global double *Fs, const __global double *Pleg,
+    //__global double *Dg, const __global double *Dsph, 
+    //const int Mmax, const int Lmax)
 {
+    int i, l;
+    i = get_global_id(0);
+    for (l = 0; l < 10; l++) 
+    {
+        printf("%.9f\n", d->cg[l+i]);
+    }
+    /*cl_double *_cg = cg;
+    cl_double *_area = Area;
+    cl_double *_darea = Darea;
+
 
     int i, m, l, k, n = 0;
     double g = 0;
@@ -32,7 +47,7 @@ __kernel void curv(const __global float *cg, __global double *Area, const __glob
         }
     }
     g = exp(g);
-    Area[i - 1] = Darea[i - 1] * g;
+    Area[i - 1] = Darea[i - 1] * g;*/
 
     //for (k = 1; k <= n; k++)
     //{

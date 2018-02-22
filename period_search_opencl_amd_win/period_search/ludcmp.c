@@ -3,7 +3,7 @@
 #define TINY 1.0e-20;
 #include <stdio.h>
 #include <stdlib.h>
-#include "declarations.h"
+#include "declarations.hpp"
 #include <math.h>
 
 void ludcmp(double **a, int n, int indx[], double d[])

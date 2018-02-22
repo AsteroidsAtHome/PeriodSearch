@@ -6,7 +6,7 @@
 
 #include <math.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 
 void sphfunc(int ndir, double at[], double af[])
 {

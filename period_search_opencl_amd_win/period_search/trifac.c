@@ -5,7 +5,7 @@
 */
 
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 
 void trifac(int nrows, int **ifp)
 {

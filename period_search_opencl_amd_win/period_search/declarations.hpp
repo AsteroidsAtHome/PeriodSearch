@@ -1,3 +1,5 @@
+#pragma once
+#include <CL/cl_platform.h>
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, 
               double at[], double af[]);
@@ -12,6 +14,10 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
 double mrqcof(double **x1, double **x2, double x3[], double y[], 
               double sig[], double a[], int ia[], int ma, 
 	      double **alpha, double beta[], int mfit, int lastone, int lastma);
+//double mrqcof(double **x1, double **x2, double x3[], double y[],
+//    double sig[], double a[], int ia[], int ma,
+//    double **alpha, double beta[], int mfit, int lastone, int lastma,
+//    cl_double _Fc[], cl_double _Fs[], cl_double _Dsph[], cl_double _Dg[]);
 void curv(double cg[]);
 void blmatrix(double bet, double lam);
 double conv(int nc, double dres[], int ma);
@@ -19,8 +25,7 @@ double conv(int nc, double dres[], int ma);
 void covsrt(double **covar, int ma, int ia[], int mfit);
 void phasec(double dcdp[], double alpha, double p[]);
 void matrix(double omg, double t, double tmat[][4], double dtm[][4][4]);
-double bright(double ee[], double ee0[], double t, double cg[], 
-            double dyda[], int ncoef);
+double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
 //void shell(int n, double a[], int index[]);
 
 double *vector_double(int length);
@@ -77,3 +82,4 @@ double bright_ell_YORP(double ee[], double ee0[], double t, double cg[],
             double dyda[], int ncoef);
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
 */
+void curv1D(double cg[]);

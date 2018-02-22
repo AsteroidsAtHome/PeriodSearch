@@ -288,7 +288,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h" />
-    <ClInclude Include="period_search\declarations.h" />
+    <ClInclude Include="period_search\declarations.hpp" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\OpenClWorker.hpp" />
     <ClInclude Include="period_search\stdafx.h" />
@@ -297,11 +297,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\Array2D.cpp" />
+    <ClCompile Include="period_search\Array3D.cpp" />
     <ClCompile Include="period_search\blmatrix.c" />
-    <ClCompile Include="period_search\bright.c" />
+    <ClCompile Include="period_search\bright.cpp" />
     <ClCompile Include="period_search\conv.c" />
     <ClCompile Include="period_search\covsrt.c" />
     <ClCompile Include="period_search\curv.c" />
+    <ClCompile Include="period_search\Curv1D.cpp" />
     <ClCompile Include="period_search\host_dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
     <ClCompile Include="period_search\gauss_errc.c" />
@@ -326,8 +329,19 @@
     <ClCompile Include="period_search\trifac.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="dave.cl" />
+    <None Include="period_search\clear_files.bat">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="period_search\curv.cl">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="period_search\dave.cl">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="period_search\period_search_in">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="period_search\sig2iwght.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>

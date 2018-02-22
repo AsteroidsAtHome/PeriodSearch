@@ -8,20 +8,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 #include "constants.h"
 #include "OpenClWorker.hpp"
-
+#include <iostream>
+#include <chrono>
+#include "Array2D.cpp"
+using namespace std::chrono;
+using std::cout;
+using std::endl;
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 /* comment the following line if no YORP */
 /*#define YORP*/
+int offset = 0;
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-ytemp[POINTS_MAX + 1], dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
+//ytemp[POINTS_MAX + 1], 
+dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
 coef, ave = 0, trial_chisq, wght;                               //moved here due to 64 debugger bug in vs2010
 
 cl_double dyda[MAX_N_PAR + 1], dave[MAX_N_PAR + 1];             //is zero indexed for aligned memory access
+//double *sig2Iwght, *dY;
+
 
 double mrqcof(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
@@ -29,11 +38,11 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
 {
     int i, j, k, l, m, np, np1, np2, jp, ic;
 
-
     /* N.B. curv and blmatrix called outside bright
        because output same for all points */
-    curv(a);
-
+    //curv(a);
+    curv1D(a);
+    
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
       // #else      
@@ -77,8 +86,12 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
 
             if (Inrel[i]/* == 1*/)
             {
-                ave = ave + ymod;
-                daveCl(dave, dyda);
+                /*ave = ave + ymod;
+                auto t1 = high_resolution_clock::now();
+                daveCl(dave, dyda, ma);
+                auto t2 = high_resolution_clock::now();
+                auto duration = duration_cast<microseconds>(t2 - t1).count();
+                cout << "'daveCl()' uration: " << duration << endl;*/
 
                 for (l = 1; l <= ma; l++)   //last odd value is not problems
                 {
@@ -98,6 +111,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
 
         if (Lastcall != 1)
         {
+            //    printf("|");
             for (jp = 1; jp <= Lpoints[i]; jp++)
             {
                 np1++;
@@ -115,22 +129,29 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                     dytemp[jp][1] = 0;
                 }
             }
-
             if (ia[0]) //not relative
             {
+                //auto t1 = high_resolution_clock::now();
+                //offset = Lpoints[i - 1];
+
+                //sig2IwghtF(offset, Lpoints[i], sig, Weight, sig2Iwght, dY, y, ytemp);
+                //printf(".");
                 for (jp = 1; jp <= Lpoints[i]; jp++)
                 {
                     ymod = ytemp[jp];
                     for (l = 1; l <= ma; l++)
                         dyda[l - 1] = dytemp[jp][l];
+                    
                     np2++;
                     sig2i = 1 / (sig[np2] * sig[np2]);
                     wght = Weight[np2];
-                    dy = y[np2] - ymod;
-                    j = 0;
-                    //
                     double sig2iwght = sig2i * wght;
+                    dy = y[np2] - ymod;
+
+                    //
+                    j = 0;
                     //l=0
+                    //wt = dyda[0] * sig2Iwght[jp + offset];
                     wt = dyda[0] * sig2iwght;
                     alpha[j][0] = alpha[j][0] + wt * dyda[0];
                     beta[j] = beta[j] + dy * wt;
@@ -138,6 +159,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                     //
                     for (l = 1; l <= lastone; l++)  //line of ones
                     {
+                        //wt = dyda[l] * sig2Iwght[jp + offset];
                         wt = dyda[l] * sig2iwght;
                         k = 0;
                         alpha[j][k] = alpha[j][k] + wt * dyda[0];
@@ -154,6 +176,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                     {
                         if (ia[l])
                         {
+                            //wt = dyda[l] * sig2Iwght[jp + offset];
                             wt = dyda[l] * sig2iwght;
                             k = 0;
                             alpha[j][k] = alpha[j][k] + wt * dyda[0];
@@ -177,11 +200,16 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                             j++;
                         }
                     } /* l */
+                    //trial_chisq = trial_chisq + dy * dy * sig2Iwght[jp + offset];
                     trial_chisq = trial_chisq + dy * dy * sig2iwght;
                 } /* jp */
+                //auto t2 = high_resolution_clock::now();
+                //auto duration = duration_cast<microseconds>(t2 - t1).count();
+                //cout << "'curvCl()' Duration: " << duration << endl;
             }
             else //relative ia[0]==0
             {
+                //printf(":");
                 for (jp = 1; jp <= Lpoints[i]; jp++)
                 {
                     ymod = ytemp[jp];
@@ -249,6 +277,9 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
     for (j = 1; j < mfit; j++)
         for (k = 0; k <= j - 1; k++)
             alpha[k][j] = alpha[j][k];
+
+    //deallocate_vector(sig2Iwght);
+    //deallocate_vector(dY);
 
     return trial_chisq;
 }

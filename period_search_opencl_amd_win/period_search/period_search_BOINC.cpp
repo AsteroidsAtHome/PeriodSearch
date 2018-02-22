@@ -23,6 +23,7 @@
 */
 
 #include <CL/cl.hpp>
+//#include <CL/cl_platform.h>
 #include "OpenClWorker.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +32,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <memory.h>
+#include "Array2D.cpp"
 
-#include "declarations.h"
+#include "declarations.hpp"
 #include "constants.h"
 #include "globals.h"
 
@@ -132,12 +134,15 @@ std::vector<cl::Platform> platforms;
 cl::Context context;
 std::vector<cl::Device> devices;
 cl::Program program;
-cl::Kernel kernel;
+cl::Kernel kernel, kernelDave, kernelSig2wght;
 cl::CommandQueue queue;
 cl::Buffer bufCg, bufArea, bufDarea, bufDg, bufFc, bufFs, bufDsph, bufPleg, bufMmax, bufLmax, bufX, bufY, bufZ;
+cl::Buffer bufSig, bufSig2iwght, bufDy, bufWeight, bufYmod;
 cl::Buffer bufDave, bufDyda;
+cl::Buffer bufD;
 // kernel files
-string kernelCurv, kernelDave;
+string kernelCurv, kernelDaveFile, kernelSig2wghtFile;
+//cl_double *sig;
 
 // Globals for size of matrices
 unsigned int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
@@ -155,18 +160,29 @@ Deallocate, n_iter;
 double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 Sclnw[MAX_LC + 1],
 Yout[MAX_N_OBS + 1],
-Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1],
+//Fc[MAX_N_FAC + 1][MAX_LM + 1],
+//Fs[MAX_N_FAC + 1][MAX_LM + 1],
 Tc[MAX_N_FAC + 1][MAX_LM + 1], Ts[MAX_N_FAC + 1][MAX_LM + 1],
-Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1],
+//Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1],
 Blmat[4][4],
 Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1],
-Area[MAX_N_FAC + 1], 
+//Area[MAX_N_FAC + 1], 
 tmpArea[MAX_N_FAC + 1],
-Darea[MAX_N_FAC + 1],
+//Darea[MAX_N_FAC + 1],
 Nor[3][MAX_N_FAC + 1],
-Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
+//Dg[MAX_N_FAC + 1][MAX_N_PAR + 1],
+ytemp[POINTS_MAX + 1];
+
+__declspec(align(32)) cl_double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1];
+__declspec(align(32)) cl_double Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1];
+__declspec(align(32)) cl_double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
+//cl_double *_Fc = Fc[0];
+//cl_double *_Fs = Fs[0];
+//cl_double *_Dsph = Dsph[0];
+//cl_double *_Dg = Dg[0];
+//cl_double *p = Fc[0];
 
 //Nor[MAX_N_FAC + 1][3], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 
@@ -205,10 +221,12 @@ int main(int argc, char **argv) {
         dth, dph, rfit, escl,
         *brightness, e[4], e0[4], **ee,
         **ee0, *cg, *cg_first, **covar,
-        **aalpha, *sig, chck[4],
+        **aalpha, chck[4], *sig, 
         *tim, *al,
         beta_pole[N_POLES + 1], lambda_pole[N_POLES + 1], par[4], rchisq, *weight_lc;
-
+    
+    double *sig2Iwght, *dY;
+    
     char *str_temp;
 
     str_temp = (char *)malloc(MAX_LINE_LENGTH);
@@ -232,6 +250,11 @@ int main(int argc, char **argv) {
     af = vector_double(MAX_N_FAC);
 
     ia = vector_int(MAX_N_PAR);
+
+    // ------ OpenCL memory aligned array pointers
+
+    sig2Iwght = vector_double(MAX_N_OBS);
+    dY = vector_double(MAX_N_OBS);
 
     lambda_pole[1] = 0;    beta_pole[1] = 0;
     lambda_pole[2] = 90;   beta_pole[2] = 0;
@@ -553,7 +576,9 @@ int main(int argc, char **argv) {
         max_test_periods = n_iter;
 
     Numfac = 8 * nrows * nrows;
-    Init();
+    
+    Init(cg);
+    //sigSetBuffers(sig, Weight, sig2Iwght, dY, brightness, ytemp);
     
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
@@ -730,7 +755,7 @@ int main(int argc, char **argv) {
                 dev_old = 1e30;
                 dev_new = 0;
                 Lastcall = 0;
-
+                
                 while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
                 {
                     mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
@@ -1106,6 +1131,10 @@ int main(int argc, char **argv) {
     deallocate_vector(ia);
     deallocate_vector(al);
     deallocate_vector(weight_lc);
+
+    deallocate_vector(sig2Iwght);
+    deallocate_vector(dY);
+
     free(str_temp);
 
     boinc_fraction_done(1);

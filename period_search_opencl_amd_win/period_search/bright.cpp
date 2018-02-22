@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 #include "constants.h"
 
 double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[], int ncoef)

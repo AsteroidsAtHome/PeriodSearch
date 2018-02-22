@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "declarations.h"
+#include "declarations.hpp"
 
 
 int gauss_errc(double **a, int n, double b[])

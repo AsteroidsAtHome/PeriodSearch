@@ -5,7 +5,7 @@
 
 #include <math.h>
 #include "globals.h"
-#include "declarations.h"
+#include "declarations.hpp"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
