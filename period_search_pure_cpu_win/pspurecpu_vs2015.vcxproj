@@ -208,6 +208,10 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>10000000</StackReserveSize>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y $(ProjectDir)period_search\clear_files.bat $(SolutionDir)$(Platform)\$(Configuration)\
+xcopy /y $(ProjectDir)period_search\period_search_in $(SolutionDir)$(Platform)\$(Configuration)\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Remote Debug|x64'">
     <ClCompile>
@@ -222,7 +226,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;libboinc_staticcrt.lib;libboincapi_staticcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary></ImportLibrary>
+      <ImportLibrary>
+      </ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -322,6 +327,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="period_search\trifac.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\clear_files.bat" />
+    <None Include="period_search\period_search_in" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
