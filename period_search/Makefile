@@ -1,0 +1,68 @@
+# This should work on Linux.  Modify as needed for other platforms.
+
+BOINC_DIR = ../..
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+
+CXXFLAGS = -g \
+    -DAPP_GRAPHICS \
+    -I$(BOINC_DIR) \
+    -I$(BOINC_LIB_DIR) \
+    -I$(BOINC_API_DIR) \
+    -L /usr/X11R6/lib \
+    -L.
+
+CC=g++
+CXX=g++
+OPTFLAGS=-O3
+CFLAGS=$(OPTFLAGS) -Wall
+LDFLAGS=-lm
+MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
+        curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
+	dot_product.o gauss_errc.o
+
+# the following should be freeglut; use nm to check
+# you may have to change the paths for your system
+
+ifeq ($(wildcard /usr/local/lib/libglut.a),)
+	LIBGLUT = /usr/lib/libglut.a
+	LIBGLU = /usr/lib/libGLU.a
+	LIBJPEG = /usr/lib/libjpeg.a
+else
+	LIBGLUT = /usr/local/lib/libglut.a
+	LIBGLU = /usr/local/lib/libGLU.a
+	LIBJPEG = /usr/local/lib/libjpeg.a
+endif
+
+PROGS = period_search_BOINC 
+# uc2_graphics
+# make this optional so compile doesn't break on systems without OpenGL
+
+all: $(PROGS)
+
+libstdc++.a:
+	ln -s `g++ -print-file-name=libstdc++.a`
+
+clean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+distclean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+install: period_search_BOINC
+
+# specify library paths explicitly (rather than -l)
+# because otherwise you might get a version in /usr/lib etc.
+
+#uc2: uc2.o libstdc++.a $(BOINC_API_DIR)/libboinc_api.a #$(BOINC_LIB_DIR)/libboinc.a
+#	$(CXX) $(CXXFLAGS) -o uc2 uc2.o libstdc++.a -pthread \
+#	$(BOINC_API_DIR)/libboinc_api.a \
+#	$(BOINC_LIB_DIR)/libboinc.a
+
+period_search_BOINC: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
+	$(BOINC_API_DIR)/libboinc_api.a \
+	$(BOINC_LIB_DIR)/libboinc.a -lm 
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
