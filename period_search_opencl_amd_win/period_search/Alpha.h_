@@ -1,0 +1,12 @@
+#pragma once
+class Alpha
+{
+
+public:
+    Alpha(int rows, int columns);
+    virtual ~Alpha();
+
+private:
+    double **_alpha = nullptr;
+};
+

@@ -1,0 +1,13 @@
+#include "Alpha.h"
+#include "declarations.hpp"
+
+
+Alpha::Alpha(int rows, int columns)
+{
+    _alpha = matrix_double(rows, columns);
+}
+
+
+Alpha::~Alpha()
+{
+}
