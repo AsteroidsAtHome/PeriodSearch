@@ -764,7 +764,8 @@ int main(int argc, char **argv) {
                     if ((Niter == 1) || (Chisq < Ochisq))
                     {
                         Ochisq = Chisq;
-                        curv(cg);
+                        //curv(cg);
+                        curv1D(cg);
                         for (i = 1; i <= 3; i++)
                         {
                             chck[i] = 0;
@@ -1023,7 +1024,8 @@ int main(int argc, char **argv) {
                 if ((Niter == 1) || (Chisq < Ochisq))
                 {
                     Ochisq = Chisq;
-                    curv(cg);
+                    //curv(cg);
+                    curv1D(cg);
                     for (i = 1; i <= 3; i++)
                     {
                         chck[i] = 0;

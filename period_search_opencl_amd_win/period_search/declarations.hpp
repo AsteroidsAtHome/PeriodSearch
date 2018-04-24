@@ -10,10 +10,10 @@ void lubksb(double **a, int n, int indx[], double b[]);
 void ludcmp(double **a, int n, int indx[], double d[]);
 int mrqmin(double **x1, double **x2, double x3[], double y[], 
             double sig[], double a[], int ia[], int ma, 
-	    double **covar, double **alpha);
+        double **covar, double **alpha);
 double mrqcof(double **x1, double **x2, double x3[], double y[], 
               double sig[], double a[], int ia[], int ma, 
-	      double **alpha, double beta[], int mfit, int lastone, int lastma);
+          double **alpha, double beta[], int mfit, int lastone, int lastma);
 //double mrqcof(double **x1, double **x2, double x3[], double y[],
 //    double sig[], double a[], int ia[], int ma,
 //    double **alpha, double beta[], int mfit, int lastone, int lastma,
@@ -53,13 +53,13 @@ double gasdev(long *idum);
 
 double raytracing(double sl[], double poz[], int n_fac,
                   double **d, double **e, double **f, double **o, 
-		  double **normal, double ds[],
-	          int n_over_horiz[], int **fac_list, char *sc_law,
-		  double sc_param[]);
+          double **normal, double ds[],
+              int n_over_horiz[], int **fac_list, char *sc_law,
+          double sc_param[]);
 void precomp(int n_fac, double *x, double *y, double *z, int **fac,
              double **d, double **e, double **f, double **o, 
-	     double **normal, double *ds,
-	     int *n_over_horiz, int **fac_list);
+         double **normal, double *ds,
+         int *n_over_horiz, int **fac_list);
 
 void matrix_YORP(double omg, double yorp, double t, double tmat[][4], double dtm[][4][4]);
 double bright_YORP(double ee[], double ee0[], double t, double cg[], 
@@ -67,10 +67,10 @@ double bright_YORP(double ee[], double ee0[], double t, double cg[],
 
 int mrqmin_ell(double **x1, double **x2, double x3[], double y[], 
             double sig[], double a[], int ia[], int ma, 
-	    double **covar, double **alpha, double (*funcs)());
+        double **covar, double **alpha, double (*funcs)());
 double mrqcof_ell(double **x1, double **x2, double x3[], double y[], 
               double sig[], double a[], int ia[], int ma, 
-	      double **alpha, double beta[], double (*funcs)());
+          double **alpha, double beta[], double (*funcs)());
 */
 int gauss_errc(double **aa, int n, double b[]);
 /*

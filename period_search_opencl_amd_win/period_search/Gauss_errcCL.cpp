@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "globals.hpp"
-#include "Array2D.h"
+#include "Array2D.cpp"
 #include "declarations.hpp"
 
 
@@ -44,16 +44,16 @@ int Gauss_errcCl(Array2D<cl_double, MAX_N_PAR + 1, MAX_N_PAR + 1> _alpha2D, int 
         if (irow != icol) {
             for (l = 0; l < n; l++)
             {
-                _alpha2D.swap(irow, l, icol, l);
-                //SWAP(a[irow][l], a[icol][l])
+                //_alpha2D.swap(irow, l, icol, l);
+                SWAP(a[irow][l], a[icol][l])
             }
 
             SWAP(b[irow], b[icol])
         }
         indxr[i] = irow;
         indxc[i] = icol;
-        //if (a[icol][icol] == 0.0) {
-        if (_alpha2D(icol, icol) == 0.0)
+        if (a[icol][icol] == 0.0) {
+        //if (_alpha2D(icol, icol) == 0.0)
         {
             deallocate_vector((void *)ipiv);
             deallocate_vector((void *)indxc);

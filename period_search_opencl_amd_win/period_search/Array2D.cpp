@@ -8,6 +8,7 @@ class Array2D
     }
 
 public:
+    T *pAr = nullptr;
     Array2D(T(&p)[N][M]) //: wt(x), ht(y)
     {
         wt = N;
@@ -35,7 +36,6 @@ public:
 
 private:
     size_t wt, ht;
-    T *pAr = nullptr;
 };
 
 template <typename T, size_t N, size_t M>

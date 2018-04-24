@@ -1,4 +1,4 @@
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 __kernel void mrqcofNotRel(ulong iter, ulong ma, ulong dytempCol, ulong alphaCol,
     const __global double *ytemp,
     const __global double *dytemp,

@@ -5,15 +5,14 @@
 
 void curv1D(double cg[])
 {
-    int l;
-    cl_double *_cg = cg;
-    cl_double *_area = Area;
-    cl_double *_darea = Darea;
-    Array2D<cl_double, MAX_N_FAC + 1, MAX_LM + 1> _fc(Fc);
-    Array2D<cl_double, MAX_N_FAC + 1, MAX_LM + 1> _fs(Fs);
-    Array2D<cl_double, MAX_N_FAC + 1, MAX_N_PAR + 1> _dg(Dg);
-    Array2D<cl_double, MAX_N_FAC + 1, MAX_N_PAR + 1> _dsph(Dsph);
-    Array3D<cl_double, MAX_N_FAC + 1, MAX_LM + 1, MAX_LM + 1> _pleg(Pleg);
+    cl_double *_cg = cg;                                                    // write
+    cl_double *_area = Area;                                                // write
+    cl_double *_darea = Darea;                                              // read
+    Array2D<cl_double, MAX_N_FAC + 1, MAX_LM + 1> _fc(Fc);                  // read
+    Array2D<cl_double, MAX_N_FAC + 1, MAX_LM + 1> _fs(Fs);                  // read
+    Array2D<cl_double, MAX_N_FAC + 1, MAX_N_PAR + 1> _dg(Dg);               // write
+    Array2D<cl_double, MAX_N_FAC + 1, MAX_N_PAR + 1> _dsph(Dsph);           // read
+    Array3D<cl_double, MAX_N_FAC + 1, MAX_LM + 1, MAX_LM + 1> _pleg(Pleg);  // read
 
     //curvCl();
 
@@ -22,10 +21,10 @@ void curv1D(double cg[])
         cl_double g = 0;
         int n = 0;
         for (int m = 0; m <= Mmax; m++)
-            for (l = m; l <= Lmax; l++)
+            for (int l = m; l <= Lmax; l++)
             {
                 n++;
-                cl_double fsum = _cg[n] * _fc(i, m);
+                cl_double fsum = cg[n] * _fc(i, m);
                 if (m > 0) {
                     n++;
                     fsum = fsum + _cg[n] * _fs(i, m);

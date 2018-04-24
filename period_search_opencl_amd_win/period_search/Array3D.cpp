@@ -8,6 +8,7 @@ class Array3D
     }
 
 public:
+    T *pAr = nullptr;
     Array3D(T(&p)[N][M][Z])
     {
         wt = N;
@@ -36,7 +37,6 @@ public:
 
 private:
     size_t wt, ht, zt;
-    T *pAr = nullptr;
 };
 
 template <typename T, size_t N, size_t M, size_t Z>

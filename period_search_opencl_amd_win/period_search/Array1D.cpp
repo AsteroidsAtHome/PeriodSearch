@@ -8,6 +8,7 @@ class Array1D
     }
 
 public:
+    T *pAr = nullptr;
     Array1D(T(&p)[N]) //: wt(x)
     {
         wt = N;
@@ -34,7 +35,6 @@ public:
 
 private:
     size_t wt;
-    T *pAr = nullptr;
 };
 
 template <typename T, size_t N>

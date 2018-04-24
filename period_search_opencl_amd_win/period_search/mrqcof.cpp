@@ -88,7 +88,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
             {
                 /*ave = ave + ymod;
                 auto t1 = high_resolution_clock::now();
-                daveCl(dave, dyda, ma);
+                //  -----------> daveCl(dave, dyda, ma);
                 auto t2 = high_resolution_clock::now();
                 auto duration = duration_cast<microseconds>(t2 - t1).count();
                 cout << "'daveCl()' uration: " << duration << endl;*/
@@ -131,62 +131,36 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
             }
             if (ia[0]) //not relative
             {
-                //auto t1 = high_resolution_clock::now();
-                //offset = Lpoints[i - 1];
-
-                //sig2IwghtF(offset, Lpoints[i], sig, Weight, sig2Iwght, dY, y, ytemp);
-                //printf(".");
-                for (jp = 1; jp <= Lpoints[i]; jp++)
+                for (jp = 1; jp <= Lpoints[i]; jp++)   // 1 to 288
                 {
                     ymod = ytemp[jp];
                     for (l = 1; l <= ma; l++)
                         dyda[l - 1] = dytemp[jp][l];
-                    
                     np2++;
                     sig2i = 1 / (sig[np2] * sig[np2]);
                     wght = Weight[np2];
                     double sig2iwght = sig2i * wght;
                     dy = y[np2] - ymod;
-
-                    //
-                    j = 0;
-                    //l=0
-                    //wt = dyda[0] * sig2Iwght[jp + offset];
-                    wt = dyda[0] * sig2iwght;
-                    alpha[j][0] = alpha[j][0] + wt * dyda[0];
-                    beta[j] = beta[j] + dy * wt;
-                    j++;
-                    //
-                    for (l = 1; l <= lastone; l++)  //line of ones
+                    for (l = 0; l <= lastone; l++)  //line of ones
                     {
-                        //wt = dyda[l] * sig2Iwght[jp + offset];
                         wt = dyda[l] * sig2iwght;
-                        k = 0;
-                        alpha[j][k] = alpha[j][k] + wt * dyda[0];
-                        k++;
-                        for (m = 1; m <= l; m++)
+                        for (m = 0; m <= l; m++)
                         {
-                            alpha[j][k] = alpha[j][k] + wt * dyda[m];
-                            k++;
-                        } /* m */
-                        beta[j] = beta[j] + dy * wt;
-                        j++;
-                    } /* l */
-                    for (; l <= lastma; l++)  //rest parameters
+                            alpha[l][m] = alpha[l][m] + wt * dyda[m];
+                        }
+                        beta[l] = beta[l] + dy * wt;
+                    }
+                    j = 0;
+                    for (; l <= lastma; l++)  //rest parameters //--------------------> ???
                     {
                         if (ia[l])
                         {
-                            //wt = dyda[l] * sig2Iwght[jp + offset];
                             wt = dyda[l] * sig2iwght;
-                            k = 0;
-                            alpha[j][k] = alpha[j][k] + wt * dyda[0];
-                            k++;
-                            int kk = k;
+                            k = 1;
                             for (m = 1; m <= lastone; m++)
                             {
-                                alpha[j][kk] = alpha[j][kk] + wt * dyda[m];
-                                kk++;
-                            } /* m */
+                                alpha[j][k] = alpha[j][k] + wt * dyda[m];
+                            } 
                             k += lastone;
                             for (m = lastone + 1; m <= l; m++)
                             {
@@ -195,17 +169,13 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                                     alpha[j][k] = alpha[j][k] + wt * dyda[m];
                                     k++;
                                 }
-                            } /* m */
+                            }
                             beta[j] = beta[j] + dy * wt;
                             j++;
                         }
-                    } /* l */
-                    //trial_chisq = trial_chisq + dy * dy * sig2Iwght[jp + offset];
+                    }
                     trial_chisq = trial_chisq + dy * dy * sig2iwght;
                 } /* jp */
-                //auto t2 = high_resolution_clock::now();
-                //auto duration = duration_cast<microseconds>(t2 - t1).count();
-                //cout << "'curvCl()' Duration: " << duration << endl;
             }
             else //relative ia[0]==0
             {

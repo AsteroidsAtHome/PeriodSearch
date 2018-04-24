@@ -1,57 +1,59 @@
-class Data {
-    double cg;
-    //double *Area;
-    //double *Darea;
-    //double *Fc;
-};
-
 //#pragma OPENCL EXTENSION cl_khr_printf : enable
-kernel void curv(__global Data *d)
-    //const __global float *cg, __global double *Area, const __global double *Darea, 
-    //const __global double *Fc, const __global double *Fs, const __global double *Pleg,
-    //__global double *Dg, const __global double *Dsph, 
-    //const int Mmax, const int Lmax)
+kernel void curv(__global const double cg[],
+                __global const double fc[],
+                __global const double fs[],
+                __global const double dsph[],
+                __global const double pleg[],
+                __global const double darea[],
+                __global double dg[],
+                __global double area[],
+    uint Lmax, uint Mmax, uint yFc, uint, yFs, uint yPleg, uint zPleg)
 {
     int i, l;
     i = get_global_id(0);
+    if (i == 0) return;
     for (l = 0; l < 10; l++) 
     {
-        printf("%.9f\n", d->cg[l+i]);
+        //
     }
-    /*cl_double *_cg = cg;
-    cl_double *_area = Area;
-    cl_double *_darea = Darea;
-
-
-    int i, m, l, k, n = 0;
-    double g = 0;
-
-    i = get_global_id(0) + 1;
-    
-
-    for (l = 0; l <= Lmax; l++)
-    {
-        double fsum;
-        n++;
-        fsum = cg[n] * Fc[i + maxFcX*0];
-        g = g + Pleg[i + maxPlegX*l + maxPlegY*0] * fsum;
-    }
-    for (m = 1; m <= Mmax; m++) {
-        for (l = m; l <= m; l++) {
-            double fsum;
+    double g = 0.0;
+    uint n = 0;
+    for(int m = 0; m <= Mmax; m++)
+        for (int l = m; l <= Lmax; l++)
+        {
             n++;
-            fsum = cg[n] * Fc[i + maxFcX*m];
-            n++;
-            fsum = fsum + cg[n] * Fs[i + maxFcX*m];
-            g = g + Pleg[i + maxPlegX*l + maxPlegY*m] * fsum;
+            double fsum = cg[n] * fc[i * yFc + m];
+            if (m > 0)
+            {
+                n++;
+                fsum = fsum + cg[n] * fs[i * yFs + m];
+            }
+            g = g + pleg[i * zPleg*yPleg + l * zPleg + m];
         }
-    }
-    g = exp(g);
-    Area[i - 1] = Darea[i - 1] * g;*/
 
-    //for (k = 1; k <= n; k++)
-    //{
-    //    Dg[i - 1 + maxDgX * (k - 1)] = g * Dsph[i + maxDsphX * k]
-    //    //Dg[i - 1][k - 1] = g * Dsph[i][k];
-    //}
+    g = exp(g);
+    area[i - 1] = darea[i - 1] * g;
+
+    /*cl_double g = 0;
+    int n = 0;
+    for (int m = 0; m <= Mmax; m++)
+        for (l = m; l <= Lmax; l++)
+        {
+            n++;
+            cl_double fsum = cg[n] * _fc(i, m);
+            if (m > 0) {
+                n++;
+                fsum = fsum + _cg[n] * _fs(i, m);
+            }
+            g = g + _pleg(i, l, m) * fsum;
+        }
+
+    g = exp(g);
+    _area[i - 1] = _darea[i - 1] * g;
+
+    for (int k = 1; k <= n; k++)
+    {
+        _dg.set(i - 1, k - 1, g * _dsph(i, k));
+    }*/
+   
 }

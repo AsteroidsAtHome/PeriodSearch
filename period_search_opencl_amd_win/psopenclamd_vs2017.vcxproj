@@ -315,7 +315,6 @@
     <ClCompile Include="period_search\covsrt.c" />
     <ClCompile Include="period_search\curv.c" />
     <ClCompile Include="period_search\Curv1D.cpp" />
-    <ClCompile Include="period_search\Gauss_errcCL.cpp" />
     <ClCompile Include="period_search\getPath.cpp" />
     <ClCompile Include="period_search\host_dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
