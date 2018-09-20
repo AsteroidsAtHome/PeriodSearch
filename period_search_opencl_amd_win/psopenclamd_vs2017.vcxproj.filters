@@ -61,6 +61,12 @@
     <ClInclude Include="period_search\globals.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="period_search\DotProductT.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\VectorT.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\clear_files.bat">

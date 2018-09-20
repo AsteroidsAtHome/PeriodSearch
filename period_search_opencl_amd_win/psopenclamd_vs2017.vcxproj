@@ -296,12 +296,14 @@
     <ClInclude Include="period_search\Beta.h" />
     <ClInclude Include="period_search\constants.h" />
     <ClInclude Include="period_search\declarations.hpp" />
+    <ClInclude Include="period_search\DotProductT.hpp" />
     <ClInclude Include="period_search\getPath.h" />
     <ClInclude Include="period_search\globals.hpp" />
     <ClInclude Include="period_search\OpenClWorker.hpp" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
     <ClInclude Include="period_search\uc2.h" />
+    <ClInclude Include="period_search\VectorT.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.c" />
