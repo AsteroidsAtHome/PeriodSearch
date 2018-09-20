@@ -8,17 +8,15 @@
 #include "declarations.hpp"
 #include "VectorT.hpp"
 
+using namespace std;
+
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
     int i, j;
-
     double  st, clen2, clen, clen_t;
-    double vx[4], vy[4], vz[4], *x, *y, *z;
+    double vx[4], vy[4], vz[4];
     math::VectorT<double> vector_c(3);
-
-    x = vector_double(ndir);
-    y = vector_double(ndir);
-    z = vector_double(ndir);
+    vector<double> x(ndir + 1), y(ndir + 1), z(ndir + 1);
 
     for (i = 1; i <= ndir; i++)
     {
@@ -27,6 +25,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         y[i] = st * sin(f[i]);
         z[i] = cos(t[i]);
     }
+
     for (i = 1; i <= nfac; i++)
     {
         /* vectors of triangle edges */
@@ -57,9 +56,5 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         /* triangle area */
         Darea[i - 1] = 0.5 * clen;
     }
-
-    deallocate_vector((void *)x);
-    deallocate_vector((void *)y);
-    deallocate_vector((void *)z);
 }
 
