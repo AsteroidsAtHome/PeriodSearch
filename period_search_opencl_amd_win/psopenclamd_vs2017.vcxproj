@@ -306,7 +306,7 @@
     <ClInclude Include="period_search\VectorT.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\areanorm.cpp" />
     <ClCompile Include="period_search\Array1D.cpp" />
     <ClCompile Include="period_search\Array2D.cpp" />
     <ClCompile Include="period_search\Array3D.cpp" />

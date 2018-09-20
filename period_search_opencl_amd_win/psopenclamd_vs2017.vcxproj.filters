@@ -19,7 +19,6 @@
     <ClCompile Include="period_search\sphfunc.c" />
     <ClCompile Include="period_search\stdafx.cpp" />
     <ClCompile Include="period_search\trifac.c" />
-    <ClCompile Include="period_search\areanorm.c" />
     <ClCompile Include="period_search\conv.c" />
     <ClCompile Include="period_search\curv.c" />
     <ClCompile Include="period_search\host_dot_product.c" />
@@ -28,6 +27,7 @@
     <ClCompile Include="period_search\matrix.c" />
     <ClCompile Include="period_search\mrqmin.c" />
     <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\areanorm.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\OpenClWorker.hpp" />

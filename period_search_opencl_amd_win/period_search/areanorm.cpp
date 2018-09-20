@@ -13,7 +13,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
     int i, j;
 
     double  st, clen2, clen, clen_t;
-    double c[4], vx[4], vy[4], vz[4], *x, *y, *z;
+    double vx[4], vy[4], vz[4], *x, *y, *z;
     math::VectorT<double> vector_c(3);
 
     x = vector_double(ndir);
@@ -42,19 +42,13 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         vector_c[1] = vz[2] * vx[3] - vz[3] * vx[2];
         vector_c[2] = vx[2] * vy[3] - vx[3] * vy[2];
 
-        c[1] = vy[2] * vz[3] - vy[3] * vz[2];
-        c[2] = vz[2] * vx[3] - vz[3] * vx[2];
-        c[3] = vx[2] * vy[3] - vx[3] * vy[2];
-
         /* Areas (on the unit sphere) and normals */
         clen = vector_c.magnitude();
-        //clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
-        //clen = sqrt(clen2);
 
         /* normal */
-        Nor[0][i - 1] = c[1] / clen;
-        Nor[1][i - 1] = c[2] / clen;
-        Nor[2][i - 1] = c[3] / clen;
+        Nor[0][i - 1] = vector_c[0] / clen;
+        Nor[1][i - 1] = vector_c[1] / clen;
+        Nor[2][i - 1] = vector_c[2] / clen;
 
         /* direction angles of normal */
         at[i] = acos(Nor[2][i - 1]);
