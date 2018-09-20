@@ -1,18 +1,19 @@
 #pragma once
 #include <CL/cl_platform.h>
+#include "AnglesOfNormals.hpp"
+
 void trifac(int nrows, int **ifp);
-void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, 
-              double at[], double af[]);
-void sphfunc(int ndir, double at[], double af[]);
-void ellfit(double r[], double a, double b, double c, 
-            int ndir, int ncoef, double at[], double af[]);
+void areanorm(double t[], double f[], int ndir, int **ifp, struct AnglesOfNormals &angles_n);
+void sphfunc(struct AnglesOfNormals angles_n);
+void ellfit(double r[], double a, double b, double c, int ncoef, struct AnglesOfNormals angles_n);
+
 void lubksb(double **a, int n, int indx[], double b[]);
 void ludcmp(double **a, int n, int indx[], double d[]);
-int mrqmin(double **x1, double **x2, double x3[], double y[], 
-            double sig[], double a[], int ia[], int ma, 
+int mrqmin(double **x1, double **x2, double x3[], double y[],
+            double sig[], double a[], int ia[], int ma,
         double **covar, double **alpha);
-double mrqcof(double **x1, double **x2, double x3[], double y[], 
-              double sig[], double a[], int ia[], int ma, 
+double mrqcof(double **x1, double **x2, double x3[], double y[],
+              double sig[], double a[], int ia[], int ma,
           double **alpha, double beta[], int mfit, int lastone, int lastma);
 //double mrqcof(double **x1, double **x2, double x3[], double y[],
 //    double sig[], double a[], int ia[], int ma,
@@ -52,33 +53,33 @@ double ran1(long *idum);
 double gasdev(long *idum);
 
 double raytracing(double sl[], double poz[], int n_fac,
-                  double **d, double **e, double **f, double **o, 
+                  double **d, double **e, double **f, double **o,
           double **normal, double ds[],
               int n_over_horiz[], int **fac_list, char *sc_law,
           double sc_param[]);
 void precomp(int n_fac, double *x, double *y, double *z, int **fac,
-             double **d, double **e, double **f, double **o, 
+             double **d, double **e, double **f, double **o,
          double **normal, double *ds,
          int *n_over_horiz, int **fac_list);
 
 void matrix_YORP(double omg, double yorp, double t, double tmat[][4], double dtm[][4][4]);
-double bright_YORP(double ee[], double ee0[], double t, double cg[], 
+double bright_YORP(double ee[], double ee0[], double t, double cg[],
             double dyda[], int ncoef);
 
-int mrqmin_ell(double **x1, double **x2, double x3[], double y[], 
-            double sig[], double a[], int ia[], int ma, 
+int mrqmin_ell(double **x1, double **x2, double x3[], double y[],
+            double sig[], double a[], int ia[], int ma,
         double **covar, double **alpha, double (*funcs)());
-double mrqcof_ell(double **x1, double **x2, double x3[], double y[], 
-              double sig[], double a[], int ia[], int ma, 
+double mrqcof_ell(double **x1, double **x2, double x3[], double y[],
+              double sig[], double a[], int ia[], int ma,
           double **alpha, double beta[], double (*funcs)());
 */
 int gauss_errc(double **aa, int n, double b[]);
 /*
 void matrix_ell(double omg, double fi0, double t, double tmat[][4], double dtm[][4][4]);
-double bright_ell(double ee[], double ee0[], double t, double cg[], 
+double bright_ell(double ee[], double ee0[], double t, double cg[],
             double dyda[], int ncoef);
 
-double bright_ell_YORP(double ee[], double ee0[], double t, double cg[], 
+double bright_ell_YORP(double ee[], double ee0[], double t, double cg[],
             double dyda[], int ncoef);
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
 */

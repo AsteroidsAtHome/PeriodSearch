@@ -7,10 +7,11 @@
 #include "globals.h"
 #include "declarations.hpp"
 #include "VectorT.hpp"
+#include "AnglesOfNormals.hpp"
 
 using namespace std;
 
-void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
+void areanorm(double t[], double f[], int ndir, int **ifp, struct AnglesOfNormals &angles_n)
 {
     int i, j;
     double  sin_t, clen;
@@ -26,7 +27,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         z.at(i) = cos(t[i]);
     }
 
-    for (i = 1; i <= nfac; i++)
+    for (i = 1; i <= angles_n.number_facets; i++)
     {
         /* vectors of triangle edges */
         for (j = 2; j <= 3; j++)
@@ -50,8 +51,10 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         Nor[2][i - 1] = vector_c.at(2) / clen;
 
         /* direction angles of normal */
-        at[i] = acos(Nor[2][i - 1]);
-        af[i] = atan2(Nor[1][i - 1], Nor[0][i - 1]);
+        angles_n.theta_angle.at(i) = acos(Nor[2][i - 1]);
+        angles_n.phi_angle.at(i) = atan2(Nor[1][i - 1], Nor[0][i - 1]);
+        /*at[i] = acos(Nor[2][i - 1]);
+        af[i] = atan2(Nor[1][i - 1], Nor[0][i - 1]);*/
 
         /* triangle area */
         Darea[i - 1] = 0.5 * clen;

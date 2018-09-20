@@ -67,6 +67,9 @@
     <ClInclude Include="period_search\VectorT.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="period_search\AnglesOfNormals.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\clear_files.bat">

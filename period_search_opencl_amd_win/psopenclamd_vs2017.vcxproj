@@ -293,6 +293,7 @@
   <ItemGroup>
     <ClInclude Include="period_search\Alpha.h" />
     <ClInclude Include="period_search\Alpha2D.h" />
+    <ClInclude Include="period_search\AnglesOfNormals.hpp" />
     <ClInclude Include="period_search\Beta.h" />
     <ClInclude Include="period_search\constants.h" />
     <ClInclude Include="period_search\declarations.hpp" />

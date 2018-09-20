@@ -39,6 +39,7 @@
 #include "declarations.hpp"
 #include "constants.h"
 #include "globals.h"
+#include "AnglesOfNormals.hpp"
 
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
@@ -184,6 +185,8 @@ ytemp[POINTS_MAX + 1];
 __declspec(align(32)) cl_double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1];
 __declspec(align(32)) cl_double Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1];
 __declspec(align(32)) cl_double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
+
+struct AnglesOfNormals angles_n;
 //cl_double *_Fc = Fc[0];
 //cl_double *_Fs = Fs[0];
 //cl_double *_Dsph = Dsph[0];
@@ -220,7 +223,7 @@ int main(int argc, char **argv) {
         freq, jd_min, jd_max,
         dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
         totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-        *t, *f, *at, *af, sum_dark_facet;
+        *t, *f, sum_dark_facet; // *at, *af,
 
     double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
         prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
@@ -252,8 +255,12 @@ int main(int argc, char **argv) {
     cg_first = vector_double(MAX_N_PAR);
     t = vector_double(MAX_N_FAC);
     f = vector_double(MAX_N_FAC);
-    at = vector_double(MAX_N_FAC);
-    af = vector_double(MAX_N_FAC);
+
+    angles_n.theta_angle.resize(MAX_N_FAC + 1);
+    angles_n.phi_angle.resize(MAX_N_FAC + 1);
+
+    /*at = vector_double(MAX_N_FAC);
+    af = vector_double(MAX_N_FAC);*/
 
     ia = vector_int(MAX_N_PAR);
 
@@ -588,6 +595,7 @@ int main(int argc, char **argv) {
 
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
+        printf(">");
         for (j = 1; j <= 3; j++)
         {
             ndata++;
@@ -648,16 +656,18 @@ int main(int argc, char **argv) {
         trifac(nrows, ifp);
 
         /* areas and normals of the triangulated Gaussian image sphere */
+        angles_n.number_facets = Numfac;
+
         auto t1 = high_resolution_clock::now();
-        areanorm(t, f, ndir, Numfac, ifp, at, af);
+        areanorm(t, f, ndir, ifp, angles_n);
         auto t2 = high_resolution_clock::now();
         auto duration = duration_cast<microseconds>(t2 - t1).count();
         cerr << "Duration: " << duration << " microseconds." << endl;
 
         /* Precompute some function values at each normal direction*/
-        sphfunc(Numfac, at, af);
+        sphfunc(angles_n);
 
-        ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
+        ellfit(cg_first, a, b, c_axis, Ncoef, angles_n);
 
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
@@ -935,12 +945,15 @@ int main(int argc, char **argv) {
 
     /* makes indices to triangle vertices */
     trifac(nrows, ifp);
-    /* areas and normals of the triangulated Gaussian image sphere */
-    areanorm(t, f, ndir, Numfac, ifp, at, af);
-    /* Precompute some function values at each normal direction*/
-    sphfunc(Numfac, at, af);
 
-    ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
+    /* areas and normals of the triangulated Gaussian image sphere */
+    angles_n.number_facets = Numfac;
+    areanorm(t, f, ndir, ifp, angles_n);
+
+    /* Precompute some function values at each normal direction*/
+    sphfunc(angles_n);
+
+    ellfit(cg_first, a, b, c_axis, Ncoef, angles_n);
 
     freq_start = 1 / per_start;
     freq_end = 1 / per_end;
@@ -967,8 +980,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
     }
 
+    printf("\nStarting calculations...\n");
     for (n = n_start_from; n <= (int)((freq_start - freq_end) / freq_step) + 1; n++)
     {
+        auto t_calc_start = high_resolution_clock::now();
+
         fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
         boinc_fraction_done(fraction_done);
 
@@ -1027,6 +1043,8 @@ int main(int argc, char **argv) {
             dev_old = 1e30;
             dev_new = 0;
             Lastcall = 0;
+
+            printf(".");
 
             while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
             {
@@ -1094,12 +1112,14 @@ int main(int argc, char **argv) {
         if (_isnan(dark_best) == 1)
             dark_best = 1.0;
 #endif
-
+        printf("\t");
+        auto t_calc_end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(t_calc_end - t_calc_start).count();
         /* output file */
         if (n == 1)
             out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best);
         else
-            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best);
+            out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\t\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best);
 
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone())
@@ -1112,9 +1132,9 @@ int main(int argc, char **argv) {
         if (boinc_is_standalone())
         {
             if (n == 1)
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%d milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done, duration);
             else
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%d milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done, duration);
         }
 
 #ifdef _DEBUG
@@ -1140,8 +1160,8 @@ int main(int argc, char **argv) {
     deallocate_vector(cg_first);
     deallocate_vector(t);
     deallocate_vector(f);
-    deallocate_vector(at);
-    deallocate_vector(af);
+    /*deallocate_vector(at);
+    deallocate_vector(af);*/
     deallocate_vector(ia);
     deallocate_vector(al);
     deallocate_vector(weight_lc);
