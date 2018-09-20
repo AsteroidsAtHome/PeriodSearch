@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="period_search\Array1D.cpp" />
+    <ClCompile Include="period_search\Array2D.cpp" />
+    <ClCompile Include="period_search\Array3D.cpp" />
+    <ClCompile Include="period_search\Beta.cpp" />
+    <ClCompile Include="period_search\blmatrix.c" />
+    <ClCompile Include="period_search\bright.cpp" />
+    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\Curv1D.cpp" />
+    <ClCompile Include="period_search\getPath.cpp" />
+    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\lubksb.c" />
+    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\mrqcof.cpp" />
+    <ClCompile Include="period_search\OpenClWorker.cpp" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\stdafx.cpp" />
+    <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\conv.c" />
+    <ClCompile Include="period_search\curv.c" />
+    <ClCompile Include="period_search\host_dot_product.c" />
+    <ClCompile Include="period_search\ellfit.c" />
+    <ClCompile Include="period_search\ludcmp.c" />
+    <ClCompile Include="period_search\matrix.c" />
+    <ClCompile Include="period_search\mrqmin.c" />
+    <ClCompile Include="period_search\phasec.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\OpenClWorker.hpp" />
+    <ClInclude Include="period_search\Alpha.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Alpha2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Beta.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\getPath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\uc2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\globals.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\clear_files.bat">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="period_search\period_search_in">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="period_search\sig2iwght.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\mrqcofNotRel.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\mrqcofMid.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\mrqcof.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\dave.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+    <None Include="period_search\curv.cl">
+      <Filter>Kernel Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="period_search\ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{467011b4-bbec-4292-a412-2b4a899cb3d8}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{e3e5fc3c-5cd3-4c9a-8909-7eef22b652db}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Kernel Files">
+      <UniqueIdentifier>{14a1d8b9-b481-4998-af54-6e9faba84e18}</UniqueIdentifier>
+      <Extensions>cl</Extensions>
+    </Filter>
+  </ItemGroup>
+</Project>
