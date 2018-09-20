@@ -6,15 +6,15 @@
 #include <math.h>
 #include "globals.h"
 #include "declarations.hpp"
+#include "VectorT.hpp"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
     int i, j;
 
-    double  st, clen2, clen;
-
-    double c[4], vx[4], vy[4], vz[4],
-        *x, *y, *z;
+    double  st, clen2, clen, clen_t;
+    double c[4], vx[4], vy[4], vz[4], *x, *y, *z;
+    math::VectorT<double> vector_c(3);
 
     x = vector_double(ndir);
     y = vector_double(ndir);
@@ -36,20 +36,30 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
             vy[j] = y[ifp[i][j]] - y[ifp[i][1]];
             vz[j] = z[ifp[i][j]] - z[ifp[i][1]];
         }
+
         /* The cross product for each triangle */
+        vector_c[0] = vy[2] * vz[3] - vy[3] * vz[2];
+        vector_c[1] = vz[2] * vx[3] - vz[3] * vx[2];
+        vector_c[2] = vx[2] * vy[3] - vx[3] * vy[2];
+
         c[1] = vy[2] * vz[3] - vy[3] * vz[2];
         c[2] = vz[2] * vx[3] - vz[3] * vx[2];
         c[3] = vx[2] * vy[3] - vx[3] * vy[2];
+
         /* Areas (on the unit sphere) and normals */
-        clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
-        clen = sqrt(clen2);
+        clen = vector_c.magnitude();
+        //clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
+        //clen = sqrt(clen2);
+
         /* normal */
         Nor[0][i - 1] = c[1] / clen;
         Nor[1][i - 1] = c[2] / clen;
         Nor[2][i - 1] = c[3] / clen;
+
         /* direction angles of normal */
         at[i] = acos(Nor[2][i - 1]);
         af[i] = atan2(Nor[1][i - 1], Nor[0][i - 1]);
+
         /* triangle area */
         Darea[i - 1] = 0.5 * clen;
     }

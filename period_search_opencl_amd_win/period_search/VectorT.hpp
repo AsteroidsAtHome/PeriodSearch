@@ -1,7 +1,7 @@
 #pragma once
 #include <cmath>
 #include "DotProductT.hpp"
-#include "declarations.h"
+#include "declarations.hpp"
 #include <type_traits>
 
 using namespace std;

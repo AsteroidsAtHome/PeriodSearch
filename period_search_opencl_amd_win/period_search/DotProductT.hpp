@@ -8,20 +8,18 @@ namespace math {
 
     template <typename T, typename A, typename B>
     T DotProduct(vector<T, A> const &a, vector<T, B> const &b) {
+        T result;
         size_t size_a = a.size();
         size_t size_b = b.size();
-        T result;
-
-        for (size_t i = 0; i != a.size(); ++i)
-        {
-            try {
-                result += a[i] * b[i];
-            }
-            catch (exception const& ex) {
-                std::cerr << "Exception: " << ex.what() << endl;
-            }
+        if (size_a != size_b) {
+            throw std::invalid_argument("Number of rows of vector 'a' are not equal to the number of columns of vector 'b'!");
         }
-        //T const result = a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+
+        for (size_t i = 0; i < size_a; ++i)
+        {
+            T mid = a[i] * b[i];
+            result = result + mid;
+        }
 
         return result;
     }
