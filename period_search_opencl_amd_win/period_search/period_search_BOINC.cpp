@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include "Array2D.cpp"
+#include <iostream>
+#include <chrono>
 
 #include "declarations.hpp"
 #include "constants.h"
@@ -81,6 +83,10 @@ UC_SHMEM* shmem;
 #endif
 
 using std::string;
+using namespace std::chrono;
+using std::cout;
+using std::endl;
+using std::cerr;
 
 #define CHECKPOINT_FILE "period_search_state"
 #define INPUT_FILENAME "period_search_in"
@@ -168,7 +174,7 @@ Blmat[4][4],
 Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1],
-//Area[MAX_N_FAC + 1], 
+//Area[MAX_N_FAC + 1],
 tmpArea[MAX_N_FAC + 1],
 //Darea[MAX_N_FAC + 1],
 Nor[3][MAX_N_FAC + 1],
@@ -221,12 +227,12 @@ int main(int argc, char **argv) {
         dth, dph, rfit, escl,
         *brightness, e[4], e0[4], **ee,
         **ee0, *cg, *cg_first, **covar,
-        **aalpha, chck[4], *sig, 
+        **aalpha, chck[4], *sig,
         *tim, *al,
         beta_pole[N_POLES + 1], lambda_pole[N_POLES + 1], par[4], rchisq, *weight_lc;
-    
+
     double *sig2Iwght, *dY;
-    
+
     char *str_temp;
 
     str_temp = (char *)malloc(MAX_LINE_LENGTH);
@@ -576,10 +582,10 @@ int main(int argc, char **argv) {
         max_test_periods = n_iter;
 
     Numfac = 8 * nrows * nrows;
-    
-    Init(cg);
+
+    //Init(cg);
     //sigSetBuffers(sig, Weight, sig2Iwght, dY, brightness, ytemp);
-    
+
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
         for (j = 1; j <= 3; j++)
@@ -631,7 +637,7 @@ int main(int argc, char **argv) {
 
         t[ndir] = PI;
         f[ndir] = 0;
-        
+
 
         if (Numfac > MAX_N_FAC)
         {
@@ -640,13 +646,19 @@ int main(int argc, char **argv) {
 
         /* makes indices to triangle vertices */
         trifac(nrows, ifp);
+
         /* areas and normals of the triangulated Gaussian image sphere */
+        auto t1 = high_resolution_clock::now();
         areanorm(t, f, ndir, Numfac, ifp, at, af);
+        auto t2 = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(t2 - t1).count();
+        cerr << "Duration: " << duration << " microseconds." << endl;
+
         /* Precompute some function values at each normal direction*/
         sphfunc(Numfac, at, af);
 
         ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
-        
+
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
         ia[Ncoef + 2 - 1] = ia_lambda_pole;
@@ -669,7 +681,7 @@ int main(int argc, char **argv) {
         }
 
         // TODO: Parelelize this >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        
+
 
         if (checkpoint_exists)
         {
@@ -687,7 +699,7 @@ int main(int argc, char **argv) {
         //    printf("\nconw_r: %.8f\t", conw_r);
         //    printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
         //}
-        
+
         for (; n <= max_test_periods; n++)
         {
             boinc_fraction_done(n / 10000.0 / max_test_periods);
@@ -755,7 +767,7 @@ int main(int argc, char **argv) {
                 dev_old = 1e30;
                 dev_new = 0;
                 Lastcall = 0;
-                
+
                 while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
                 {
                     mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
@@ -834,7 +846,7 @@ int main(int argc, char **argv) {
             }
 
             if (boinc_is_standalone())
-                printf("\t"); 
+                printf("\t");
 
         } /* period loop */
 

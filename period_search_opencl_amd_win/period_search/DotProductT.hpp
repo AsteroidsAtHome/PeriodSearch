@@ -17,8 +17,15 @@ namespace math {
 
         for (size_t i = 0; i < size_a; ++i)
         {
-            T mid = a[i] * b[i];
-            result = result + mid;
+            T mid = a.at(i) * b.at(i);
+
+            if (i == 0) {
+                result = mid;
+            }
+            else
+            {
+                result = result + mid;
+            }
         }
 
         return result;

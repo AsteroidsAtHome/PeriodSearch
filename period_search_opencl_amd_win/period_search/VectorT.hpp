@@ -18,23 +18,23 @@ namespace math {
         vector<T> v;
 
     public:
-        T &operator[](size_t index);
-        T operator[](size_t index) const;
+        T &at(size_t index);
+        T at(size_t index) const;
         T magnitude() const;
         VectorT(size_t size);
         virtual ~VectorT();
     };
 
     template <class T>
-    T &VectorT<T>::operator[](size_t index)
+    T &VectorT<T>::at(size_t index)
     {
-        return v[index];
+        return v.at(index);
     }
 
     template <class T>
-    T VectorT<T>::operator[](size_t index) const
+    T VectorT<T>::at(size_t index) const
     {
-        return v[index];
+        return v.at(index);
     }
 
     template <class T>
