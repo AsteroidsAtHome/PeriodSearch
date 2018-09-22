@@ -58,7 +58,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Remote Debug|x64'" Label="Configuration">
@@ -296,6 +296,7 @@
     <ClInclude Include="period_search\AnglesOfNormals.hpp" />
     <ClInclude Include="period_search\Beta.h" />
     <ClInclude Include="period_search\constants.h" />
+    <ClInclude Include="period_search\Coordinates.hpp" />
     <ClInclude Include="period_search\declarations.hpp" />
     <ClInclude Include="period_search\DotProductT.hpp" />
     <ClInclude Include="period_search\getPath.h" />
@@ -304,7 +305,6 @@
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
     <ClInclude Include="period_search\uc2.h" />
-    <ClInclude Include="period_search\VectorT.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.cpp" />

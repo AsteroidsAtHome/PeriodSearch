@@ -64,10 +64,10 @@
     <ClInclude Include="period_search\DotProductT.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\VectorT.hpp">
+    <ClInclude Include="period_search\AnglesOfNormals.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\AnglesOfNormals.hpp">
+    <ClInclude Include="period_search\Coordinates.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

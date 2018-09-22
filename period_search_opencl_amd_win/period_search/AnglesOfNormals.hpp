@@ -6,7 +6,7 @@
 #include <vector>
 
 struct AnglesOfNormals {
-    std::vector<double> theta_angle;
-    std::vector<double> phi_angle;
-    size_t number_facets;
+    std::vector<double> theta;
+    std::vector<double> phi;
+    size_t numberFacets;
 };

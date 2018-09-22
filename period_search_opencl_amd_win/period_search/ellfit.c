@@ -21,23 +21,23 @@ void ellfit(double cg[], double a, double b, double c, int ncoef, struct AnglesO
    indx = vector_int(ncoef);
 
    fitvec = vector_double(ncoef);
-   er = vector_double(angles_n.number_facets);
+   er = vector_double(angles_n.numberFacets);
    d = vector_double(1);
 
-   fmat = matrix_double(angles_n.number_facets, ncoef);
+   fmat = matrix_double(angles_n.numberFacets, ncoef);
    fitmat = matrix_double(ncoef, ncoef);
 
    /* Compute the LOGcurv.func. of the ellipsoid */
-   for (i = 1; i <= angles_n.number_facets; i++)
+   for (i = 1; i <= angles_n.numberFacets; i++)
    {
-      st = sin(angles_n.theta_angle.at(i));
-      sum = pow(a * st * cos(angles_n.phi_angle.at(i)), 2) + pow(b * st * sin(angles_n.phi_angle.at(i)), 2) +
-            pow(c * cos(angles_n.theta_angle.at(i)), 2);
+      st = sin(angles_n.theta.at(i));
+      sum = pow(a * st * cos(angles_n.phi.at(i)), 2) + pow(b * st * sin(angles_n.phi.at(i)), 2) +
+            pow(c * cos(angles_n.theta.at(i)), 2);
       er[i] = 2 * (log(a * b * c) - log(sum));
    }
    /* Compute the sph. harm. values at each direction and
       construct the matrix fmat from them */
-   for (i = 1; i <= angles_n.number_facets; i++)
+   for (i = 1; i <= angles_n.numberFacets; i++)
    {
       n = 0;
       for (m = 0; m <= Mmax; m++)
@@ -46,9 +46,9 @@ void ellfit(double cg[], double a, double b, double c, int ncoef, struct AnglesO
             n++;
             if (m != 0)
         {
-               fmat[i][n] = Pleg[i][l][m] * cos(m * angles_n.phi_angle.at(i));
+               fmat[i][n] = Pleg[i][l][m] * cos(m * angles_n.phi.at(i));
                n++;
-               fmat[i][n] = Pleg[i][l][m] * sin(m * angles_n.phi_angle.at(i));
+               fmat[i][n] = Pleg[i][l][m] * sin(m * angles_n.phi.at(i));
             }
             else
                fmat[i][n] = Pleg[i][l][m];
@@ -62,13 +62,13 @@ void ellfit(double cg[], double a, double b, double c, int ncoef, struct AnglesO
       {
          fitmat[i][j]=0;
 
-         for (k = 1; k <= angles_n.number_facets; k++)
+         for (k = 1; k <= angles_n.numberFacets; k++)
             fitmat[i][j] = fitmat[i][j] + fmat[k][i] * fmat[k][j];
 
       }
       fitvec[i]=0;
 
-      for (j = 1; j <= angles_n.number_facets; j++)
+      for (j = 1; j <= angles_n.numberFacets; j++)
          fitvec[i] = fitvec[i] + fmat[j][i] * er[j];
    }
 
@@ -80,7 +80,7 @@ void ellfit(double cg[], double a, double b, double c, int ncoef, struct AnglesO
       cg[i] = fitvec[i];
 
    deallocate_matrix_double(fitmat, ncoef);
-   deallocate_matrix_double(fmat, angles_n.number_facets);
+   deallocate_matrix_double(fmat, angles_n.numberFacets);
    deallocate_vector((void *) fitvec);
    deallocate_vector((void *) d);
    deallocate_vector((void *) indx);

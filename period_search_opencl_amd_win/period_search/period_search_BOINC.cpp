@@ -186,7 +186,7 @@ __declspec(align(32)) cl_double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1];
 __declspec(align(32)) cl_double Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1];
 __declspec(align(32)) cl_double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 
-struct AnglesOfNormals angles_n;
+struct AnglesOfNormals normals;
 //cl_double *_Fc = Fc[0];
 //cl_double *_Fs = Fs[0];
 //cl_double *_Dsph = Dsph[0];
@@ -256,8 +256,8 @@ int main(int argc, char **argv) {
     t = vector_double(MAX_N_FAC);
     f = vector_double(MAX_N_FAC);
 
-    angles_n.theta_angle.resize(MAX_N_FAC + 1);
-    angles_n.phi_angle.resize(MAX_N_FAC + 1);
+    normals.theta.resize(MAX_N_FAC + 1);
+    normals.phi.resize(MAX_N_FAC + 1);
 
     /*at = vector_double(MAX_N_FAC);
     af = vector_double(MAX_N_FAC);*/
@@ -656,18 +656,18 @@ int main(int argc, char **argv) {
         trifac(nrows, ifp);
 
         /* areas and normals of the triangulated Gaussian image sphere */
-        angles_n.number_facets = Numfac;
+        normals.numberFacets = Numfac;
 
         auto t1 = high_resolution_clock::now();
-        areanorm(t, f, ndir, ifp, angles_n);
+        areanorm(t, f, ndir, ifp, normals);
         auto t2 = high_resolution_clock::now();
         auto duration = duration_cast<microseconds>(t2 - t1).count();
         cerr << "Duration: " << duration << " microseconds." << endl;
 
         /* Precompute some function values at each normal direction*/
-        sphfunc(angles_n);
+        sphfunc(normals);
 
-        ellfit(cg_first, a, b, c_axis, Ncoef, angles_n);
+        ellfit(cg_first, a, b, c_axis, Ncoef, normals);
 
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
@@ -947,13 +947,13 @@ int main(int argc, char **argv) {
     trifac(nrows, ifp);
 
     /* areas and normals of the triangulated Gaussian image sphere */
-    angles_n.number_facets = Numfac;
-    areanorm(t, f, ndir, ifp, angles_n);
+    normals.numberFacets = Numfac;
+    areanorm(t, f, ndir, ifp, normals);
 
     /* Precompute some function values at each normal direction*/
-    sphfunc(angles_n);
+    sphfunc(normals);
 
-    ellfit(cg_first, a, b, c_axis, Ncoef, angles_n);
+    ellfit(cg_first, a, b, c_axis, Ncoef, normals);
 
     freq_start = 1 / per_start;
     freq_end = 1 / per_end;

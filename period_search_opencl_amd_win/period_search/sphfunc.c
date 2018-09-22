@@ -4,34 +4,34 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "declarations.hpp"
 #include "AnglesOfNormals.hpp"
 
-void sphfunc(struct AnglesOfNormals angles_n)
+void sphfunc(struct AnglesOfNormals normals)
 {
-    int i, j, m, l, n, k, ibot;
+    int m, l, n, k, ibot;
 
     double aleg[MAX_LM + 1][MAX_LM + 1][MAX_LM + 1];
 
-    for (i = 1; i <= angles_n.number_facets; i++)
+    for (size_t i = 1; i <= normals.numberFacets; i++)
     {
         Ts[i][0] = 1;
         Tc[i][0] = 1;
-        Ts[i][1] = sin(angles_n.theta_angle.at(i));
-        Tc[i][1] = cos(angles_n.theta_angle.at(i));
-        for (j = 2; j <= Lmax; j++)
+        Ts[i][1] = sin(normals.theta.at(i));
+        Tc[i][1] = cos(normals.theta.at(i));
+        for (auto j = 2; j <= Lmax; j++)
         {
             Ts[i][j] = Ts[i][1] * Ts[i][j - 1];
             Tc[i][j] = Tc[i][1] * Tc[i][j - 1];
         }
         Fs[i][0] = 0;
         Fc[i][0] = 1;
-        for (j = 1; j <= Mmax; j++)
+        for (auto j = 1; j <= Mmax; j++)
         {
-            Fs[i][j] = sin(j * angles_n.phi_angle.at(i));
-            Fc[i][j] = cos(j * angles_n.phi_angle.at(i));
+            Fs[i][j] = sin(j * normals.phi.at(i));
+            Fc[i][j] = cos(j * normals.phi.at(i));
         }
     }
 
@@ -62,7 +62,7 @@ void sphfunc(struct AnglesOfNormals angles_n)
                     aleg[n][l][m] = ((2 * l - 1) * aleg[n - 1][l - 1][m] - (l + m - 1) * aleg[n][l - 2][m]) / (1 * (l - m));
         }
 
-    for (i = 1; i <= angles_n.number_facets; i++)
+    for (size_t i = 1; i <= normals.numberFacets; i++)
     {
         k = 0;
         for (m = 0; m <= Mmax; m++)
