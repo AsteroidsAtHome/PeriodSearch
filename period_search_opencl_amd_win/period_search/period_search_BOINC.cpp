@@ -39,6 +39,7 @@
 #include "declarations.hpp"
 #include "constants.h"
 #include "globals.h"
+#include "Coordinates.hpp"
 #include "AnglesOfNormals.hpp"
 
 // This file is part of BOINC.
@@ -228,8 +229,8 @@ int main(int argc, char **argv) {
     double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
         prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
         dth, dph, rfit, escl,
-        *brightness, e[4], e0[4], **ee,
-        **ee0, *cg, *cg_first, **covar,
+        *brightness, **ee, **ee0, //e[4], e0[4],
+         *cg, *cg_first, **covar,
         **aalpha, chck[4], *sig,
         *tim, *al,
         beta_pole[N_POLES + 1], lambda_pole[N_POLES + 1], par[4], rchisq, *weight_lc;
@@ -258,6 +259,7 @@ int main(int argc, char **argv) {
 
     normals.theta.resize(MAX_N_FAC + 1);
     normals.phi.resize(MAX_N_FAC + 1);
+    Coordinates<double> coords(3);
 
     /*at = vector_double(MAX_N_FAC);
     af = vector_double(MAX_N_FAC);*/
@@ -351,7 +353,7 @@ int main(int argc, char **argv) {
 
 
     /* period interval (hrs) fixed or free */
-    fscanf(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);          fgets(str_temp, MAX_LINE_LENGTH, infile);
+    fscanf(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd); fgets(str_temp, MAX_LINE_LENGTH, infile);
     /* epoch of zero time t0 */
     fscanf(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
     /* initial fixed rotation angle fi0 */
@@ -443,34 +445,33 @@ int main(int argc, char **argv) {
             }
 
             fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
-            fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
-            fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
+            fscanf(infile, "%lf %lf %lf", &coords.e0[0], &coords.e0[1], &coords.e0[2]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
+            fscanf(infile, "%lf %lf %lf", &coords.e[0], &coords.e[1], &coords.e[2]); /* ecliptic astrocentric coord. of the Earth in AU */
 
         /* selects the minimum and maximum JD */
             if (tim[ndata] < jd_min) jd_min = tim[ndata];
             if (tim[ndata] > jd_max) jd_max = tim[ndata];
 
             /* normals of distance vectors */
-            e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
-            elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
-
-            /*if (boinc_is_standalone())
-            {
-                printf("%d \t%.12f \t%.12f\n", j, e0len, elen);
-            }*/
+            e0len = sqrt(math::DotProduct(coords.e0, coords.e0));
+            elen = sqrt(math::DotProduct(coords.e, coords.e));
+            //e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
+            //elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
 
             ave += brightness[ndata];
 
             /* normalization of distance vectors */
             for (k = 1; k <= 3; k++)
             {
-                ee[ndata][k] = e[k] / elen;
-                ee0[ndata][k] = e0[k] / e0len;
+                ee[ndata][k] = coords.e[k - 1] / elen;
+                ee0[ndata][k] = coords.e0[k - 1] / e0len;
             }
 
             if (j == 1)
             {
-                cos_alpha = host_dot_product(e, e0) / (elen * e0len);
+                cos_alpha = coords.DotProduct() / (elen * e0len);
+                //cos_alpha = host_dot_product(e, e0) / (elen * e0len);
+
                 al[i] = acos(cos_alpha); /* solar phase angle */
                 /* Find the smallest solar phase al0 (not important, just for info) */
                 if (al[i] < al0)
@@ -661,7 +662,7 @@ int main(int argc, char **argv) {
         auto t1 = high_resolution_clock::now();
         areanorm(t, f, ndir, ifp, normals);
         auto t2 = high_resolution_clock::now();
-        auto duration = duration_cast<microseconds>(t2 - t1).count();
+        auto const duration = duration_cast<microseconds>(t2 - t1).count();
         cerr << "Duration: " << duration << " microseconds." << endl;
 
         /* Precompute some function values at each normal direction*/
@@ -704,12 +705,6 @@ int main(int argc, char **argv) {
             n = 1;
         }
 
-        //if (boinc_is_standalone())
-        //{
-        //    printf("\nconw_r: %.8f\t", conw_r);
-        //    printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
-        //}
-
         for (; n <= max_test_periods; n++)
         {
             boinc_fraction_done(n / 10000.0 / max_test_periods);
@@ -743,7 +738,6 @@ int main(int argc, char **argv) {
                 if (boinc_is_standalone())
                 {
                     printf(".");
-                    //printf("%d \t%.8f \t%.8f \t%.8f \t%.8f\n", n, freq, prd, cg[Ncoef + 3], dark_best);
                 }
 
                 for (i = 1; i <= Nphpar; i++)
@@ -786,14 +780,12 @@ int main(int argc, char **argv) {
                     if ((Niter == 1) || (Chisq < Ochisq))
                     {
                         Ochisq = Chisq;
-                        //curv(cg);
                         curv1D(cg);
                         for (i = 1; i <= 3; i++)
                         {
                             chck[i] = 0;
                             for (j = 1; j <= Numfac; j++) {
                                 chck[i] = chck[i] + Area[j - 1] * Nor[i - 1][j - 1];
-                                //chck[i] = chck[i] + Area[j - 1] * Nor[j - 1][i - 1];
                             }
                         }
                         rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);

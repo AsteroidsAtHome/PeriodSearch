@@ -2,6 +2,9 @@
 #include <vector>
 #include "DotProductT.hpp"
 
+/// <summary>
+/// Struct of two vectors vector<T> e0 & vector<T> e for tempocentric and astrocentric coordinates
+/// </summary>
 template <typename T>
 struct Coordinates
 {

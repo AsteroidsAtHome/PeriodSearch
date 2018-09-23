@@ -14,9 +14,9 @@
 #include <iostream>
 #include <chrono>
 #include "Array2D.cpp"
+
+using namespace std;
 using namespace std::chrono;
-using std::cout;
-using std::endl;
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
@@ -24,7 +24,7 @@ using std::endl;
 /*#define YORP*/
 int offset = 0;
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-//ytemp[POINTS_MAX + 1], 
+//ytemp[POINTS_MAX + 1],
 dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
 coef, ave = 0, trial_chisq, wght;                               //moved here due to 64 debugger bug in vs2010
 
@@ -42,12 +42,12 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
        because output same for all points */
     //curv(a);
     curv1D(a);
-    
+
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-      // #else      
+      // #else
     blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
-    //   #endif      
+    //   #endif
 
     for (j = 0; j < mfit; j++)
     {
@@ -160,7 +160,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                             for (m = 1; m <= lastone; m++)
                             {
                                 alpha[j][k] = alpha[j][k] + wt * dyda[m];
-                            } 
+                            }
                             k += lastone;
                             for (m = lastone + 1; m <= l; m++)
                             {
