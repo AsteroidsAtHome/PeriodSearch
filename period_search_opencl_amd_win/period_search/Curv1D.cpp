@@ -1,3 +1,6 @@
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define __CL_ENABLE_EXCEPTIONS
+
 #include "globals.h"
 #include "Array2D.cpp"
 #include "Array3D.cpp"
@@ -34,7 +37,7 @@ void curv1D(double cg[])
 
         g = exp(g);
         _area[i - 1] = _darea[i - 1] * g;
-        
+
         for (int k = 1; k <= n; k++)
         {
             _dg.set(i - 1, k - 1, g * _dsph(i, k));

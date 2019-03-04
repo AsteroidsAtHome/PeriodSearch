@@ -1,5 +1,5 @@
 #pragma once
-#include <CL/cl.hpp>
+#include <CL/cl.h>
 #include <memory.h>
 #include "declarations.hpp"
 

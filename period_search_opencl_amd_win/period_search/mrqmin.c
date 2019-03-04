@@ -3,126 +3,94 @@
 
    8.11.2006
 */
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define __CL_ENABLE_EXCEPTIONS
 
 #include <chrono>
+#include <vector>
 #include "globals.h"
 #include "declarations.hpp"
 #include "constants.h"
 #include <iostream>
+#include "LightPoint.h"
+#include "globals.hpp"
+#include <algorithm>
+#include "MrqminContext.h"
 
+using namespace std;
 using namespace std::chrono;
-using std::cout;
-using std::endl;
 
-int mrqmin(double **x1, double **x2, double x3[], double y[],
-    double sig[], double a[], int ia[], int ma,
-    double **covar, double **alpha)
+int mrqmin(const CoordinatesDouble3& ndv,
+    const LightPoints<double> &lightPoints,
+    double sig[],
+    std::vector<double> &a,
+    const std::vector<int> &ia,
+    const int &ma,
+    double **covar,
+    double **alpha,
+    const int &mfit,
+    struct MrqminContext &ctx)
 {
 
     int j, k, l, err_code;
-    static int mfit, lastone, lastma; /* it is set in the first call*/
+    //static int mfit, lastone, lastma; /* it is set in the first call*/
+    const auto indexA = ma - 4 - Nphpar;
+    const auto indexB = indexA + 1;
 
-    static double *atry, *beta, *da; //beta, da are zero indexed
-
-    double temp;
-
-    /* dealocates memory when usen in period_search */
-    if (Deallocate == 1)
+    if (Alamda < 0)
     {
-        deallocate_vector((void *)atry);
-        deallocate_vector((void *)beta);
-        deallocate_vector((void *)da);
-        return(0);
+        /* number of fitted parameters */
+        Alamda = Alamda_start; /* initial alambda */
+        curv(a);
+        blmatrix(a[indexA], a[indexB]);
+        Ochisq = mrqcof(ndv, lightPoints, sig, a, ia, ma, alpha, ctx.beta, mfit);
+        std::copy(a.begin(), a.end(), ctx.atry.begin());  // TODO: test this!
+        //for (j = 1; j <= ma; j++)
+        //    atry[j] = a[j];
     }
 
-    if (Lastcall != 1)
+    std::copy(ctx.beta.begin(), ctx.beta.end(), ctx.da.begin());
+    for (j = 0; j < mfit; j++)
     {
-        if (Alamda < 0)
-        {
-            atry = vector_double(ma);
-            beta = vector_double(ma);
-            da = vector_double(ma);
+        for (k = 0; k < mfit; k++)
+            covar[j][k] = alpha[j][k];
 
-            /* number of fitted parameters */
-            mfit = 0;
-            lastma = 0;
-            for (j = 0; j < ma; j++)
-            {
-                if (ia[j])
-                {
-                    mfit++;
-                    lastma = j;
-                }
-            }
-            lastone = 0;
-            for (j = 1; j <= lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
-            {
-                if (!ia[j]) break;
-                lastone = j;
-            }
-            Alamda = Alamda_start; /* initial alambda */
-
-            //auto t1 = high_resolution_clock::now();
-            temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-            //auto t2 = high_resolution_clock::now();
-            //auto duration = duration_cast<microseconds>(t2 - t1).count();
-            //cout << "'curvCl()' Duration: " << duration << endl;
-
-            Ochisq = temp;
-            for (j = 1; j <= ma; j++)
-                atry[j] = a[j];
-        }
-        for (j = 0; j < mfit; j++)
-        {
-            for (k = 0; k < mfit; k++)
-                covar[j][k] = alpha[j][k];
-            covar[j][j] = alpha[j][j] * (1 + Alamda);
-            da[j] = beta[j];
-        }
-
-        err_code = gauss_errc(covar, mfit, da);
-
-        if (err_code != 0) return(err_code);
-
-
-        j = 0;
-        for (l = 1; l <= ma; l++)
-        {
-            if (ia[l - 1])
-            {
-                atry[l] = a[l] + da[j];
-                j++;
-            }
-        }
-    } /* Lastcall != 1 */
-
-    if (Lastcall == 1)
-        for (l = 1; l <= ma; l++)
-            atry[l] = a[l];
-
-    temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-    Chisq = temp;
-
-
-    if (Lastcall == 1)
-    {
-        deallocate_vector((void *)atry);
-        deallocate_vector((void *)beta);
-        deallocate_vector((void *)da);
-        return(0);
+        covar[j][j] = alpha[j][j] * (1 + Alamda);
+        //da[j] = beta[j];
     }
 
-    if (temp < Ochisq)
+    err_code = gauss_errc(covar, mfit, ctx.da);
+
+    if (err_code != 0) return(err_code);
+
+    j = 0;
+    for (l = 1; l <= ma; l++)
+    {
+        if (ia[l - 1])
+        {
+            ctx.atry[l] = a[l] + ctx.da[j];
+            j++;
+        }
+    }
+
+    curv(ctx.atry);
+    blmatrix(ctx.atry[indexA], ctx.atry[indexB]);
+    Chisq = mrqcof(ndv, lightPoints, sig, ctx.atry, ia, ma, covar, ctx.da, mfit);
+
+    if (Chisq < Ochisq)
     {
         Alamda = Alamda / Alamda_incr;
         for (j = 0; j < mfit; j++)
         {
             for (k = 0; k < mfit; k++)
                 alpha[j][k] = covar[j][k];
-            beta[j] = da[j];
+
+            ctx.beta[j] = ctx.da[j];
         }
-        for (l = 1; l <= ma; l++)
-            a[l] = atry[l];
+
+        std::copy(ctx.atry.begin(), ctx.atry.end(), a.begin());
+        /*for (l = 1; l <= ma; l++)
+            a[l] = atry[l];*/
     }
     else
     {

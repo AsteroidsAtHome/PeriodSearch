@@ -3,13 +3,15 @@
 
    8.11.2006
 */
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define __CL_ENABLE_EXCEPTIONS
 
 #include <cmath>
 #include "globals.h"
 #include "declarations.hpp"
 #include "AnglesOfNormals.hpp"
 
-void sphfunc(struct AnglesOfNormals normals)
+void sphfunc(const struct AnglesOfNormals &normals)
 {
     int m, l, n, k, ibot;
 

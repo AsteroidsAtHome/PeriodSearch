@@ -4,6 +4,9 @@
    8.11.2006
 */
 
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define __CL_ENABLE_EXCEPTIONS
+
 #include <math.h>
 #include <stdio.h>
 #include "globals.h"

@@ -1,12 +1,11 @@
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
 #include "declarations.hpp"
+#include "Gauss.hpp"
 
 
-int gauss_errc(double **a, int n, double b[])
+int gauss_errc(double **a, int n, std::vector<double> &b)
 {
     int *indxc, *indxr, *ipiv;
     int i, icol = 0, irow = 0, j, k, l, ll;
@@ -53,7 +52,7 @@ int gauss_errc(double **a, int n, double b[])
         }
         pivinv = 1.0 / a[icol][icol];
         a[icol][icol] = 1.0;
-        for (l = 0; l < n; l++) 
+        for (l = 0; l < n; l++)
         {
             a[icol][l] *= pivinv;
         }
@@ -63,7 +62,7 @@ int gauss_errc(double **a, int n, double b[])
                 dum = a[ll][icol];
                 a[ll][icol] = 0.0;
                 //for (l = 1; l <= n; l++)
-                for (l = 0; l < n; l++) 
+                for (l = 0; l < n; l++)
                 {
                     a[ll][l] -= a[icol][l] * dum;
                 }
@@ -75,6 +74,7 @@ int gauss_errc(double **a, int n, double b[])
             for (k = 0; k < n; k++)
                 SWAP(a[k][indxr[l]], a[k][indxc[l]]);
     }
+
     deallocate_vector((void *)ipiv);
     deallocate_vector((void *)indxc);
     deallocate_vector((void *)indxr);

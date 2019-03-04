@@ -529,7 +529,7 @@ int main(int argc, char **argv) {
 
     if (n_iter < max_test_periods)
         max_test_periods = n_iter;
-    
+
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
         for (j = 1; j <= 3; j++)
@@ -596,7 +596,7 @@ int main(int argc, char **argv) {
         sphfunc(Numfac, at, af);
 
         ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
-        
+
         /* Give ia the value 0/1 if it's fixed/free */
         ia[Ncoef + 1 - 1] = ia_beta_pole;
         ia[Ncoef + 2 - 1] = ia_lambda_pole;
@@ -636,7 +636,7 @@ int main(int argc, char **argv) {
         //    printf("\nconw_r: %.8f\t", conw_r);
         //    printf("(n) \tFrequency\tPeriod\t\tcg[Ncoef + 3]\tDark_Best\n");
         //}
-        
+
         for (; n <= max_test_periods; n++)
         {
             boinc_fraction_done(n / 10000.0 / max_test_periods);
@@ -782,7 +782,7 @@ int main(int argc, char **argv) {
             }
 
             if (boinc_is_standalone())
-                printf("\t"); 
+                printf("\t");
 
         } /* period loop */
 
@@ -1053,7 +1053,7 @@ int main(int argc, char **argv) {
         }
 
 #ifdef _DEBUG
-        if(n == 10)
+        if(n == 50)
             break;
 #endif
     } /* period loop */

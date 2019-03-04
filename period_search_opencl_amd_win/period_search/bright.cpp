@@ -12,7 +12,7 @@
 #include "declarations.hpp"
 #include "constants.h"
 
-double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[], int ncoef)
+double bright(double ee[], double ee0[], double t, const std::vector<double> &cg, cl_double dyda[], int ncoef)
 {
     int ncoef0, i, j, k,
         incl[MAX_N_FAC], //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
@@ -22,8 +22,7 @@ double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[]
         e[4], e0[4],
         php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1], s,
         dbr[MAX_N_FAC], //IS ZERO INDEXED
-        de[4][4], de0[4][4], tmat[4][4],
-        dtm[4][4][4];
+        de[4][4], de0[4][4], tmat[4][4], dtm[4][4][4];
 
     double tmpdyda1 = 0, tmpdyda2 = 0, tmpdyda3 = 0;
     double tmpdyda4 = 0, tmpdyda5 = 0;
@@ -75,13 +74,13 @@ double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[]
             s = lmu * lmu0 * (cl + cls / dnom);
             //br = Area[i] * s;
             br = br + Area[i] * s;
-            // 
+            //
             incl[incl_count] = i;
             dbr[incl_count++] = Darea[i] * s;
             //
             dsmu = cls * pow(lmu0 / dnom, 2) + cl * lmu0;
             dsmu0 = cls * pow(lmu / dnom, 2) + cl * lmu;
-            
+
             // end of inner_calc_dsmu
 
             // INNER_CALC
@@ -136,7 +135,7 @@ double bright(double ee[], double ee0[], double t, double cg[], cl_double dyda[]
 
     //dyda[ncoef - 1 - 1] = Scale * tmpdyda4 * cl;
     //dyda[ncoef - 1] = Scale * tmpdyda5;
-    
+
     /* Ders. of br. w.r.t. phase function params. */
     for (i = 1; i <= Nphpar; i++)
         dyda[ncoef0 + i - 1] = br * dphp[i];

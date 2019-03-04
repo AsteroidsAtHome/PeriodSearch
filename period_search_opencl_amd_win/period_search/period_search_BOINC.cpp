@@ -22,8 +22,13 @@
 
 */
 
-#include <CL/cl.hpp>
-//#include <CL/cl_platform.h>
+//#define CL_HPP_TARGET_OPENCL_VERSION 120
+//#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+//#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define __CL_ENABLE_EXCEPTIONS
+
+#include <CL/cl.h>
 #include "OpenClWorker.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,12 +40,14 @@
 #include "Array2D.cpp"
 #include <iostream>
 #include <chrono>
+#include <numeric>
 
 #include "declarations.hpp"
 #include "constants.h"
 #include "globals.h"
 #include "Coordinates.hpp"
 #include "AnglesOfNormals.hpp"
+#include "Gauss.hpp"
 
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
@@ -78,17 +85,17 @@
 #include "boinc_api.h"
 #include "mfile.h"
 #include "graphics2.h"
+#include "LightPoint.h"
+#include "MrqminContext.h"
 
 #ifdef APP_GRAPHICS
 #include "uc2.h"
 UC_SHMEM* shmem;
 #endif
 
-using std::string;
+using namespace std;
 using namespace std::chrono;
-using std::cout;
-using std::endl;
-using std::cerr;
+
 
 #define CHECKPOINT_FILE "period_search_state"
 #define INPUT_FILENAME "period_search_in"
@@ -167,7 +174,7 @@ Deallocate, n_iter;
 
 double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 Sclnw[MAX_LC + 1],
-Yout[MAX_N_OBS + 1],
+//Yout[MAX_N_OBS + 1],
 //Fc[MAX_N_FAC + 1][MAX_LM + 1],
 //Fs[MAX_N_FAC + 1][MAX_LM + 1],
 Tc[MAX_N_FAC + 1][MAX_LM + 1], Ts[MAX_N_FAC + 1][MAX_LM + 1],
@@ -187,7 +194,9 @@ __declspec(align(32)) cl_double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1];
 __declspec(align(32)) cl_double Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1];
 __declspec(align(32)) cl_double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 
-struct AnglesOfNormals normals;
+//struct EllipsoidFunctionContext<double> ellfitContext;
+
+
 //cl_double *_Fc = Fc[0];
 //cl_double *_Fs = Fs[0];
 //cl_double *_Dsph = Dsph[0];
@@ -207,7 +216,7 @@ struct AnglesOfNormals normals;
 
 /*--------------------------------------------------------------*/
 
-int main(int argc, char **argv) {
+int period(int argc, char **argv) {
     int /*c,*/ nchars = 0, retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
     //    double fsize, fd;
     char input_path[512], output_path[512], chkpt_path[512], buf[256];
@@ -215,24 +224,24 @@ int main(int argc, char **argv) {
     FILE* state, *infile;
 
     int i, j, l, m, k, n, nrows, ndata, k2, ndir, i_temp, onlyrel,
-        n_iter_max, n_iter_min,
-        *ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, //ia is zero indexed
+        n_iter_max, n_iter_min, //*ia,
+         ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, //ia is zero indexed
         lc_number,
         **ifp, new_conw;
 
     double per_start, per_step_coef, per_end,
-        freq, jd_min, jd_max,
+        freq, //jd_min, jd_max,
         dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
         totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-        *t, *f, sum_dark_facet; // *at, *af,
+        *theta, *phi, sum_dark_facet; // *at, *af,
 
-    double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
+    double jd_0, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis, //, jd_00
         prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
         dth, dph, rfit, escl,
-        *brightness, **ee, **ee0, //e[4], e0[4],
-         *cg, *cg_first, **covar,
+        //**ee, **ee0, //*tim, *brightness, e[4], e0[4],
+        *cg_first, **covar, //*cg,
         **aalpha, chck[4], *sig,
-        *tim, *al,
+        *al,
         beta_pole[N_POLES + 1], lambda_pole[N_POLES + 1], par[4], rchisq, *weight_lc;
 
     double *sig2Iwght, *dY;
@@ -241,30 +250,44 @@ int main(int argc, char **argv) {
 
     str_temp = (char *)malloc(MAX_LINE_LENGTH);
 
-    ee = matrix_double(MAX_N_OBS, 3);
-    ee0 = matrix_double(MAX_N_OBS, 3);
+    //ee = matrix_double(MAX_N_OBS, 3);
+    //ee0 = matrix_double(MAX_N_OBS, 3);
     covar = matrix_double(MAX_N_PAR, MAX_N_PAR);
     aalpha = matrix_double(MAX_N_PAR, MAX_N_PAR);
     /*covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
     aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 4);*/
     ifp = matrix_int(MAX_N_FAC, 4);
 
-    tim = vector_double(MAX_N_OBS);
-    brightness = vector_double(MAX_N_OBS);
+    /*tim = vector_double(MAX_N_OBS);
+    brightness = vector_double(MAX_N_OBS);*/
     sig = vector_double(MAX_N_OBS);
-    cg = vector_double(MAX_N_PAR);
+    //cg = vector_double(MAX_N_PAR);
     cg_first = vector_double(MAX_N_PAR);
-    t = vector_double(MAX_N_FAC);
-    f = vector_double(MAX_N_FAC);
+    theta = vector_double(MAX_N_FAC);
+    phi = vector_double(MAX_N_FAC);
 
+    std::vector<double> cg;
+    //std::vector<double> cg(MAX_N_PAR + 1);
+    MrqminContext mrqminCtx;
+    //std::vector<double> atry, beta, da;
+    struct AnglesOfNormals normals;
     normals.theta.resize(MAX_N_FAC + 1);
     normals.phi.resize(MAX_N_FAC + 1);
-    Coordinates<double> coords(3);
+    PairCoordinates coords{};
+    LightPoints<double> lightPoints;
+    CoordinatesDouble3 ndv(MAX_N_OBS); // Normalization of distance vectors
+
+    /*std::vector<std::vector<double>> ee(4);
+    for (auto& q : ee) { q.resize(MAX_N_OBS + 1); }
+    std::vector<std::vector<double>> ee0(4);
+    for (auto& q : ee0) { q.resize(MAX_N_OBS + 1); }*/
 
     /*at = vector_double(MAX_N_FAC);
     af = vector_double(MAX_N_FAC);*/
 
-    ia = vector_int(MAX_N_PAR);
+    //ia = vector_int(MAX_N_PAR);
+    std::vector<int> ia(MAX_N_PAR);
+
 
     // ------ OpenCL memory aligned array pointers
 
@@ -355,7 +378,7 @@ int main(int argc, char **argv) {
     /* period interval (hrs) fixed or free */
     fscanf(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd); fgets(str_temp, MAX_LINE_LENGTH, infile);
     /* epoch of zero time t0 */
-    fscanf(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+    fscanf(infile, "%lf", &jd_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
     /* initial fixed rotation angle fi0 */
     fscanf(infile, "%lf", &Phi_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
     /* the weight factor for conv. reg. */
@@ -383,7 +406,7 @@ int main(int argc, char **argv) {
     if (boinc_is_standalone())
     {
         printf("\n%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end, ia_prd);
-        printf("%g epoch of zero time t0\n", jd_00);
+        printf("%g epoch of zero time t0\n", jd_0);
         printf("%g  initial fixed rotation angle fi0\n", Phi_0);
         printf("%g  the weight factor for conv. reg.\n", conw);
         printf("%d %d  degree and order of the Laplace series\n", Lmax, Mmax);
@@ -413,18 +436,26 @@ int main(int argc, char **argv) {
     k2 = 0;   /* index */
     al0 = al0_abs = PI; /* the smallest solar phase angle */
     ial0 = ial0_abs = -1; /* initialization, index of al0 */
-    jd_min = 1e20; /* initial minimum and minimum JD */
-    jd_max = -1e40;
-    onlyrel = 1;
-    jd_0 = jd_00;
-    a = a0; b = b0; c_axis = c0;
 
-    /* loop over lightcurves */
+    InitialJd<double> initialJd;
+    //jd_min = 1e20; /* initial minimum and minimum JD */
+    //jd_max = -1e40;
+    onlyrel = 1;
+    a = a0; b = b0; c_axis = c0;
+    size_t maxLightPoints = 0;
+
+    /* loop over light curves */
     for (i = 1; i <= Lcurves; i++)
     {
         ave = 0; /* average */
-        fscanf(infile, "%d %d", &Lpoints[i], &i_temp); /* points in this lightcurve */
+        fscanf(infile, "%d %d", &Lpoints[i], &i_temp); /* points in this light curve */
         fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+        maxLightPoints += Lpoints[i];
+
+        lightPoints.time.resize(maxLightPoints + 1);
+        lightPoints.brightness.resize(maxLightPoints + 1);
+
         Inrel[i] = 1 - i_temp;
         if (Inrel[i] == 0)
             onlyrel = 0;
@@ -434,7 +465,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2);
         }
 
-        /* loop over one lightcurve */
+        /* loop over one light curve */
         for (j = 1; j <= Lpoints[i]; j++)
         {
             ndata++;
@@ -444,35 +475,34 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
             }
 
-            fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
-            fscanf(infile, "%lf %lf %lf", &coords.e0[0], &coords.e0[1], &coords.e0[2]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
-            fscanf(infile, "%lf %lf %lf", &coords.e[0], &coords.e[1], &coords.e[2]); /* ecliptic astrocentric coord. of the Earth in AU */
+            fscanf(infile, "%lf %lf", &lightPoints.time[ndata], &lightPoints.brightness[ndata]); /* JD, brightness */
+            fscanf(infile, "%lf %lf %lf", &coords.e0.x, &coords.e0.y, &coords.e0.z); /* ecliptic astr_tempocentric coord. of the Sun in AU */
+            fscanf(infile, "%lf %lf %lf", &coords.e.x, &coords.e.y, &coords.e.z); /* ecliptic astrocentric coord. of the Earth in AU */
 
         /* selects the minimum and maximum JD */
-            if (tim[ndata] < jd_min) jd_min = tim[ndata];
-            if (tim[ndata] > jd_max) jd_max = tim[ndata];
+            if (lightPoints.time[ndata] < initialJd.min) initialJd.min = lightPoints.time[ndata];
+            if (lightPoints.time[ndata] > initialJd.max) initialJd.max = lightPoints.time[ndata];
 
             /* normals of distance vectors */
-            e0len = sqrt(math::DotProduct(coords.e0, coords.e0));
-            elen = sqrt(math::DotProduct(coords.e, coords.e));
-            //e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
-            //elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
+            e0len = sqrt(math::DotProduct3(coords.e0, coords.e0));
+            elen = sqrt(math::DotProduct3(coords.e, coords.e));
 
-            ave += brightness[ndata];
+            ave += lightPoints.brightness[ndata];
 
             /* normalization of distance vectors */
-            for (k = 1; k <= 3; k++)
-            {
-                ee[ndata][k] = coords.e[k - 1] / elen;
-                ee0[ndata][k] = coords.e0[k - 1] / e0len;
-            }
+            ndv.ee[ndata].x = coords.e.x / elen;
+            ndv.ee[ndata].y = coords.e.y / elen;
+            ndv.ee[ndata].z = coords.e.z / elen;
+
+            ndv.ee0[ndata].x = coords.e0.x / e0len;
+            ndv.ee0[ndata].y = coords.e0.y / e0len;
+            ndv.ee0[ndata].z = coords.e0.z / e0len;
 
             if (j == 1)
             {
                 cos_alpha = coords.DotProduct() / (elen * e0len);
-                //cos_alpha = host_dot_product(e, e0) / (elen * e0len);
-
                 al[i] = acos(cos_alpha); /* solar phase angle */
+
                 /* Find the smallest solar phase al0 (not important, just for info) */
                 if (al[i] < al0)
                 {
@@ -513,19 +543,19 @@ int main(int argc, char **argv) {
         if (boinc_is_standalone())
             printf("weights %d %g\n", lc_number, weight_lc[lc_number]);
     }
+    fclose(infile);
 
-    /* If input jd_0 <= 0 then the jd_0 is set to the day before the
-       lowest JD in the data */
+    /* If input jd_0 <= 0 then the jd_0 is set to the day before the lowest JD in the data */
     if (jd_0 <= 0)
     {
-        jd_0 = (int)jd_min;
+        jd_0 = static_cast<int>(initialJd.min);
         if (boinc_is_standalone())
             printf("\nNew epoch of zero time  %f\n", jd_0);
     }
 
     /* loop over data - subtraction of jd_0 */
     for (i = 1; i <= ndata; i++)
-        tim[i] = tim[i] - jd_0;
+        lightPoints.time[i] -= jd_0;
 
     Phi_0 = Phi_0 * DEG2RAD;
 
@@ -570,6 +600,9 @@ int main(int argc, char **argv) {
     Lcurves = Lcurves + 1;
     Lpoints[Lcurves] = 3;
     Inrel[Lcurves] = 0;
+    maxLightPoints += Lpoints[Lcurves];
+    lightPoints.time.resize(maxLightPoints + 1);
+    lightPoints.brightness.resize(maxLightPoints + 1);
 
     /* optimization of the convexity weight **************************************************************/
     if (!checkpoint_exists)
@@ -578,18 +611,17 @@ int main(int argc, char **argv) {
         new_conw = 0;
     }
 
-    double freq_start = 1 / per_start;
-    double freq_end = 1 / per_end;
-    double freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
+    auto freqStart = 1 / per_start;
+    auto freqEnd = 1 / per_end;
+    auto freqStep = 0.5 / (initialJd.max - initialJd.min) / 24 * per_step_coef;
 
-    int max_test_periods = 10;
-    double ave_dark_facet = 0.0;
-    n_iter = int((freq_start - freq_end) / freq_step) + 1;
+    auto maxTestPeriods = 10;
+    n_iter = int((freqStart - freqEnd) / freqStep) + 1;
 
-    if (n_iter < max_test_periods)
-        max_test_periods = n_iter;
+    if (n_iter < maxTestPeriods)
+        maxTestPeriods = n_iter;
 
-    Numfac = 8 * nrows * nrows;
+    Numfac = 8 * nrows * nrows; // usualy is 288
 
     //Init(cg);
     //sigSetBuffers(sig, Weight, sig2Iwght, dY, brightness, ytemp);
@@ -597,10 +629,12 @@ int main(int argc, char **argv) {
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
     {
         printf(">");
+        maxLightPoints += 3;
         for (j = 1; j <= 3; j++)
         {
             ndata++;
-            brightness[ndata] = 0;
+            lightPoints.brightness.push_back(0);
+            //lightPoints.brightness[ndata] = 0;
             sig[ndata] = 1 / conw_r;
         }
 
@@ -617,16 +651,16 @@ int main(int argc, char **argv) {
             t = theta angle, f = phi angle */
         dth = PI / (2 * nrows); /* step in theta */
         k = 1;
-        t[1] = 0;
-        f[1] = 0;
+        theta[1] = 0;
+        phi[1] = 0;
         for (i = 1; i <= nrows; i++)
         {
             dph = PI / (2 * i); /* step in phi */
             for (j = 0; j <= 4 * i - 1; j++)
             {
                 k++;
-                t[k] = i * dth;
-                f[k] = j * dph;
+                theta[k] = i * dth;
+                phi[k] = j * dph;
             }
         }
 
@@ -637,15 +671,15 @@ int main(int argc, char **argv) {
             for (j = 0; j <= 4 * i - 1; j++)
             {
                 k++;
-                t[k] = PI - i * dth;
-                f[k] = j * dph;
+                theta[k] = PI - i * dth;
+                phi[k] = j * dph;
             }
         }
 
         ndir = k + 1; /* number of vertices */
 
-        t[ndir] = PI;
-        f[ndir] = 0;
+        theta[ndir] = PI;
+        phi[ndir] = 0;
 
 
         if (Numfac > MAX_N_FAC)
@@ -660,7 +694,7 @@ int main(int argc, char **argv) {
         normals.numberFacets = Numfac;
 
         auto t1 = high_resolution_clock::now();
-        areanorm(t, f, ndir, ifp, normals);
+        areanorm(theta, phi, ndir, ifp, normals);
         auto t2 = high_resolution_clock::now();
         auto const duration = duration_cast<microseconds>(t2 - t1).count();
         cerr << "Duration: " << duration << " microseconds." << endl;
@@ -691,9 +725,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
         }
 
-        // TODO: Parelelize this >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-
         if (checkpoint_exists)
         {
             n = ntestperiods + 1;
@@ -705,11 +736,18 @@ int main(int argc, char **argv) {
             n = 1;
         }
 
-        for (; n <= max_test_periods; n++)
-        {
-            boinc_fraction_done(n / 10000.0 / max_test_periods);
+        auto ma = Ncoef + 5 + Nphpar;
+        cg.resize(ma + 1);
+        mrqminCtx.da.resize(ma + 1);
+        mrqminCtx.atry.resize(ma + 1);
+        mrqminCtx.beta.resize(ma + 1);
+        const int mfit = std::count_if(ia.begin(), ia.begin() + ma, [](int& i) { return i >= 1; });
 
-            freq = freq_start - (n - 1) * freq_step;
+        // TODO: Parelelize this >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        for (; n <= maxTestPeriods; n++)
+        {
+            boinc_fraction_done(n / 10000.0 / maxTestPeriods);
+            freq = freqStart - (n - 1) * freqStep;
 
             /* initial poles */
             per_best = dark_best = la_best = be_best = 0;
@@ -745,10 +783,12 @@ int main(int argc, char **argv) {
                     cg[Ncoef + 3 + i] = par[i];
                     ia[Ncoef + 3 + i - 1] = ia_par[i];
                 }
-                /* Lommel-Seeliger part */
-                cg[Ncoef + 3 + Nphpar + 2] = 1;
+
                 /* Use logarithmic formulation for Lambert to keep it positive */
-                cg[Ncoef + 3 + Nphpar + 1] = log(cl);
+                cg[ma - 1] = log(cl);
+
+                /* Lommel-Seeliger part */
+                cg[ma] = 1;
 
                 /* Levenberg-Marquardt loop */
                 n_iter_max = 0;
@@ -772,15 +812,17 @@ int main(int argc, char **argv) {
                 dev_new = 0;
                 Lastcall = 0;
 
+
                 while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
                 {
-                    mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
+
+                    mrqmin(ndv, lightPoints, sig, cg, ia, ma, covar, aalpha, mfit, mrqminCtx);
                     Niter++;
 
                     if ((Niter == 1) || (Chisq < Ochisq))
                     {
                         Ochisq = Chisq;
-                        curv1D(cg);
+                        curv(cg);
                         for (i = 1; i <= 3; i++)
                         {
                             chck[i] = 0;
@@ -802,7 +844,7 @@ int main(int argc, char **argv) {
 
                 /* deallocates variables used in mrqmin */
                 Deallocate = 1;
-                mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
+                //mrqmin(ndv, lightPoints, sig, cg, ia, ma, covar, aalpha);
                 Deallocate = 0;
 
                 totarea = 0;
@@ -852,15 +894,12 @@ int main(int argc, char **argv) {
 
         } /* period loop */
 
-        ave_dark_facet = sum_dark_facet / max_test_periods;
+        const auto aveDarkFacet = sum_dark_facet / maxTestPeriods;
 
-        if (ave_dark_facet < 1.0)
-            new_conw = 1; /* new correct conwexity weight */
-        if (ave_dark_facet >= 1.0)
-            conw_r = conw_r * 2; /* still not good */
-
-        //if (boinc_is_standalone() && ave_dark_facet > 1.0)
-        //  printf("\tconw_r -> %0.8f\n", conw_r);
+        if (aveDarkFacet < 1.0)
+            new_conw = 1;           /* new correct conwexity weight */
+        if (aveDarkFacet >= 1.0)
+            conw_r = conw_r * 2;    /* still not good */
 
         if (boinc_is_standalone())
             printf("\n");
@@ -878,11 +917,12 @@ int main(int argc, char **argv) {
     /*end optimizing conw *********************************************************************************/
 
 
-
+    maxLightPoints += 3;
     for (j = 1; j <= 3; j++)
     {
         ndata++;
-        brightness[ndata] = 0;
+        lightPoints.brightness.push_back(0);
+        //lightPoints.brightness[ndata] = 0;
         sig[ndata] = 1 / conw_r;
     }
 
@@ -899,16 +939,16 @@ int main(int argc, char **argv) {
         t = theta angle, f = phi angle */
     dth = PI / (2 * nrows); /* step in theta */
     k = 1;
-    t[1] = 0;
-    f[1] = 0;
+    theta[1] = 0;
+    phi[1] = 0;
     for (i = 1; i <= nrows; i++)
     {
         dph = PI / (2 * i); /* step in phi */
         for (j = 0; j <= 4 * i - 1; j++)
         {
             k++;
-            t[k] = i * dth;
-            f[k] = j * dph;
+            theta[k] = i * dth;
+            phi[k] = j * dph;
         }
     }
 
@@ -919,15 +959,15 @@ int main(int argc, char **argv) {
         for (j = 0; j <= 4 * i - 1; j++)
         {
             k++;
-            t[k] = PI - i * dth;
-            f[k] = j * dph;
+            theta[k] = PI - i * dth;
+            phi[k] = j * dph;
         }
     }
 
     ndir = k + 1; /* number of vertices */
 
-    t[ndir] = PI;
-    f[ndir] = 0;
+    theta[ndir] = PI;
+    phi[ndir] = 0;
     Numfac = 8 * nrows * nrows;
 
     if (Numfac > MAX_N_FAC)
@@ -940,16 +980,16 @@ int main(int argc, char **argv) {
 
     /* areas and normals of the triangulated Gaussian image sphere */
     normals.numberFacets = Numfac;
-    areanorm(t, f, ndir, ifp, normals);
+    areanorm(theta, phi, ndir, ifp, normals);
 
     /* Precompute some function values at each normal direction*/
     sphfunc(normals);
 
     ellfit(cg_first, a, b, c_axis, Ncoef, normals);
 
-    freq_start = 1 / per_start;
-    freq_end = 1 / per_end;
-    freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
+    freqStart = 1 / per_start;
+    freqEnd = 1 / per_end;
+    freqStep = 0.5 / (initialJd.max - initialJd.min) / 24 * per_step_coef;
 
     /* Give ia the value 0/1 if it's fixed/free */
     ia[Ncoef + 1 - 1] = ia_beta_pole;
@@ -972,15 +1012,22 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
     }
 
+    const auto ma = Ncoef + 5 + Nphpar;
+    cg.resize(ma + 1);
+    mrqminCtx.da.resize(ma + 1);
+    mrqminCtx.atry.resize(ma + 1);
+    mrqminCtx.beta.resize(ma + 1);
+    const int mfit = std::count_if(ia.begin(), ia.begin() + ma, [](int& i) { return i >= 1; });
+
     printf("\nStarting calculations...\n");
-    for (n = n_start_from; n <= (int)((freq_start - freq_end) / freq_step) + 1; n++)
+    for (n = n_start_from; n <= (int)((freqStart - freqEnd) / freqStep) + 1; n++)
     {
         auto t_calc_start = high_resolution_clock::now();
 
-        fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
+        fraction_done = n / (((freqStart - freqEnd) / freqStep) + 1);
         boinc_fraction_done(fraction_done);
 
-        freq = freq_start - (n - 1) * freq_step;
+        freq = freqStart - (n - 1) * freqStep;
 
         /* initial poles */
         per_best = dark_best = la_best = be_best = 0;
@@ -1009,10 +1056,12 @@ int main(int argc, char **argv) {
                 cg[Ncoef + 3 + i] = par[i];
                 ia[Ncoef + 3 + i - 1] = ia_par[i];
             }
-            /* Lommel-Seeliger part */
-            cg[Ncoef + 3 + Nphpar + 2] = 1;
+
             /* Use logarithmic formulation for Lambert to keep it positive */
-            cg[Ncoef + 3 + Nphpar + 1] = log(cl);
+            cg[ma - 1] = log(cl);
+
+            /* Lommel-Seeliger part */
+            cg[ma] = 1;
 
             /* Levenberg-Marquardt loop */
             n_iter_max = 0;
@@ -1037,17 +1086,19 @@ int main(int argc, char **argv) {
             Lastcall = 0;
 
             printf(".");
+            //auto mrqminTime1 = high_resolution_clock::now();
+            // Niter = 50; ~ 200ms
+
 
             while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
             {
-                mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
+                mrqmin(ndv, lightPoints, sig, cg, ia, ma, covar, aalpha, mfit, mrqminCtx);
                 Niter++;
 
                 if ((Niter == 1) || (Chisq < Ochisq))
                 {
                     Ochisq = Chisq;
-                    //curv(cg);
-                    curv1D(cg);
+                    curv(cg);
                     for (i = 1; i <= 3; i++)
                     {
                         chck[i] = 0;
@@ -1066,9 +1117,12 @@ int main(int argc, char **argv) {
                 }
             }
 
+            //auto mrqminTime2 = high_resolution_clock::now();
+            //auto duration = duration_cast<microseconds>(mrqminTime2 - mrqminTime1).count();
+
             /* deallocates variables used in mrqmin */
             Deallocate = 1;
-            mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha);
+            //mrqmin(ndv, lightPoints, sig, cg, ia, ma, covar, aalpha);
             Deallocate = 0;
 
             totarea = 0;
@@ -1124,37 +1178,37 @@ int main(int argc, char **argv) {
         if (boinc_is_standalone())
         {
             if (n == 1)
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%d milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done, duration);
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%lld milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done, duration);
             else
-                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%d milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done, duration);
+                printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\t%lld milliseconds\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done, duration);
         }
 
 #ifdef _DEBUG
-        if(n == 10)
+        if (n == 10) // TODO: Test with bigger range
             break;
 #endif
     } /* period loop */
 
     out.close();
 
-    deallocate_matrix_double(ee, MAX_N_OBS);
-    deallocate_matrix_double(ee0, MAX_N_OBS);
+    //deallocate_matrix_double(ee, MAX_N_OBS);
+    //deallocate_matrix_double(ee0, MAX_N_OBS);
     deallocate_matrix_double(covar, MAX_N_PAR);
     deallocate_matrix_double(aalpha, MAX_N_PAR);
     /*aligned_deallocate_matrix_double(covar, MAX_N_PAR);
     aligned_deallocate_matrix_double(aalpha, MAX_N_PAR);*/
     deallocate_matrix_int(ifp, MAX_N_FAC);
 
-    deallocate_vector(tim);
-    deallocate_vector(brightness);
+    /*deallocate_vector(tim);
+    deallocate_vector(brightness);*/
     deallocate_vector(sig);
-    deallocate_vector(cg);
+    //deallocate_vector(cg);
     deallocate_vector(cg_first);
-    deallocate_vector(t);
-    deallocate_vector(f);
+    deallocate_vector(theta);
+    deallocate_vector(phi);
     /*deallocate_vector(at);
     deallocate_vector(af);*/
-    deallocate_vector(ia);
+    //deallocate_vector(ia);
     deallocate_vector(al);
     deallocate_vector(weight_lc);
 
@@ -1168,8 +1222,17 @@ int main(int argc, char **argv) {
     update_shmem();
 #endif
 
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    const auto result = 0; // period(argc, argv);
+
     system("PAUSE");
     boinc_finish(0);
+
+    return result;
 }
 
 #ifdef _WIN32

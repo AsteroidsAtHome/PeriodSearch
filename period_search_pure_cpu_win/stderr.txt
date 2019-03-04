@@ -1,0 +1,10 @@
+07:40:43 (31832): Can't open init data file - running in standalone mode
+07:40:43 (31832): Couldn't find input file, resolved name period_search_in.
+07:44:50 (20952): Can't open init data file - running in standalone mode
+07:45:01 (20952): Couldn't find input file, resolved name period_search_in.
+07:48:55 (42728): Can't open init data file - running in standalone mode
+07:49:02 (42728): Couldn't find input file, resolved name period_search_in.
+07:49:20 (41904): Can't open init data file - running in standalone mode
+07:50:28 (41904): Couldn't find input file, resolved name period_search_in.
+07:53:20 (41436): Can't open init data file - running in standalone mode
+07:53:27 (41436): Couldn't find input file, resolved name period_search_in.
