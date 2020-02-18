@@ -1,4 +1,4 @@
-/* N.B. The foll. L-M routines are modified versions of Press et al. 
+/* N.B. The foll. L-M routines are modified versions of Press et al.
    converted from Mikko's fortran code
 
    8.11.2006
@@ -14,10 +14,10 @@ using namespace std::chrono;
 using std::cout;
 using std::endl;
 
-int mrqmin(double **x1, double **x2, double x3[], double y[], 
-            double sig[], double a[], int ia[], int ma, 
+int mrqmin(double **x1, double **x2, double x3[], double y[],
+            double sig[], double a[], int ia[], int ma,
             double **covar, double **alpha)
-{     
+{
 
    int j, k, l, err_code;
    static int mfit,lastone,lastma; /* it is set in the first call*/
@@ -31,10 +31,10 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
    {
       deallocate_vector((void *) atry);
       deallocate_vector((void *) beta);
-      deallocate_vector((void *) da); 
+      deallocate_vector((void *) da);
       return(0);
    }
-         
+
    if (Lastcall != 1)
    {
       if(Alamda < 0)
@@ -42,22 +42,22 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
          atry = vector_double(ma);
          beta = vector_double(ma);
          da = vector_double(ma);
-   
+
          /* number of fitted parameters */
          mfit=0;
 		 lastma=0;
 		 for (j = 0; j < ma; j++)
 		 {
-		  if (ia[j]) 
+		  if (ia[j])
 		  {
-			mfit++; 
+			mfit++;
 			lastma=j;
 		  }
 		 }
 		 lastone=0;
 		 for (j = 1; j <=lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
 		 {
-		  if (!ia[j]) break; 
+		  if (!ia[j]) break;
 		  lastone=j;
 		 }
          Alamda = Alamda_start; /* initial alambda */
@@ -84,7 +84,7 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
 
       if (err_code != 0) return(err_code);
 
-      
+
       j = 0;
       for (l = 1; l <= ma; l++)
       {
@@ -95,23 +95,23 @@ int mrqmin(double **x1, double **x2, double x3[], double y[],
           }
       }
    } /* Lastcall != 1 */
-   
+
    if (Lastcall == 1)
       for (l = 1; l <= ma; l++)
          atry[l] = a[l];
-  
+
    temp = mrqcof(x1,x2,x3,y,sig,atry,ia,ma,covar,da,mfit,lastone,lastma);
    Chisq = temp;
 
 
-   if (Lastcall == 1) 
+   if (Lastcall == 1)
    {
       deallocate_vector((void *) atry);
       deallocate_vector((void *) beta);
-      deallocate_vector((void *) da); 
+      deallocate_vector((void *) da);
       return(0);
    }
-   
+
    if (temp < Ochisq)
    {
       Alamda = Alamda / Alamda_incr;
