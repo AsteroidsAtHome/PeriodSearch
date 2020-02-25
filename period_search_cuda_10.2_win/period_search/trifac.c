@@ -1,16 +1,17 @@
-/* Form the vertex triplets of standard triangulation facets 
+/* Form the vertex triplets of standard triangulation facets
    converted from Mikko's fortran code
 
    8.11.2006
 */
 
+#include "stdafx.h"
 #include "globals.h"
 #include "declarations.h"
 
 void trifac(int nrows, int **ifp)
 {
    int nnod, i, j, j0, j1, j2, j3, ntri;
-   
+
    int **nod;
 
    nod = matrix_int(2*nrows, 4*nrows);
@@ -42,7 +43,7 @@ void trifac(int nrows, int **ifp)
          ntri++;
          ifp[ntri][1] = nod[j1-1][j0-(j3-1)];
          ifp[ntri][2] = nod[j1][j0];
-         ifp[ntri][3] = nod[j1][j0+1];                            
+         ifp[ntri][3] = nod[j1][j0+1];
          for (j2 = j0 + 1; j2 <= j0 + j1 - 1; j2++)
 	 {
             ntri++;
@@ -64,7 +65,7 @@ void trifac(int nrows, int **ifp)
          ntri++;
          ifp[ntri][1] = nod[j1][j0];
          ifp[ntri][2] = nod[j1-1][j0+1+(j3-1)];
-         ifp[ntri][3] = nod[j1-1][j0+(j3-1)];               
+         ifp[ntri][3] = nod[j1-1][j0+(j3-1)];
          for (j2 = j0 + 1; j2 <= j0 + (2 * nrows - j1); j2++)
 	 {
             ntri++;
@@ -77,6 +78,6 @@ void trifac(int nrows, int **ifp)
             ifp[ntri][3] = nod[j1-1][j2+(j3-1)];
          }
       }
-      
-   deallocate_matrix_int(nod, 2*nrows);      
+
+   deallocate_matrix_int(nod, 2*nrows);
 }

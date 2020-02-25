@@ -1,3 +1,4 @@
+#pragma once
 #include "constants.h"
 #include <vector_types.h>
 #include <cuda_texture_types.h>

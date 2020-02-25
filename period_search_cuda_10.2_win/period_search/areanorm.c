@@ -1,15 +1,16 @@
-/* Areas and normals of the triangulated Gaussian image sphere 
+/* Areas and normals of the triangulated Gaussian image sphere
 
    8.11.2006
 */
 
+#include "stdafx.h"
 #include <math.h>
 #include "globals.h"
 #include "declarations.h"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
-   int i, j;	  
+   int i, j;
 
    double  st, clen2, clen;
 
@@ -19,7 +20,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
    x = vector_double(ndir);
    y = vector_double(ndir);
    z = vector_double(ndir);
-   
+
    for (i = 1; i <= ndir; i++)
    {
       st = sin(t[i]);
@@ -44,18 +45,17 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
       clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
       clen = sqrt(clen2);
       /* normal */
-      Nor[i][0] = c[1] / clen;
-      Nor[i][1] = c[2] / clen;
-      Nor[i][2] = c[3] / clen;
+      normal[i][0] = c[1] / clen;
+      normal[i][1] = c[2] / clen;
+      normal[i][2] = c[3] / clen;
       /* direction angles of normal */
-      at[i] = acos(Nor[i][2]);
-      af[i] = atan2(Nor[i][1], Nor[i][0]);
+      at[i] = acos(normal[i][2]);
+      af[i] = atan2(normal[i][1], normal[i][0]);
       /* triangle area */
-      Darea[i]= 0.5 * clen;
+      d_area[i]= 0.5 * clen;
    }
-   
+
    deallocate_vector((void *) x);
    deallocate_vector((void *) y);
    deallocate_vector((void *) z);
 }
-

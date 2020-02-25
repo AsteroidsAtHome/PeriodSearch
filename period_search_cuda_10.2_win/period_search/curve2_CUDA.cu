@@ -3,14 +3,14 @@
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
 
-__device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],  
+__device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[], int Inrel,int Lpoints)
 {
    int l,jp,j,k,m, lnp1,lnp2,Lpoints1=Lpoints+1;
    double dy,sig2i,wt,ymod, coef1,coef,  wght,ltrial_chisq;
    int2 xx;
 
-   
+
 //precalc thread boundaries
     int tmph,tmpl;
 	tmph=Lpoints/CUDA_BLOCK_DIM;
@@ -39,7 +39,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 
 /*   if ((*CUDA_LCC).Lastcall != 1) always ==0
    {*/
-    if (Inrel /*==1*/) 
+    if (Inrel /*==1*/)
 	{
       for (jp = tmpl; jp <= tmph; jp++)
       {
@@ -62,7 +62,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 	}
 	__syncthreads();
 
-   if (threadIdx.x==0) 
+   if (threadIdx.x==0)
    {
    (*CUDA_LCC).np1+=Lpoints;
    }
@@ -70,9 +70,9 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
    lnp2=(*CUDA_LCC).np2;
    ltrial_chisq=(*CUDA_LCC).trial_chisq;
 
-  
+
    if (CUDA_ia[1]) //not relative
-	  { 
+	  {
 		  for (jp = 1; jp <= Lpoints; jp++)
 		  {
 			 ymod = (*CUDA_LCC).ytemp[jp];
@@ -87,7 +87,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 			sig2i = 1 / (__hiloint2double(xx.y,xx.x) * __hiloint2double(xx.y,xx.x));
 
 			xx=tex1Dfetch(texWeight,lnp2);
-			wght =  __hiloint2double(xx.y,xx.x); 
+			wght =  __hiloint2double(xx.y,xx.x);
 
 			xx=tex1Dfetch(texbrightness,lnp2);
 			dy = __hiloint2double(xx.y,xx.x) - ymod;
@@ -119,10 +119,10 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 					   beta[j] = beta[j] + dy * wt;
 				   }
 				   __syncthreads();
-			 } /* l */ 
+			 } /* l */
 			 for (; l <= CUDA_lastma; l++)
 			 {
-				if(CUDA_ia[l]) 
+				if(CUDA_ia[l])
 				{
 				   j++;
 				   wt = (*CUDA_LCC).dyda[l] * sig2iwght;
@@ -150,7 +150,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 				   }
 				   __syncthreads();
 				  }
-			 } /* l */ 
+			 } /* l */
 			 ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
 			} /* jp */
 	  }
@@ -171,7 +171,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 			sig2i = 1 / (__hiloint2double(xx.y,xx.x) * __hiloint2double(xx.y,xx.x));
 
 			xx=tex1Dfetch(texWeight,lnp2);
-			wght =  __hiloint2double(xx.y,xx.x); 
+			wght =  __hiloint2double(xx.y,xx.x);
 
 			xx=tex1Dfetch(texbrightness,lnp2);
 			dy = __hiloint2double(xx.y,xx.x) - ymod;
@@ -207,10 +207,10 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 						beta[j] = beta[j] + dy * wt;
 				   }
 				  __syncthreads();
-			 } /* l */ 
+			 } /* l */
 			 for (; l <= CUDA_lastma; l++)
 			 {
-				if(CUDA_ia[l]) 
+				if(CUDA_ia[l])
 				{
 				   j++;
 				   wt = (*CUDA_LCC).dyda[l] * sig2iwght;
@@ -242,12 +242,12 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 				  }
 				  __syncthreads();
 				}
-			 } /* l */ 
+			 } /* l */
 			 ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
 			} /* jp */
 	  }
 /*     } always ==0 /* Lastcall != 1 */
-         
+
    /*  if (((*CUDA_LCC).Lastcall == 1) && (CUDA_Inrel[i] == 1)) always ==0
         (*CUDA_LCC).Sclnw[i] = (*CUDA_LCC).Scale * CUDA_Lpoints[i] * CUDA_sig[np]/ave;*/
 	if(threadIdx.x==0)
@@ -260,7 +260,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 
 __global__ void CUDACalculateIter1_mrqcof1_curve2(int Inrel,int Lpoints)
 {
-	int thidx=blockIdx.x;
+	const int thidx=blockIdx.x;
     freq_context *CUDA_LCC=&CUDA_CC[thidx];
 
 	if ((*CUDA_LCC).isInvalid) return;
@@ -274,7 +274,7 @@ __global__ void CUDACalculateIter1_mrqcof1_curve2(int Inrel,int Lpoints)
 
 __global__ void CUDACalculateIter1_mrqcof2_curve2(int Inrel,int Lpoints)
 {
-	int thidx=blockIdx.x;
+	const int thidx=blockIdx.x;
 	freq_context *CUDA_LCC=&CUDA_CC[thidx];
 
 	if ((*CUDA_LCC).isInvalid) return;

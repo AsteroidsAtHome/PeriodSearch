@@ -1,3 +1,4 @@
+#pragma once
 #define POINTS_MAX         1000             /* max number of data points in one lc. */
 #define MAX_N_OBS         20000             /* max number of data points */
 #define MAX_LC              200             /* max number of lightcurves */
@@ -17,4 +18,5 @@
 #define DEG2RAD      (PI / 180)
 #define RAD2DEG      (180 / PI)
 
-#define CUDA_BLOCK_DIM	128 // MUST BE 128 or 64 !!!!!!!!!!!!!!!!!!!!!!!
+//MUST BE 128 or 64
+#define CUDA_BLOCK_DIM	128

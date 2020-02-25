@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,9 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pscpu</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,7 +73,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>C:\boinc\win_build\Build\Win32\Debug;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\Win32;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\boincsdk\boinc_repo\Build\Win32\Debug;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\Win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -79,13 +81,14 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>C:\boinc\win_build\Build\Win32\Release;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\Win32;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;$(WindowsSdkDir)lib;$(FrameworkSDKDir)\lib</LibraryPath>
+    <LibraryPath>D:\boincsdk\boinc_repo\Build\Win32\Release;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\Win32;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;$(WindowsSdkDir)lib;$(FrameworkSDKDir)\lib</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>C:\boinc\win_build\Build\x64\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(LibraryPath)</LibraryPath>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -94,7 +97,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Full</Optimization>
       <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\boinc\api;C:\boinc\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\api;D:\boincsdk\boinc_repo\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -127,7 +130,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CompileAs>CompileAsCpp</CompileAs>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -140,7 +143,7 @@
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -158,7 +161,7 @@
       <PtxAsOptionV>true</PtxAsOptionV>
       <Optimization>InheritFromHost</Optimization>
       <GPUDebugInfo>false</GPUDebugInfo>
-      <MaxRegCount>80</MaxRegCount>
+      <MaxRegCount>32</MaxRegCount>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -192,21 +195,21 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>Create</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\boinc\lib;C:\boinc\api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CompileAs>CompileAsCpp</CompileAs>
-      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>false</OmitFramePointers>
+      <BrowseInformation>false</BrowseInformation>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
@@ -220,8 +223,8 @@
     </CudaCompile>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;compute_20,sm_21;compute_30,sm_30;compute_35,sm_35;compute_35,compute_35</CodeGeneration>
-      <MaxRegCount>80</MaxRegCount>
+      <CodeGeneration>compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75</CodeGeneration>
+      <MaxRegCount>32</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -231,7 +234,9 @@
     <ClInclude Include="period_search\declarations_CUDA.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\globals_CUDA.h" />
+    <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\start_CUDA.h" />
+    <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\uc2.h" />
   </ItemGroup>
   <ItemGroup>
@@ -257,6 +262,7 @@
     <CudaCompile Include="period_search\gauss_errc.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="period_search\error.cpp" />
     <ClCompile Include="period_search\lubksb.c" />
     <ClCompile Include="period_search\ludcmp.c" />
     <ClCompile Include="period_search\memory.c" />
@@ -268,13 +274,25 @@
     </CudaCompile>
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\stdfax.cpp" />
     <ClCompile Include="period_search\trifac.c" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="period_search\start_CUDA.cu" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cpp.hint" />
+    <None Include=".gitignore" />
+    <None Include="period_search\clear_files.bat">
+      <FileType>Discomap</FileType>
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="period_search\cpp.hint" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="period_search\pscuda.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

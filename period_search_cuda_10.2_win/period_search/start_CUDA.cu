@@ -6,6 +6,8 @@
 #include "declarations_CUDA.h"
 #include "boinc_api.h"
 #include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
+#include <cuda_occupancy.h>
 #include <device_launch_parameters.h>
 
 #ifdef __GNUC__
@@ -62,47 +64,74 @@ int CUDAPrepare(int cudadev,double *beta_pole,double *lambda_pole,double *par,do
 	cudaSetDeviceFlags(cudaDeviceBlockingSync);
 	//determine gridDim
 	cudaDeviceProp deviceProp;
-	int SMXBlock;
+	int SMXBlock; // Maximum number of resident thread blocks per multiprocessor
     cudaGetDeviceProperties(&deviceProp, cudadev);
 	if (!checkex)
 	{
-		fprintf(stderr, "CUDA RC12!!!!!!!!!!\n");
+		auto cudaVersion = CUDA_VERSION;
+		fprintf(stderr, "CUDA version: %d\n", cudaVersion);
+		//fprintf(stderr, "CUDA RC12!!!!!!!!!!\n");
 		fprintf(stderr, "CUDA Device number: %d\n",cudadev);
 		fprintf(stderr, "CUDA Device: %s\n",deviceProp.name);
 		fprintf(stderr, "Compute capability: %d.%d\n",deviceProp.major,deviceProp.minor);
+		//fprintf(stderr, "CUDA Device max grid size(x, y, z): %d, %d, %d \n", deviceProp.maxGridSize[0], deviceProp.maxGridSize[1], deviceProp.maxGridSize[2]);
 		fprintf(stderr, "Multiprocessors: %d\n",deviceProp.multiProcessorCount);
 	}
 
-	if (deviceProp.major==5) //CC 5.0
+	// NOTE: See this https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities , Table 15.
+	// NOTE: Also this https://stackoverflow.com/questions/4391162/cuda-determining-threads-per-block-blocks-per-grid
+	// NOTE: NB - Always set MaxUsedRegisters to 32 in order to achieve 100% SM occupancy (project's Configuration properties -> CUDA C/C++ -> Device)
+	if (deviceProp.major == 7)
 	{
-		SMXBlock=16; //occupancy ??? = 16 blocks per SMX
+		switch (deviceProp.minor)
+		{
+			case 0:
+			case 2:
+				SMXBlock = 32;	// CC 7.0 & 7.2, occupancy 100% = 32 blocks per SMX
+			case 5:
+				SMXBlock = 16;	// CC 7.5, occupancy 100% = 16 blocks per SMX
+			default:
+				SMXBlock = 16;	// unknown CC, occupancy unknown, 16 blocks per SMX
+		}
 	}
 	else
-	if (deviceProp.major==3) //CC 3.0 and 3.5
+	if (deviceProp.major == 6) //CC 6.0, 6.1 & 6.2
 	{
-		SMXBlock=16; //occupancy 100% = 16 blocks per SMX
+		SMXBlock = 32; //occupancy 100% = 32 blocks per SMX
 	}
 	else
+	if (deviceProp.major == 5) //CC 5.0, 5.2 & 5.3
+	{
+		SMXBlock = 32; //occupancy 100% = 32 blocks per SMX, instead as previous was 16 blocks per SMX which led to only 50%
+	}
+	else
+	if (deviceProp.major == 3) //CC 3.0, 3.2, 3.5 & 3.7
+	{
+		SMXBlock = 16; //occupancy 100% = 16 blocks per SMX
+	}
+	/*else
 	if (deviceProp.major==2) //CC 2.0 and 2.1
 	{
 		SMXBlock=8; //occupancy 67% = 8 blocks per SMX
 	}
 	else
-/*	if ((deviceProp.major==1) && (deviceProp.major==3)) //CC 1.3
+	if ((deviceProp.major==1) && (deviceProp.major==3)) //CC 1.3
 	{
 		SMXBlock=8; //occupancy 50% = 8 blocks per SMX
 		CUDA_BLOCK_DIM=64;
-	}
-	else*/
+	}*/
+	else
 	{
-		fprintf(stderr, "Unsupported CC detected (CC2.0 and better supported only).\n");
+		fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d). Supported Compute Capabilities are between 3.0 and 7.5.\n", deviceProp.major, deviceProp.minor);
 		return 0;
 	}
+
 	CUDA_grid_dim=deviceProp.multiProcessorCount*SMXBlock;
+
 	if (!checkex)
 	{
 		fprintf(stderr, "Grid dim: %d = %d*%d\n",CUDA_grid_dim,deviceProp.multiProcessorCount,SMXBlock);
-		fprintf(stderr, "Block dim: %d\n",CUDA_BLOCK_DIM);
+		fprintf(stderr, "Block dim: %d\n", CUDA_BLOCK_DIM);
 	}
 
 	cudaError_t res;
@@ -114,13 +143,13 @@ int CUDAPrepare(int cudadev,double *beta_pole,double *lambda_pole,double *par,do
 	res=cudaMemcpyToSymbol(CUDA_cl,&cl,sizeof(cl));
 	res=cudaMemcpyToSymbol(CUDA_Alamda_start,&Alamda_start,sizeof(Alamda_start));
 	res=cudaMemcpyToSymbol(CUDA_Alamda_incr,&Alamda_incr,sizeof(Alamda_incr));
-	res=cudaMemcpyToSymbol(CUDA_Mmax,&Mmax,sizeof(Mmax));
-	res=cudaMemcpyToSymbol(CUDA_Lmax,&Lmax,sizeof(Lmax));
+	res=cudaMemcpyToSymbol(CUDA_Mmax,&m_max,sizeof(m_max));
+	res=cudaMemcpyToSymbol(CUDA_Lmax,&l_max,sizeof(l_max));
 	res=cudaMemcpyToSymbol(CUDA_tim,tim,sizeof(double)*(MAX_N_OBS+1));
 	res=cudaMemcpyToSymbol(CUDA_Phi_0,&Phi_0,sizeof(Phi_0));
 
 	res=cudaMalloc(&pWeight,(ndata+3+1)*sizeof(double));
-	res=cudaMemcpy(pWeight,Weight,(ndata+3+1)*sizeof(double),cudaMemcpyHostToDevice);
+	res=cudaMemcpy(pWeight,weight,(ndata+3+1)*sizeof(double),cudaMemcpyHostToDevice);
 	res=cudaBindTexture(0, texWeight, pWeight, (ndata+3+1)*sizeof(double));
 
 	res=cudaMalloc(&pee,(ndata+1)*3*sizeof(double));
@@ -540,9 +569,9 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
      if (n_max < max_test_periods)
 		max_test_periods = n_max;
 
-    for (i = 1; i <= Nphpar; i++)
+    for (i = 1; i <= n_ph_par; i++)
     {
-        ia[Ncoef+3+i] = ia_par[i];
+        ia[n_coef+3+i] = ia_par[i];
     }
 
     n_iter_max = 0;
@@ -562,8 +591,8 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	cudaError_t err;
 
 	//here move data to device
-	cudaMemcpyToSymbol(CUDA_Ncoef,&Ncoef,sizeof(Ncoef));
-	cudaMemcpyToSymbol(CUDA_Nphpar,&Nphpar,sizeof(Nphpar));
+	cudaMemcpyToSymbol(CUDA_Ncoef,&n_coef,sizeof(n_coef));
+	cudaMemcpyToSymbol(CUDA_Nphpar,&n_ph_par,sizeof(n_ph_par));
 	cudaMemcpyToSymbol(CUDA_Numfac,&Numfac,sizeof(Numfac));
 	m=Numfac+1;
 	cudaMemcpyToSymbol(CUDA_Numfac1,&m,sizeof(m));
@@ -574,12 +603,12 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	cudaMemcpyToSymbol(CUDA_ndata,&ndata,sizeof(ndata));
 	cudaMemcpyToSymbol(CUDA_iter_diff_max,&iter_diff_max,sizeof(iter_diff_max));
 	cudaMemcpyToSymbol(CUDA_conw_r,conw_r,sizeof(conw_r));
-	cudaMemcpyToSymbol(CUDA_Nor,Nor,sizeof(double)*(MAX_N_FAC+1)*3);
-	cudaMemcpyToSymbol(CUDA_Fc,Fc,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Fs,Fs,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Pleg,Pleg,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Darea,Darea,sizeof(double)*(MAX_N_FAC+1));
-	cudaMemcpyToSymbol(CUDA_Dsph,Dsph,sizeof(double)*(MAX_N_FAC+1)*(MAX_N_PAR+1));
+	cudaMemcpyToSymbol(CUDA_Nor,normal,sizeof(double)*(MAX_N_FAC+1)*3);
+	cudaMemcpyToSymbol(CUDA_Fc,f_c,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Fs,f_s,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Pleg,pleg,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Darea,d_area,sizeof(double)*(MAX_N_FAC+1));
+	cudaMemcpyToSymbol(CUDA_Dsph,d_sphere,sizeof(double)*(MAX_N_FAC+1)*(MAX_N_PAR+1));
 
 	err=cudaMalloc(&pbrightness,(ndata+1)*sizeof(double));
 	err=cudaMemcpy(pbrightness,brightness,(ndata+1)*sizeof(double),cudaMemcpyHostToDevice);
@@ -590,7 +619,7 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	err=cudaBindTexture(0, texsig, psig, (ndata+1)*sizeof(double));
 
 	/* number of fitted parameters */
-	int lmfit=0,llastma=0,llastone=1,ma=Ncoef+5+Nphpar;
+	int lmfit=0,llastma=0,llastone=1,ma=n_coef+5+n_ph_par;
 		 for (m = 1; m <= ma; m++)
 		 {
 		  if (ia[m])
@@ -611,7 +640,7 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	cudaMemcpyToSymbol(CUDA_mfit1,&m,sizeof(m));
 	cudaMemcpyToSymbol(CUDA_lastma,&llastma,sizeof(llastma));
 	cudaMemcpyToSymbol(CUDA_lastone,&llastone,sizeof(llastone));
-	m=ma-2-Nphpar;
+	m=ma-2-n_ph_par;
 	cudaMemcpyToSymbol(CUDA_ncoef0,&m,sizeof(m));
 
 	int CUDA_Grid_dim_precalc=CUDA_grid_dim;
@@ -622,29 +651,29 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	err=cudaMalloc(&pfr,CUDA_Grid_dim_precalc*sizeof(freq_result));
 	cudaMemcpyToSymbol(CUDA_FR,&pfr,sizeof(pfr));
 
-	m=(Numfac+1)*(Ncoef+1);
+	m=(Numfac+1)*(n_coef+1);
 	cudaMemcpyToSymbol(CUDA_Dg_block,&m,sizeof(m));
 
     double *pa,*pg,*pal,*pco,*pdytemp,*pytemp;
 
 	err=cudaMalloc(&pa,CUDA_Grid_dim_precalc*(Numfac+1)*sizeof(double));
 	err=cudaBindTexture(0, texArea, pa, CUDA_Grid_dim_precalc*(Numfac+1)*sizeof(double));
-	err=cudaMalloc(&pg,CUDA_Grid_dim_precalc*(Numfac+1)*(Ncoef+1)*sizeof(double));
-	err=cudaBindTexture(0, texDg, pg, CUDA_Grid_dim_precalc*(Numfac+1)*(Ncoef+1)*sizeof(double));
+	err=cudaMalloc(&pg,CUDA_Grid_dim_precalc*(Numfac+1)*(n_coef+1)*sizeof(double));
+	err=cudaBindTexture(0, texDg, pg, CUDA_Grid_dim_precalc*(Numfac+1)*(n_coef+1)*sizeof(double));
 	err=cudaMalloc(&pal,CUDA_Grid_dim_precalc*(lmfit+1)*(lmfit+1)*sizeof(double));
 	err=cudaMalloc(&pco,CUDA_Grid_dim_precalc*(lmfit+1)*(lmfit+1)*sizeof(double));
-	err=cudaMalloc(&pdytemp,CUDA_Grid_dim_precalc*(MaxLpoints+1)*(ma+1)*sizeof(double));
-	err=cudaMalloc(&pytemp,CUDA_Grid_dim_precalc*(MaxLpoints+1)*sizeof(double));
+	err=cudaMalloc(&pdytemp,CUDA_Grid_dim_precalc*(max_l_points+1)*(ma+1)*sizeof(double));
+	err=cudaMalloc(&pytemp,CUDA_Grid_dim_precalc*(max_l_points+1)*sizeof(double));
 
 	for (m=0;m<CUDA_Grid_dim_precalc;m++)
 	{
 		freq_context ps;
 		ps.Area=&pa[m*(Numfac+1)];
-		ps.Dg=&pg[m*(Numfac+1)*(Ncoef+1)];
+		ps.Dg=&pg[m*(Numfac+1)*(n_coef+1)];
 		ps.alpha=&pal[m*(lmfit+1)*(lmfit+1)];
 		ps.covar=&pco[m*(lmfit+1)*(lmfit+1)];
-		ps.dytemp=&pdytemp[m*(MaxLpoints+1)*(ma+1)];
-		ps.ytemp=&pytemp[m*(MaxLpoints+1)];
+		ps.dytemp=&pdytemp[m*(max_l_points+1)*(ma+1)];
+		ps.ytemp=&pytemp[m*(max_l_points+1)];
 		freq_context *pt=&((freq_context *)pcc)[m];
 		err=cudaMemcpy(pt,&ps,sizeof(void *)*6,cudaMemcpyHostToDevice);
 	}
@@ -669,27 +698,27 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 				CUDACalculateIter1_Begin<<<CUDA_Grid_dim_precalc,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqcof1_start<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>();
-				for (iC=1;iC<Lcurves;iC++)
+				for (iC=1;iC<l_curves;iC++)
 				{
-						CUDACalculateIter1_mrqcof1_matrix<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Lpoints[iC]);
-						CUDACalculateIter1_mrqcof1_curve1<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
-						CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
+						CUDACalculateIter1_mrqcof1_matrix<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(l_points[iC]);
+						CUDACalculateIter1_mrqcof1_curve1<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
+						CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
-				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
+				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
+				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
 				CUDACalculateIter1_mrqcof1_end<<<CUDA_Grid_dim_precalc,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqmin1_end<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqcof2_start<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>();
-				for (iC=1;iC<Lcurves;iC++)
+				for (iC=1;iC<l_curves;iC++)
 				{
-						CUDACalculateIter1_mrqcof2_matrix<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Lpoints[iC]);
-						CUDACalculateIter1_mrqcof2_curve1<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
-						CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
+						CUDACalculateIter1_mrqcof2_matrix<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(l_points[iC]);
+						CUDACalculateIter1_mrqcof2_curve1<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
+						CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
-				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
+				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
+				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
 				CUDACalculateIter1_mrqcof2_end<<<CUDA_Grid_dim_precalc,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqmin2_end<<<CUDA_Grid_dim_precalc,1>>>();
@@ -747,6 +776,30 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	return 1;
 }
 
+void GetCUDAOccupancy(const int cudaDevice)
+{
+	int numBlocks;        // Occupancy in terms of active blocks
+	const auto blockSize = CUDA_BLOCK_DIM;
+
+	//cudaGetDevice(&cudaDevice);
+	cudaDeviceProp deviceProp;
+	cudaGetDeviceProperties(&deviceProp, cudaDevice);
+
+	cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+		&numBlocks,
+		CUDACalculateIter1_mrqcof1_curve2,
+		blockSize,
+		0);
+
+	const auto activeWarps = numBlocks * blockSize / deviceProp.warpSize;
+	const auto maxWarps = deviceProp.maxThreadsPerMultiProcessor / deviceProp.warpSize;
+
+	const auto ocupancy = static_cast<double>(activeWarps) / maxWarps * 100;
+
+	fprintf(stderr, "Occupancy for kernel \"CUDACalculateIter1_mrqcof1_curve2\": %f%%\n", ocupancy);
+
+	//std::cout << "Occupancy: " << (double)activeWarps / maxWarps * 100 << "%" << std::endl;
+}
 
 int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_step,double stop_condition,int n_iter_min,double conw_r,
 	          int ndata,int *ia,int *ia_par,double *cg_first,MFILE& mf,double escl,double *sig,int Numfac,double *brightness)
@@ -758,9 +811,9 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	void *pcc,*pfr,*pbrightness,*psig;
 	char buf[256];
 
-    for (i = 1; i <= Nphpar; i++)
+    for (i = 1; i <= n_ph_par; i++)
     {
-        ia[Ncoef+3+i] = ia_par[i];
+        ia[n_coef+3+i] = ia_par[i];
     }
 
     n_iter_max = 0;
@@ -780,8 +833,8 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	cudaError_t err;
 
 	//here move data to device
-	cudaMemcpyToSymbol(CUDA_Ncoef,&Ncoef,sizeof(Ncoef));
-	cudaMemcpyToSymbol(CUDA_Nphpar,&Nphpar,sizeof(Nphpar));
+	cudaMemcpyToSymbol(CUDA_Ncoef,&n_coef,sizeof(n_coef));
+	cudaMemcpyToSymbol(CUDA_Nphpar,&n_ph_par,sizeof(n_ph_par));
 	cudaMemcpyToSymbol(CUDA_Numfac,&Numfac,sizeof(Numfac));
 	m=Numfac+1;
 	cudaMemcpyToSymbol(CUDA_Numfac1,&m,sizeof(m));
@@ -792,12 +845,12 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	cudaMemcpyToSymbol(CUDA_ndata,&ndata,sizeof(ndata));
 	cudaMemcpyToSymbol(CUDA_iter_diff_max,&iter_diff_max,sizeof(iter_diff_max));
 	cudaMemcpyToSymbol(CUDA_conw_r,&conw_r,sizeof(conw_r));
-	cudaMemcpyToSymbol(CUDA_Nor,Nor,sizeof(double)*(MAX_N_FAC+1)*3);
-	cudaMemcpyToSymbol(CUDA_Fc,Fc,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Fs,Fs,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Pleg,Pleg,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1)*(MAX_LM+1));
-	cudaMemcpyToSymbol(CUDA_Darea,Darea,sizeof(double)*(MAX_N_FAC+1));
-	cudaMemcpyToSymbol(CUDA_Dsph,Dsph,sizeof(double)*(MAX_N_FAC+1)*(MAX_N_PAR+1));
+	cudaMemcpyToSymbol(CUDA_Nor,normal,sizeof(double)*(MAX_N_FAC+1)*3);
+	cudaMemcpyToSymbol(CUDA_Fc,f_c,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Fs,f_s,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Pleg,pleg,sizeof(double)*(MAX_N_FAC+1)*(MAX_LM+1)*(MAX_LM+1));
+	cudaMemcpyToSymbol(CUDA_Darea,d_area,sizeof(double)*(MAX_N_FAC+1));
+	cudaMemcpyToSymbol(CUDA_Dsph,d_sphere,sizeof(double)*(MAX_N_FAC+1)*(MAX_N_PAR+1));
 
 	err=cudaMalloc(&pbrightness,(ndata+1)*sizeof(double));
 	err=cudaMemcpy(pbrightness,brightness,(ndata+1)*sizeof(double),cudaMemcpyHostToDevice);
@@ -808,7 +861,7 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	err=cudaBindTexture(0, texsig, psig, (ndata+1)*sizeof(double));
 
 	/* number of fitted parameters */
-	int lmfit=0,llastma=0,llastone=1,ma=Ncoef+5+Nphpar;
+	int lmfit=0,llastma=0,llastone=1,ma=n_coef+5+n_ph_par;
 		 for (m = 1; m <= ma; m++)
 		 {
 		  if (ia[m])
@@ -829,7 +882,7 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	cudaMemcpyToSymbol(CUDA_mfit1,&m,sizeof(m));
 	cudaMemcpyToSymbol(CUDA_lastma,&llastma,sizeof(llastma));
 	cudaMemcpyToSymbol(CUDA_lastone,&llastone,sizeof(llastone));
-	m=ma-2-Nphpar;
+	m=ma-2-n_ph_par;
 	cudaMemcpyToSymbol(CUDA_ncoef0,&m,sizeof(m));
 
 	err=cudaMalloc(&pcc,CUDA_grid_dim*sizeof(freq_context));
@@ -837,29 +890,29 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 	err=cudaMalloc(&pfr,CUDA_grid_dim*sizeof(freq_result));
 	cudaMemcpyToSymbol(CUDA_FR,&pfr,sizeof(pfr));
 
-	m=(Numfac+1)*(Ncoef+1);
+	m=(Numfac+1)*(n_coef+1);
 	cudaMemcpyToSymbol(CUDA_Dg_block,&m,sizeof(m));
 
     double *pa,*pg,*pal,*pco,*pdytemp,*pytemp;
 
 	err=cudaMalloc(&pa,CUDA_grid_dim*(Numfac+1)*sizeof(double));
 	err=cudaBindTexture(0, texArea, pa, CUDA_grid_dim*(Numfac+1)*sizeof(double));
-	err=cudaMalloc(&pg,CUDA_grid_dim*(Numfac+1)*(Ncoef+1)*sizeof(double));
-	err=cudaBindTexture(0, texDg, pg, CUDA_grid_dim*(Numfac+1)*(Ncoef+1)*sizeof(double));
+	err=cudaMalloc(&pg,CUDA_grid_dim*(Numfac+1)*(n_coef+1)*sizeof(double));
+	err=cudaBindTexture(0, texDg, pg, CUDA_grid_dim*(Numfac+1)*(n_coef+1)*sizeof(double));
 	err=cudaMalloc(&pal,CUDA_grid_dim*(lmfit+1)*(lmfit+1)*sizeof(double));
 	err=cudaMalloc(&pco,CUDA_grid_dim*(lmfit+1)*(lmfit+1)*sizeof(double));
-	err=cudaMalloc(&pdytemp,CUDA_grid_dim*(MaxLpoints+1)*(ma+1)*sizeof(double));
-	err=cudaMalloc(&pytemp,CUDA_grid_dim*(MaxLpoints+1)*sizeof(double));
+	err=cudaMalloc(&pdytemp,CUDA_grid_dim*(max_l_points+1)*(ma+1)*sizeof(double));
+	err=cudaMalloc(&pytemp,CUDA_grid_dim*(max_l_points+1)*sizeof(double));
 
 	for (m=0;m<CUDA_grid_dim;m++)
 	{
 		freq_context ps;
 		ps.Area=&pa[m*(Numfac+1)];
-		ps.Dg=&pg[m*(Numfac+1)*(Ncoef+1)];
+		ps.Dg=&pg[m*(Numfac+1)*(n_coef+1)];
 		ps.alpha=&pal[m*(lmfit+1)*(lmfit+1)];
 		ps.covar=&pco[m*(lmfit+1)*(lmfit+1)];
-		ps.dytemp=&pdytemp[m*(MaxLpoints+1)*(ma+1)];
-		ps.ytemp=&pytemp[m*(MaxLpoints+1)];
+		ps.dytemp=&pdytemp[m*(max_l_points+1)*(ma+1)];
+		ps.ytemp=&pytemp[m*(max_l_points+1)];
 		freq_context *pt=&((freq_context *)pcc)[m];
 		err=cudaMemcpy(pt,&ps,sizeof(void *)*6,cudaMemcpyHostToDevice);
 	}
@@ -870,7 +923,14 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 
 	for (n=n_start_from;n<=n_max;n+=CUDA_grid_dim)
 	{
-		boinc_fraction_done((double)n/(double)n_max);
+		auto fractionDone = (double)n / (double)n_max;
+		boinc_fraction_done(fractionDone);
+
+//#if _DEBUG
+		float fraction = fractionDone * 100;
+			printf("Fraction done: %.2f%%\n", fraction);
+//#endif
+
         CUDACalculatePrepare<<<CUDA_grid_dim,1>>>(n,n_max,freq_start,freq_step);
 		err=cudaThreadSynchronize();
 
@@ -887,27 +947,27 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 				CUDACalculateIter1_Begin<<<CUDA_grid_dim,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqcof1_start<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>();
-				for (iC=1;iC<Lcurves;iC++)
+				for (iC=1;iC<l_curves;iC++)
 				{
-					CUDACalculateIter1_mrqcof1_matrix<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Lpoints[iC]);
-					CUDACalculateIter1_mrqcof1_curve1<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
-					CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
+					CUDACalculateIter1_mrqcof1_matrix<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CUDACalculateIter1_mrqcof1_curve1<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
+					CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
-				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
+				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
+				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
 				CUDACalculateIter1_mrqcof1_end<<<CUDA_grid_dim,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqmin1_end<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqcof2_start<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>();
-				for (iC=1;iC<Lcurves;iC++)
+				for (iC=1;iC<l_curves;iC++)
 				{
-					CUDACalculateIter1_mrqcof2_matrix<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Lpoints[iC]);
-					CUDACalculateIter1_mrqcof2_curve1<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
-					CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[iC],Lpoints[iC]);
+					CUDACalculateIter1_mrqcof2_matrix<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CUDACalculateIter1_mrqcof2_curve1<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
+					CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
-				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(Inrel[Lcurves],Lpoints[Lcurves]);
+				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
+				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim,CUDA_BLOCK_DIM>>>(in_rel[l_curves],l_points[l_curves]);
 				CUDACalculateIter1_mrqcof2_end<<<CUDA_grid_dim,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqmin2_end<<<CUDA_grid_dim,1>>>();
@@ -945,7 +1005,7 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 			}
 		}
 		 if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
-			retval = do_checkpoint(mf, (n-1)+LinesWritten,1,conw_r); //zero lines
+			retval = DoCheckpoint(mf, (n-1)+LinesWritten,1,conw_r); //zero lines
 			if (retval) {fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval);}
 			boinc_checkpoint_completed();
 		 }
