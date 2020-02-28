@@ -101,6 +101,7 @@ ipch/
 RC*
 ps_*_input*
 boinc_lockfile
+boinc_finish_called
 stderr.txt
 init_data*.xml
 period_search_in*

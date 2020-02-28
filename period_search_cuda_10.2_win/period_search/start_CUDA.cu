@@ -9,6 +9,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_occupancy.h>
 #include <device_launch_parameters.h>
+#include <cstdio>
 
 #ifdef __GNUC__
 #include <time.h>
@@ -69,12 +70,11 @@ int CUDAPrepare(int cudadev,double *beta_pole,double *lambda_pole,double *par,do
 	if (!checkex)
 	{
 		auto cudaVersion = CUDA_VERSION;
+		auto totalGlobalMemory = deviceProp.totalGlobalMem / 1048576;
 		fprintf(stderr, "CUDA version: %d\n", cudaVersion);
-		//fprintf(stderr, "CUDA RC12!!!!!!!!!!\n");
 		fprintf(stderr, "CUDA Device number: %d\n",cudadev);
-		fprintf(stderr, "CUDA Device: %s\n",deviceProp.name);
+		fprintf(stderr, "CUDA Device: %s %lluMB \n",deviceProp.name, totalGlobalMemory);
 		fprintf(stderr, "Compute capability: %d.%d\n",deviceProp.major,deviceProp.minor);
-		//fprintf(stderr, "CUDA Device max grid size(x, y, z): %d, %d, %d \n", deviceProp.maxGridSize[0], deviceProp.maxGridSize[1], deviceProp.maxGridSize[2]);
 		fprintf(stderr, "Multiprocessors: %d\n",deviceProp.multiProcessorCount);
 	}
 

@@ -67,11 +67,11 @@ BEGIN
     BEGIN
         BLOCK "040004b0"
         BEGIN
-            VALUE "CompanyName", "Astronomical Institute, Charles University in Prague"
+            VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
             VALUE "FileDescription", "Period search application"
             VALUE "FileVersion", "102.12.0.1"
             VALUE "InternalName", "pscuda.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2020"
+            VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_cuda.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
             VALUE "ProductVersion", "102.12.0.1"
