@@ -1,16 +1,20 @@
 #pragma once
-#include "constants.h"
-#include <vector_types.h>
-#include <cuda_texture_types.h>
+#ifndef __CUDACC__
+#define __CUDACC__
+#endif
 
-//#ifdef __CUDACC__
-////#ifdef __INTELLISENSE__
-//#define __device__
+#ifdef __INTELLISENSE__
+#define __device__ \
+			__location__(device)
 //#define __global__
 //#define __constant__
 //#define __shared__
 //#define __texture_type__
-//#endif
+#endif
+
+#include "constants.h"
+#include <vector_types.h>
+#include <cuda_texture_types.h>
 
 //NOTE: https://devtalk.nvidia.com/default/topic/517801/-34-texture-is-not-a-template-34-error-mvs-2010/
 

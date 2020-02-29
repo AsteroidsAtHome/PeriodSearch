@@ -1,7 +1,15 @@
+#ifndef __CUDACC__
+#define __CUDACC__
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <texture_indirect_functions.hpp>
+#include <texture_fetch_functions.hpp>
 
 __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[], int Inrel,int Lpoints)
