@@ -24,15 +24,15 @@ using std::endl;
 /*#define YORP*/
 int offset = 0;
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-//ytemp[POINTS_MAX + 1], 
+//ytemp[POINTS_MAX + 1],
 dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
 coef, ave = 0, trial_chisq, wght;                               //moved here due to 64 debugger bug in vs2010
 
 cl_double dyda[MAX_N_PAR + 1], dave[MAX_N_PAR + 1];             //is zero indexed for aligned memory access
 //double *sig2Iwght, *dY;
 
-
-double mrqcof(double **x1, double **x2, double x3[], double y[],
+[Obsolete]
+double mrqcof_old(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
     double **alpha, double beta[], int mfit, int lastone, int lastma)
 {
@@ -42,12 +42,12 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
        because output same for all points */
     //curv(a);
     curv1D(a);
-    
+
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-      // #else      
+      // #else
     blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
-    //   #endif      
+    //   #endif
 
     for (j = 0; j < mfit; j++)
     {
@@ -141,7 +141,7 @@ double mrqcof(double **x1, double **x2, double x3[], double y[],
                     ymod = ytemp[jp];
                     for (l = 1; l <= ma; l++)
                         dyda[l - 1] = dytemp[jp][l];
-                    
+
                     np2++;
                     sig2i = 1 / (sig[np2] * sig[np2]);
                     wght = Weight[np2];

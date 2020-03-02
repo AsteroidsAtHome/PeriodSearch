@@ -70,7 +70,7 @@ void prepareCurvCl(cl_double cg[])
         kernel = cl::Kernel(program, "curv");
 
         auto tempClass = new(Data);
-        
+
         bufD = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(Data), &tempClass);
 
         // Set the arguments that will be used for kernel execution
@@ -99,7 +99,7 @@ void prepareCurvCl(cl_double cg[])
 void curvCl()
 {
     auto maxWorkGroupSize = devices[0].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
-    int rangeLocal = Numfac <= maxWorkGroupSize ? Numfac : maxWorkGroupSize;
+    int rangeLocal = num_fac <= maxWorkGroupSize ? num_fac : maxWorkGroupSize;
 
     // Enqueue the kernel to the queue
     // with appropriate global and local work sizes
@@ -270,7 +270,7 @@ void Init(cl_double cg[])
 
 //void curvCl(double cg[]) // , double Fc[][MAX_LM + 1], double Fs[][MAX_LM + 1], double Dsph[][MAX_N_PAR + 1], double Dg[][MAX_N_PAR + 1])
 //{
-//    try 
+//    try
 //    {
 //        bufCg = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(cl_double) * MAX_N_PAR, cg);
 //        bufArea = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_double) * Numfac, Area);
@@ -289,13 +289,13 @@ void Init(cl_double cg[])
 //        bufDg = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * lenDg, prepareDg(MAX_N_FAC + 1, MAX_N_PAR + 1));
 //        int lenDsph = (MAX_N_FAC + 1) * (MAX_N_PAR + 1);
 //        bufDsph = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * lenDsph, prepareDsph(MAX_N_FAC + 1, MAX_N_PAR + 1));
-//        
+//
 //        // Set the arguments that will be used for kernel execution
 //        kernel.setArg(0, bufCg);
 //        kernel.setArg(1, bufArea);
 //        kernel.setArg(2, bufDarea);
 //        kernel.setArg(3, bufFc);
-//        kernel.setArg(4, MAX_N_FAC + 1); 
+//        kernel.setArg(4, MAX_N_FAC + 1);
 //        kernel.setArg(5, MAX_LM + 1);
 //        kernel.setArg(6, bufFs);
 //        kernel.setArg(7, MAX_N_FAC + 1);

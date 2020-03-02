@@ -3,18 +3,19 @@
    8.11.2006
 */
 
+#include "stdafx.h"
 #include <math.h>
 #include "globals.h"
 #include "declarations.hpp"
 
-void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
+void areanorm(double t[], double f[], int ndir, int nfac, int** ifp, double at[], double af[])
 {
     int i, j;
 
     double  st, clen2, clen;
 
     double c[4], vx[4], vy[4], vz[4],
-        *x, *y, *z;
+        * x, * y, * z;
 
     x = vector_double(ndir);
     y = vector_double(ndir);
@@ -44,18 +45,17 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
         clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
         clen = sqrt(clen2);
         /* normal */
-        Nor[0][i - 1] = c[1] / clen;
-        Nor[1][i - 1] = c[2] / clen;
-        Nor[2][i - 1] = c[3] / clen;
+        normal[i][0] = c[1] / clen;
+        normal[i][1] = c[2] / clen;
+        normal[i][2] = c[3] / clen;
         /* direction angles of normal */
-        at[i] = acos(Nor[2][i - 1]);
-        af[i] = atan2(Nor[1][i - 1], Nor[0][i - 1]);
+        at[i] = acos(normal[i][2]);
+        af[i] = atan2(normal[i][1], normal[i][0]);
         /* triangle area */
-        Darea[i - 1] = 0.5 * clen;
+        d_area[i] = 0.5 * clen;
     }
 
-    deallocate_vector((void *)x);
-    deallocate_vector((void *)y);
-    deallocate_vector((void *)z);
+    deallocate_vector((void*)x);
+    deallocate_vector((void*)y);
+    deallocate_vector((void*)z);
 }
-

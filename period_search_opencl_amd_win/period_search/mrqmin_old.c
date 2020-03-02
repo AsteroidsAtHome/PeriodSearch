@@ -14,7 +14,7 @@ using namespace std::chrono;
 using std::cout;
 using std::endl;
 
-int mrqmin(double **x1, double **x2, double x3[], double y[],
+int mrqmin_old(double **x1, double **x2, double x3[], double y[],
             double sig[], double a[], int ia[], int ma,
             double **covar, double **alpha)
 {

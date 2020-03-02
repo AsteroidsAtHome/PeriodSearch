@@ -1,4 +1,4 @@
-/* rotation matrix and its derivatives 
+/* rotation matrix and its derivatives
    converted from Mikko's fortran code
 
    8.11.2006
@@ -8,18 +8,18 @@
 #include "globals.h"
 #include "constants.h"
 
-void matrix(double omg, double t, double tmat[][4], double dtm[][4][4])
+void matrix_old(double omg, double t, double tmat[][4], double dtm[][4][4])
 {
-   double f, cf, sf, dfm[4][4], fmat[4][4]; 
-   
+   double f, cf, sf, dfm[4][4], fmat[4][4];
+
    int i, j, k;
-   
+
    /* phase of rotation */
    f = omg * t + Phi_0;
    f = fmod(f, 2 * PI); /* may give little different results than Mikko's */
    cf = cos(f);
    sf = sin(f);
-   /* rotation matrix, Z axis, angle f */ 
+   /* rotation matrix, Z axis, angle f */
    fmat[1][1] = cf;
    fmat[1][2] = sf;
    fmat[1][3] = 0;

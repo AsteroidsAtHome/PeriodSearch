@@ -1,12 +1,12 @@
-/* beta, lambda rotation matrix and its derivatives 
-   
+/* beta, lambda rotation matrix and its derivatives
+
    8.11.2006
 */
 
 #include <math.h>
 #include "globals.h"
 
-void blmatrix(double bet, double lam)
+void blmatrix_old(double bet, double lam)
 {
    double cb, sb, cl, sl;
 

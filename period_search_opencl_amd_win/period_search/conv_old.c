@@ -1,4 +1,4 @@
-/* Convexity regularization function 
+/* Convexity regularization function
 
    8.11.2006
 */
@@ -9,12 +9,12 @@
 #include "globals.h"
 #include "declarations.hpp"
 
-double conv(int nc, double dres[], int ma)
+double conv_old(int nc, double dres[], int ma)
 {
    int i, j;
-   
+
    double res;
-   
+
    res = 0;
    for (j = 1; j <= ma; j++)
       dres[j] = 0;
@@ -28,6 +28,6 @@ double conv(int nc, double dres[], int ma)
       for (j = 1; j <= Ncoef; j++)
          dres[j] += Darea[i] * Dg[i][j] * Nor[i][nc];*/
    }
-   
+
    return(res);
-}   
+}

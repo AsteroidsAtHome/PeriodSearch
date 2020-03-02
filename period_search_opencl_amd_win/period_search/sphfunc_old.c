@@ -8,7 +8,7 @@
 #include "globals.h"
 #include "declarations.hpp"
 
-void sphfunc(int ndir, double at[], double af[])
+void sphfunc_old(int ndir, double at[], double af[])
 {
     int i, j, m, l, n, k, ibot;
 

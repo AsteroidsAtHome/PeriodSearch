@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "globals.h"
 
+// TODO: Is this still needed?
 void phasec(double dcdp[], double alpha, double p[])
 {
    double e, c;
@@ -20,5 +21,5 @@ void phasec(double dcdp[], double alpha, double p[])
    dcdp[2] = p[1] * e * alpha / (p[2] * p[2]);
    dcdp[3] = alpha;
 
-   Scale = c;
+   scale = c;
 }

@@ -1,4 +1,4 @@
-/* Find the curv. fn. Laplace series for given ellipsoid 
+/* Find the curv. fn. Laplace series for given ellipsoid
    converted from Mikko's fortran code
 
    8.11.2006
@@ -8,11 +8,11 @@
 #include "globals.h"
 #include "declarations.hpp"
 
-void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])
+void ellfit_old(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])
 {
    int i, m, l, n, j, k;
    int *indx;
-   
+
    double sum, st;
    double *fitvec, *d, *er,
           **fmat, **fitmat;
@@ -30,7 +30,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
    for (i = 1; i <= ndir; i++)
    {
       st = sin(at[i]);
-      sum = pow(a * st * cos(af[i]), 2) + pow(b * st * sin(af[i]), 2) + 
+      sum = pow(a * st * cos(af[i]), 2) + pow(b * st * sin(af[i]), 2) +
             pow(c * cos(at[i]), 2);
       er[i] = 2 * (log(a * b * c) - log(sum));
    }
@@ -43,7 +43,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
          for (l = m; l <= Lmax; l++)
 	 {
             n++;
-            if (m != 0) 
+            if (m != 0)
 	    {
                fmat[i][n] = Pleg[i][l][m] * cos(m * af[i]);
                n++;
@@ -63,10 +63,10 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
 
          for (k = 1; k <= ndir; k++)
             fitmat[i][j] = fitmat[i][j] + fmat[k][i] * fmat[k][j];
-	    
+
       }
       fitvec[i]=0;
-      
+
       for (j = 1; j <= ndir; j++)
          fitvec[i] = fitvec[i] + fmat[j][i] * er[j];
    }
@@ -74,7 +74,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
 
    ludcmp(fitmat,ncoef,indx,d);
    lubksb(fitmat,ncoef,indx,fitvec);
-   
+
    for (i = 1; i <= ncoef; i++)
       cg[i] = fitvec[i];
 
@@ -84,6 +84,6 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
    deallocate_vector((void *) d);
    deallocate_vector((void *) indx);
    deallocate_vector((void *) er);
-         
+
 }
 

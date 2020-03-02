@@ -3,7 +3,7 @@
 #include "Array3D.cpp"
 #include "OpenClWorker.hpp"
 
-void curv1D(double cg[])
+void curv1D_old(double cg[])
 {
     int l;
     cl_double *_cg = cg;
@@ -35,7 +35,7 @@ void curv1D(double cg[])
 
         g = exp(g);
         _area[i - 1] = _darea[i - 1] * g;
-        
+
         for (int k = 1; k <= n; k++)
         {
             _dg.set(i - 1, k - 1, g * _dsph(i, k));
