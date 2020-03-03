@@ -451,7 +451,7 @@
       <!-- <LanguageStandard>stdcpp14</LanguageStandard> -->
       <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
       <OmitFramePointers>false</OmitFramePointers>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -734,6 +734,7 @@
     <ClInclude Include="period_search\globals_CUDA.h" />
     <ClInclude Include="period_search\Intellisense_cuda_intrinsics.h" />
     <ClInclude Include="period_search\resource.h" />
+    <ClInclude Include="period_search\Start.cuh" />
     <ClInclude Include="period_search\start_CUDA.h" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\uc2.h" />
@@ -781,6 +782,7 @@
     <ClCompile Include="period_search\trifac.c" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="period_search\Start.cu" />
     <CudaCompile Include="period_search\start_CUDA.cu" />
   </ItemGroup>
   <ItemGroup>

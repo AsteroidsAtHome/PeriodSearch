@@ -26,7 +26,7 @@ __device__ void matrix_neo(freq_context *CUDA_LCC, double cg[],int lnp1, int Lpo
       for (jp = brtmpl; jp <= brtmph; jp++)
       {
          lnp++;
-            ee_1 = CUDA_ee[lnp*3+0];// position vectors 
+            ee_1 = CUDA_ee[lnp*3+0];// position vectors
             ee0_1 = CUDA_ee0[lnp*3+0];
             ee_2 = CUDA_ee[lnp*3+1];
             ee0_2 = CUDA_ee0[lnp*3+1];
@@ -47,7 +47,7 @@ __device__ void matrix_neo(freq_context *CUDA_LCC, double cg[],int lnp1, int Lpo
 		f = fmod(f, 2 * PI); /* may give little different results than Mikko's */
 		cf = cos(f);
 		sf = sin(f);
-	/* rotation matrix, Z axis, angle f */ 
+	/* rotation matrix, Z axis, angle f */
 
 	tmat = cf * (*CUDA_LCC).Blmat[1][1] + sf * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
 	pom = tmat * ee_1;
@@ -182,7 +182,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
    ncoef = CUDA_ma;
    cl = exp(cg[ncoef-1]); /* Lambert */
    cls = cg[ncoef];       /* Lommel-Seeliger */
- 
+
   /* matrix from neo */
 		/* derivatives */
 
@@ -234,14 +234,14 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
    {
 		  lmu = e_1 * CUDA_Nor[i][0] + e_2 * CUDA_Nor[i][1] + e_3 * CUDA_Nor[i][2];
 		  lmu0 = e0_1 * CUDA_Nor[i][0] + e0_2 * CUDA_Nor[i][1] + e0_3 * CUDA_Nor[i][2];
-		  if((lmu > TINY) && (lmu0 > TINY)) 
+		  if((lmu > TINY) && (lmu0 > TINY))
 		  {
 			dnom = lmu + lmu0;
 			s = lmu * lmu0 * (cl + cls / dnom);
 			bfr=tex1Dfetch(texArea,j);
 			ar=__hiloint2double(bfr.y,bfr.x);
 			br+= ar * s;
-			// 
+			//
 			incl[incl_count] = i;
 			dbr[incl_count] = CUDA_Darea[i] * s;
 			incl_count++;
@@ -305,7 +305,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 	d1=d+(Lpoints1);
 	dr=2*Lpoints1;
    /* Derivatives of brightness w.r.t. g-coeffs */
-	if (incl_count) 
+	if (incl_count)
 	{
   		for (i = iStart; i <= ncoef0; i+=2,m+=mr,m1+=mr,d+=dr,d1+=dr)
 		{
@@ -316,24 +316,24 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 
 			int2 xx;
 			xx=tex1Dfetch(texDg,m+l_incl);
-			tmp = l_dbr * __hiloint2double(xx.y,xx.x); 
+			tmp = l_dbr * __hiloint2double(xx.y,xx.x);
 			if ((i+1)<=ncoef0)
 			{
 				xx=tex1Dfetch(texDg,m1+l_incl);
-				tmp1 = l_dbr * __hiloint2double(xx.y,xx.x); 
+				tmp1 = l_dbr * __hiloint2double(xx.y,xx.x);
 			}
-			for (j = 1; j < incl_count; j++) 
+			for (j = 1; j < incl_count; j++)
 			{
 				double l_dbr=dbr[j];
 				int l_incl=incl[j];
 
 				int2 xx;
 				xx=tex1Dfetch(texDg,m+l_incl);
-				tmp += l_dbr * __hiloint2double(xx.y,xx.x); 
+				tmp += l_dbr * __hiloint2double(xx.y,xx.x);
 				if ((i+1)<=ncoef0)
 				{
 					xx=tex1Dfetch(texDg,m1+l_incl);
-					tmp1 += l_dbr * __hiloint2double(xx.y,xx.x); 
+					tmp1 += l_dbr * __hiloint2double(xx.y,xx.x);
 				}
 			}
 
@@ -343,8 +343,8 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 				(*CUDA_LCC).dytemp[d1]=Scale * tmp1;
 			}
 		}
-	} 
-	else 
+	}
+	else
 	{
 		for (i = 1; i <= ncoef0; i++,d+=Lpoints1)
 			(*CUDA_LCC).dytemp[d]= 0;

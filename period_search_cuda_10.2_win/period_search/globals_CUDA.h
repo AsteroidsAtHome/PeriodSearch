@@ -1,20 +1,44 @@
 #pragma once
+
+//  NOTE Fake declaration to satisfy intellisense. See https://stackoverflow.com/questions/39980645/enable-code-indexing-of-cuda-in-clion/39990500
 #ifndef __CUDACC__
-#define __CUDACC__
+#define __host__
+#define __device__
+#define __shared__
+#define __constant__
+#define __global__
+#define __host__
+#include <device_functions.h>
+#include <vector_types.h>
+#include <driver_types.h>
+#include <texture_types.h>
+//#define __CUDACC__
+#define __CUDA__
+inline void __syncthreads() {};
+inline void atomicAdd(int*, int) {};
+
+//template<class T, int texType = cudaTextureType1D, enum cudaTextureReadMode mode = cudaReadModeElementType>
+//struct texture {};
+//	int                          norm;
+//	enum cudaTextureFilterMode   fMode;
+//	enum cudaTextureAddressMode  aMode;
+//	struct cudaChannelFormatDesc desc;
+//};
+
+//#include <__clang_cuda_builtin_vars.h>
+//#include <__clang_cuda_intrinsics.h>
+//#include <__clang_cuda_math_forward_declares.h>
+//#include <__clang_cuda_complex_builtins.h>
+//#include <../../../../../../2019/Professional/VC/Tools/Llvm/lib/clang/9.0.0/include/__clang_cuda_cmath.h>
 #endif
 
-#ifdef __INTELLISENSE__
-#define __device__ \
-			__location__(device)
-//#define __global__
-//#define __constant__
-//#define __shared__
-//#define __texture_type__
-#endif
+//#ifdef __INTELLISENSE__
+////#define __device__ \
+////			__location__(device)
+//#endif
 
 #include "constants.h"
-#include <vector_types.h>
-#include <cuda_texture_types.h>
+
 
 //NOTE: https://devtalk.nvidia.com/default/topic/517801/-34-texture-is-not-a-template-34-error-mvs-2010/
 
@@ -26,6 +50,7 @@ __device__ extern double CUDA_cg_first[MAX_N_PAR+1];
 __device__ extern double CUDA_beta_pole[N_POLES+1];
 __device__ extern double CUDA_lambda_pole[N_POLES+1];
 __device__ extern double CUDA_par[4];
+//__device__ __constant__ extern double CUDA_cl, CUDA_Alamda_start, CUDA_Alamda_incr;
 __device__ extern double CUDA_cl,CUDA_Alamda_start,CUDA_Alamda_incr;
 __device__ extern int CUDA_n_iter_max,CUDA_n_iter_min,CUDA_ndata;
 __device__ extern double CUDA_iter_diff_max;
