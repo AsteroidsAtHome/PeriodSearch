@@ -698,7 +698,7 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 				CUDACalculateIter1_Begin<<<CUDA_Grid_dim_precalc,1>>>();
 				//mrqcof
 				CUDACalculateIter1_mrqcof1_start<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>();
-				for (iC=1;iC<l_curves;iC++)
+				for (iC=1; iC < l_curves; iC++)
 				{
 						CUDACalculateIter1_mrqcof1_matrix<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(l_points[iC]);
 						CUDACalculateIter1_mrqcof1_curve1<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>(in_rel[iC],l_points[iC]);
@@ -926,10 +926,10 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 		auto fractionDone = (double)n / (double)n_max;
 		boinc_fraction_done(fractionDone);
 
-//#if _DEBUG
+#if _DEBUG
 		float fraction = fractionDone * 100;
 			printf("Fraction done: %.2f%%\n", fraction);
-//#endif
+#endif
 
         CUDACalculatePrepare<<<CUDA_grid_dim,1>>>(n,n_max,freq_start,freq_step);
 		err=cudaThreadSynchronize();

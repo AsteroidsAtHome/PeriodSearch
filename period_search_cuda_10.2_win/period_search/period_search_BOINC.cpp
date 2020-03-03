@@ -162,13 +162,26 @@ int main(int argc, char **argv)
         lcNumber, **ifp, newConw;
 
     double startPeriod, periodStepCoef, endPeriod,
-        startFrequency, frequencyStep, endFrequency, jdMin, jdMax, stopCondition,
+        startFrequency, frequencyStep, endFrequency, //jdMin, jdMax,
+		stopCondition,
         *t, *f, *at, *af;
+    /*Minimum JD*/
+    double jdMin;
+    /*Maximum JD*/
+    double jdMax;
+    /*Time in JD*/
+    double* tim;
+    /*Brightness*/
+    double* brightness;
+    /*Ecliptic astronomical tempocentric coordinates of the Sun in AU*/
+    double e0[4];
+    /*Ecliptic astronomical centric coordinates of the Earth in AU*/
+    double e[4];
 
     double jd0, jd00, conw, conwR, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, cAxis,
         cl, al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl,
-        *brightness, e[4], e0[4], ee[MAX_N_OBS + 1][3],
-        ee0[MAX_N_OBS + 1][3], *cg, *cgFirst, *sig, *tim, *al,
+        ee[MAX_N_OBS + 1][3], // e[4], e0[4],
+        ee0[MAX_N_OBS + 1][3], *cg, *cgFirst, *sig, *al, // *tim, *brightness,
         betaPole[N_POLES + 1], lambdaPole[N_POLES + 1], par[4], *weightLc;
 
     char *stringTemp;
@@ -341,9 +354,14 @@ int main(int argc, char **argv)
     }
 
 
-    /* lightcurves + geometry file */
-    /* number of lightcurves and the first realtive one */
+    // NOTE: light curves + geometry file
+    // NOTE: number of light curves and the first relative one
     fscanf(infile, "%d", &l_curves);
+
+    if(boinc_is_standalone())
+    {
+        printf("%d  Number of light curves\n", l_curves);
+    }
 
     if (l_curves > MAX_LC)
     {
@@ -353,11 +371,11 @@ int main(int argc, char **argv)
     al = vector_double(l_curves);
     weightLc = vector_double(l_curves);
 
-    ndata = 0; /* total number of data */
-    k2 = 0;   /* index */
-    al0 = al0Abs = PI; /* the smallest solar phase angle */
-    ial0 = ial0_abs = -1; /* initialization, index of al0 */
-    jdMin = 1e20; /* initial minimum and minimum JD */
+    ndata = 0;              /* total number of data */
+    k2 = 0;                 /* index */
+    al0 = al0Abs = PI;      /* the smallest solar phase angle */
+    ial0 = ial0_abs = -1;   /* initialization, index of al0 */
+    jdMin = 1e20;           /* initial minimum and maximum JD */
     jdMax = -1e40;
     onlyrel = 1;
     jd0 = jd00;
@@ -369,6 +387,10 @@ int main(int argc, char **argv)
     {
         ave = 0; /* average */
         fscanf(infile, "%d %d", &l_points[i], &iTemp); /* points in this lightcurve */
+        if (boinc_is_standalone())
+        {
+            printf("%d points in light curve[%d]\n", l_points[i], i);
+        }
         fgets(stringTemp, MAX_LINE_LENGTH, infile);
         in_rel[i] = 1 - iTemp;
         if (in_rel[i] == 0)
@@ -381,7 +403,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2);
         }
 
-        /* loop over one lightcurve */
+        // NOTE: loop over one light curve
         for (j = 1; j <= l_points[i]; j++)
         {
             ndata++;
@@ -391,21 +413,22 @@ int main(int argc, char **argv)
                 fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
             }
 
-            fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
-            fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
-            fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
+            fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); // NOTE: JD, brightness
+            fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]);      // NOTE: ecliptic astronomical tempocentric coordinates of the Sun in AU
+            fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]);         // NOTE: ecliptic astronomical centric coordinates of the Earth in AU
 
-        /* selects the minimum and maximum JD */
+			// NOTE: selects the minimum and maximum JD
             if (tim[ndata] < jdMin) jdMin = tim[ndata];
             if (tim[ndata] > jdMax) jdMax = tim[ndata];
 
-            /* normals of distance vectors */
+
+            // NOTE: normals of distance vectors
             e0Len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
             elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
 
             ave += brightness[ndata];
 
-            /* normalization of distance vectors */
+            // NOTE: normalization of distance vectors
             for (k = 1; k <= 3; k++)
             {
                 ee[ndata][k - 1] = e[k] / elen;
@@ -454,16 +477,20 @@ int main(int argc, char **argv)
         fscanf(infile, "%d", &lcNumber);
         fscanf(infile, "%lf", &weightLc[lcNumber]);
         if (boinc_is_standalone())
-            printf("weights %d %g\n", lcNumber, weightLc[lcNumber]);
+        {
+            printf("Weights: Light curve[%d], Weight[%g]\n", lcNumber, weightLc[lcNumber]);
+        }
     }
 
     /* If input jd_0 <= 0 then the jd_0 is set to the day before the
        lowest JD in the data */
     if (jd0 <= 0)
     {
-        jd0 = (int)jdMin;
+        jd0 = static_cast<int>(jdMin);
         if (boinc_is_standalone())
+        {
             printf("\nNew epoch of zero time  %f\n", jd0);
+        }
     }
 
     /* loop over data - subtraction of jd_0 */
@@ -543,6 +570,10 @@ int main(int argc, char **argv)
         conwR = conw / escl / escl;
         newConw = 0;
         boinc_fraction_done(0.0001); //signal start
+#if _DEBUG
+        printf("Fraction done: 0.0001 (start signal)\n");
+#endif
+
     }
     while ((newConw != 1) && ((conwR * escl * escl) < 10.0))
     {
