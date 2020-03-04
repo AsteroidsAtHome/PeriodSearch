@@ -19,4 +19,5 @@
 #define RAD2DEG      (180 / PI)
 
 //MUST BE 128 or 64
-#define CUDA_BLOCK_DIM	128
+
+#define CUDA_BLOCK_DIM 128

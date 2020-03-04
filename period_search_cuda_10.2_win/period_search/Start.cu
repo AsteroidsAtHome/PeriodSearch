@@ -6,6 +6,7 @@
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
 #include "../../../../../../../Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt/math.h"
+#include <cstdio>
 
 __global__ void CUDACalculatePrepare(int n_start, int n_max, double freq_start, double freq_step)
 {
@@ -116,6 +117,9 @@ __global__ void CUDACalculateIter1_Begin(void)
 		if (!(*CUDA_LFR).isReported)
 		{
 			atomicAdd(&CUDA_End, 1);
+#ifdef _DEBUG
+			printf("%d ", CUDA_End);
+#endif
 			(*CUDA_LFR).isReported = 1;
 		}
 	}
