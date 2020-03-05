@@ -96,10 +96,12 @@ int CUDAPrepare(int cudadev,double *beta_pole,double *lambda_pole,double *par,do
 			case 0:
 			case 2:
 				SMXBlock = 32;	// CC 7.0 & 7.2, occupancy 100% = 32 blocks per SMX
+				break;
 			case 5:
 				SMXBlock = 16;	// CC 7.5, occupancy 100% = 16 blocks per SMX
-			//default:
-			//	SMXBlock = 16;	// unknown CC, occupancy unknown, 16 blocks per SMX
+				break;
+			default:
+				SMXBlock = 16;	// unknown CC, occupancy unknown, 16 blocks per SMX
 		}
 	}
 	else
@@ -313,14 +315,14 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 	for (n=1;n<=max_test_periods;n+=CUDA_Grid_dim_precalc)
 	{
         CUDACalculatePrepare<<<CUDA_Grid_dim_precalc,1>>>(n,max_test_periods,freq_start,freq_step);
-		err=cudaThreadSynchronize();
+		err = cudaDeviceSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
 		{
 			//zero global End signal
 			theEnd=0;
-			cudaMemcpyToSymbol(CUDA_End,&theEnd,sizeof(theEnd));
-			cudaGetSymbolAddress((void**)&endPtr, CUDA_End);
+			cudaMemcpyToSymbol(CUDA_End,&theEnd,sizeof(theEnd), 0, cudaMemcpyHostToDevice);
+			//cudaGetSymbolAddress((void**)&endPtr, CUDA_End);
 			//
 			CUDACalculatePreparePole<<<CUDA_Grid_dim_precalc,1>>>(m);
 			//
@@ -362,14 +364,14 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 				CUDACalculateIter2<<<CUDA_Grid_dim_precalc,CUDA_BLOCK_DIM>>>();
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
 				err = cudaDeviceSynchronize();
-				cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
-				//cudaMemcpyFromSymbol(&theEnd,CUDA_End,sizeof(theEnd));
+				//cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
+				cudaMemcpyFromSymbol(&theEnd,CUDA_End,sizeof(theEnd), 0, cudaMemcpyDeviceToHost);
 				theEnd=theEnd==CUDA_Grid_dim_precalc;
 
 				//break;//debug
 			}
 			CUDACalculateFinishPole<<<CUDA_Grid_dim_precalc,1>>>();
-			err=cudaThreadSynchronize();
+			err= cudaDeviceSynchronize();
 //			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_Grid_dim_precalc);
 //			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_Grid_dim_precalc);
 			//break; //debug
@@ -414,31 +416,6 @@ int CUDAPrecalc(double freq_start,double freq_end,double freq_step,double stop_c
 
 	return 1;
 }
-
-//void GetCUDAOccupancy(const int cudaDevice)
-//{
-//	int numBlocks;        // Occupancy in terms of active blocks
-//	const auto blockSize = CUDA_BLOCK_DIM;
-//
-//	//cudaGetDevice(&cudaDevice);
-//	cudaDeviceProp deviceProp;
-//	cudaGetDeviceProperties(&deviceProp, cudaDevice);
-//
-//	cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-//		&numBlocks,
-//		CUDACalculateIter1_mrqcof1_curve2,
-//		blockSize,
-//		0);
-//
-//	const auto activeWarps = numBlocks * blockSize / deviceProp.warpSize;
-//	const auto maxWarps = deviceProp.maxThreadsPerMultiProcessor / deviceProp.warpSize;
-//
-//	const auto ocupancy = static_cast<double>(activeWarps) / maxWarps * 100;
-//
-//	fprintf(stderr, "Occupancy for kernel \"CUDACalculateIter1_mrqcof1_curve2\": %f%%\n", ocupancy);
-//
-//	//std::cout << "Occupancy: " << (double)activeWarps / maxWarps * 100 << "%" << std::endl;
-//}
 
 int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_step,double stop_condition,int n_iter_min,double conw_r,
 	          int ndata,int *ia,int *ia_par,double *cg_first,MFILE& mf,double escl,double *sig,int Numfac,double *brightness)
@@ -567,7 +544,8 @@ int CUDAStart(int n_start_from,double freq_start,double freq_end,double freq_ste
 
 #if _DEBUG
 		float fraction = fractionDone * 100;
-			printf("Fraction done: %.2f%%\n", fraction);
+			printf("Fraction done: %.3f%%\n", fraction);
+			fprintf(stderr, "Fraction done: %.3f%%\n", fraction);
 #endif
 
         CUDACalculatePrepare<<<CUDA_grid_dim,1>>>(n,n_max,freq_start,freq_step);
