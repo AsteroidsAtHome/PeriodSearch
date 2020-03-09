@@ -252,7 +252,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>D:\boincsdk\boinc_repo\win_build\Build\x64\Debug;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Debug;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)_$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_8_1|x64'">
@@ -445,7 +445,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <!-- <CallingConvention>Cdecl</CallingConvention> -->
       <!-- <LanguageStandard>stdcpp14</LanguageStandard> -->
@@ -467,7 +467,7 @@
     <CudaCompile>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_75,sm_75</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <FastMath>false</FastMath>
       <PtxAsOptionV>true</PtxAsOptionV>

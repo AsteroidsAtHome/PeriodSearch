@@ -1,6 +1,6 @@
-#ifndef __CUDACC__
-#define __CUDACC__
-#endif
+//#ifndef __CUDACC__
+//#define __CUDACC__
+//#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include <texture_fetch_functions.hpp>
 
 __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
-	      double *alpha, double beta[], int Inrel,int Lpoints)
+		  double *alpha, double beta[], int Inrel,int Lpoints)
 {
    int l,jp,j,k,m, lnp1,lnp2,Lpoints1=Lpoints+1;
    double dy,sig2i,wt,ymod, coef1,coef,  wght,ltrial_chisq;
@@ -20,7 +20,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 
 
 //precalc thread boundaries
-    int tmph,tmpl;
+	int tmph,tmpl;
 	tmph=Lpoints/CUDA_BLOCK_DIM;
 	if(Lpoints%CUDA_BLOCK_DIM) tmph++;
 	tmpl=threadIdx.x*tmph;
@@ -29,7 +29,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 	if (tmph>Lpoints) tmph=Lpoints;
 	tmpl++;
 
-    int matmph,matmpl;
+	int matmph,matmpl;
 	matmph=CUDA_ma/CUDA_BLOCK_DIM;
 	if(CUDA_ma%CUDA_BLOCK_DIM) matmph++;
 	matmpl=threadIdx.x*matmph;
@@ -37,7 +37,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 	if (matmph>CUDA_ma) matmph=CUDA_ma;
 	matmpl++;
 
-    int latmph,latmpl;
+	int latmph,latmpl;
 	latmph=CUDA_lastone/CUDA_BLOCK_DIM;
 	if(CUDA_lastone%CUDA_BLOCK_DIM) latmph++;
 	latmpl=threadIdx.x*latmph;
@@ -47,11 +47,11 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 
 /*   if ((*CUDA_LCC).Lastcall != 1) always ==0
    {*/
-    if (Inrel /*==1*/)
+	if (Inrel /*==1*/)
 	{
-      for (jp = tmpl; jp <= tmph; jp++)
-      {
-        lnp1++;
+	  for (jp = tmpl; jp <= tmph; jp++)
+	  {
+		lnp1++;
 			int ixx=jp+1*Lpoints1;
 				/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
 			(*CUDA_LCC).dytemp[ixx]=0;
@@ -257,7 +257,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 /*     } always ==0 /* Lastcall != 1 */
 
    /*  if (((*CUDA_LCC).Lastcall == 1) && (CUDA_Inrel[i] == 1)) always ==0
-        (*CUDA_LCC).Sclnw[i] = (*CUDA_LCC).Scale * CUDA_Lpoints[i] * CUDA_sig[np]/ave;*/
+		(*CUDA_LCC).Sclnw[i] = (*CUDA_LCC).Scale * CUDA_Lpoints[i] * CUDA_sig[np]/ave;*/
 	if(threadIdx.x==0)
 	{
 		(*CUDA_LCC).np2=lnp2;
@@ -269,7 +269,7 @@ __device__ void mrqcof_curve2(freq_context *CUDA_LCC, double a[],
 __global__ void CUDACalculateIter1_mrqcof1_curve2(int Inrel,int Lpoints)
 {
 	const int thidx=blockIdx.x;
-    freq_context *CUDA_LCC=&CUDA_CC[thidx];
+	freq_context *CUDA_LCC=&CUDA_CC[thidx];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
