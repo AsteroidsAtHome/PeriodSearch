@@ -1,5 +1,5 @@
 #pragma once
-#include <crt/host_defines.h>
+#include <cuda_runtime_api.h>
 
 //  NOTE Fake declaration to satisfy intellisense. See https://stackoverflow.com/questions/39980645/enable-code-indexing-of-cuda-in-clion/39990500
 #ifndef __CUDACC__

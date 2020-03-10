@@ -196,7 +196,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	//int* endPtr;
 	int max_test_periods, iC, theEnd;
 	double sum_dark_facet, ave_dark_facet;
-	int i, n, m, n_max = (int)((freq_start - freq_end) / freq_step) + 1;
+	int i, n, m;
 	int n_iter_max;
 	double iter_diff_max;
 	freq_result* res;
@@ -213,6 +213,8 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	sum_dark_facet = 0.0;
 	ave_dark_facet = 0.0;
 
+#ifdef _DEBUG
+	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
 	if (n_max < max_test_periods)
 	{
 		max_test_periods = n_max;
@@ -224,7 +226,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	}
 
 	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
-
+#endif
 
 	for (i = 1; i <= n_ph_par; i++)
 	{
@@ -311,9 +313,12 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	cudaMemcpyToSymbol(CUDA_ncoef0, &m, sizeof(m));
 
 	int CUDA_Grid_dim_precalc = CUDA_grid_dim;
-	if (max_test_periods < CUDA_Grid_dim_precalc) {
+	if (max_test_periods < CUDA_Grid_dim_precalc)
+	{
 		CUDA_Grid_dim_precalc = max_test_periods;
+#ifdef _DEBUG
 		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
+#endif
 	}
 
 	err = cudaMalloc(&pcc, CUDA_Grid_dim_precalc * sizeof(freq_context));
