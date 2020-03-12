@@ -6,6 +6,7 @@
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
 #include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 //__device__ int gauss_errc(freq_context *CUDA_LCC,int n, double b[])
 __device__ int gauss_errc(freq_context* CUDA_LCC, const int ma)

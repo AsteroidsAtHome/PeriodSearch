@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
+#include <device_launch_parameters.h>
 
 
 /* comment the following line if no YORP */
@@ -26,7 +27,7 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
 	if (brtmph>CUDA_Numfac) brtmph=CUDA_Numfac;
 	brtmpl++;
 
-   /* N.B. curv and blmatrix called outside bright 
+   /* N.B. curv and blmatrix called outside bright
       because output same for all points */
    curv(CUDA_LCC,a,brtmpl,brtmph);
 
@@ -34,9 +35,9 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
    {
 //   #ifdef YORP
 //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-  // #else      
-      blmatrix(CUDA_LCC,a[CUDA_ma-4-CUDA_Nphpar],a[CUDA_ma-3-CUDA_Nphpar]); 
-//   #endif      
+  // #else
+      blmatrix(CUDA_LCC,a[CUDA_ma-4-CUDA_Nphpar],a[CUDA_ma-3-CUDA_Nphpar]);
+//   #endif
 	   (*CUDA_LCC).trial_chisq = 0;
 	   (*CUDA_LCC).np = 0;
 	   (*CUDA_LCC).np1 = 0;
@@ -57,14 +58,14 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
          alpha[j*(CUDA_mfit1)+k]=0;
       beta[j]=0;
    }
-   
+
    __syncthreads(); //pro jistotu
 }
 
 __device__ double mrqcof_end(freq_context *CUDA_LCC,double *alpha)
 {
    int j,k;
-	   
+
    for (j = 2; j <= CUDA_mfit; j++)
       for (k = 1; k <= j-1; k++)
          alpha[k*(CUDA_mfit1)+j] = alpha[j*(CUDA_mfit1)+k];
@@ -77,7 +78,7 @@ __device__ void mrqcof_matrix(freq_context *CUDA_LCC, double a[], int Lpoints)
    matrix_neo(CUDA_LCC, a,(*CUDA_LCC).np, Lpoints);
 }
 
-__device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],  
+__device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[],int Inrel,int Lpoints)
 {
 	int l,k,jp, lnp,Lpoints1=Lpoints+1;
@@ -95,7 +96,7 @@ __device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
 	if (brtmph>Lpoints) brtmph=Lpoints;
 	brtmpl++;
 //
-   
+
    for (jp = brtmpl; jp <= brtmph; jp++)
     bright(CUDA_LCC,a,jp,Lpoints1,Inrel);
 
@@ -148,7 +149,7 @@ __device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
 	  }
 }
 
-__device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],  
+__device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[],int Inrel,int Lpoints)
 {
 	int l,jp, lnp;
@@ -185,25 +186,25 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	brtmpl++;
 
 	__syncthreads();
- 
+
 
       for (jp = 1; jp <= Lpoints; jp++)
       {
          lnp++;
-	    
+
          ymod = conv(CUDA_LCC,jp-1,tmpl,tmph,brtmpl,brtmph);
-		
+
 		 if (threadIdx.x==0)
 		 {
 			 (*CUDA_LCC).ytemp[jp] = ymod;
-	    
+
 			 if (Inrel == 1)
 				lave = lave + ymod;
-		 }     
+		 }
 		for (l=tmpl; l <= tmph; l++)
 		{
 			(*CUDA_LCC).dytemp[jp+l*(Lpoints+1)] = (*CUDA_LCC).dyda[l];
-			if (Inrel == 1) 
+			if (Inrel == 1)
 				(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dyda[l];
 		}
 		/* save lightcurves */

@@ -9,7 +9,7 @@
 //#include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-__device__ void MrqcofCurve2(freq_context* CUDA_LCC, double a[], double* alpha, double beta[], int inrel, int lpoints)
+__device__ void MrqcofCurve2(freq_context* CUDA_LCC, double* alpha, double beta[], int inrel, int lpoints)
 {
 	int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
 	double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
@@ -273,7 +273,7 @@ __global__ void CudaCalculateIter1Mrqcof1Curve2(const int inrel, const int lpoin
 
 	if (!(*CUDA_LCC).isAlamda) return;
 
-	MrqcofCurve2(CUDA_LCC, (*CUDA_LCC).cg, (*CUDA_LCC).alpha, (*CUDA_LCC).beta, inrel, lpoints);
+	MrqcofCurve2(CUDA_LCC, (*CUDA_LCC).alpha, (*CUDA_LCC).beta, inrel, lpoints);
 }
 
 __global__ void CudaCalculateIter1Mrqcof2Curve2(const int inrel, const int lpoints)
@@ -284,5 +284,5 @@ __global__ void CudaCalculateIter1Mrqcof2Curve2(const int inrel, const int lpoin
 
 	if (!(*CUDA_LCC).isNiter) return;
 
-	MrqcofCurve2(CUDA_LCC, (*CUDA_LCC).atry, (*CUDA_LCC).covar, (*CUDA_LCC).da, inrel, lpoints);
+	MrqcofCurve2(CUDA_LCC, (*CUDA_LCC).covar, (*CUDA_LCC).da, inrel, lpoints);
 }

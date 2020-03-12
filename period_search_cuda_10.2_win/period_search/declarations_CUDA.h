@@ -7,10 +7,8 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
 __device__ void mrqcof_matrix(freq_context *CUDA_LCC, double a[], int Lpoints);
 __device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
                               double *alpha, double beta[], int Inrel,int Lpoints);
-__device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
-                                   double *alpha, double beta[], int Inrel,int Lpoints);
-__device__ void MrqcofCurve2(freq_context *CUDA_LCC, double a[],
-                              double *alpha, double beta[], int inrel,int lpoints);
+__device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[], double *alpha, double beta[], int Inrel,int Lpoints);
+__device__ void MrqcofCurve2(freq_context *CUDA_LCC, double *alpha, double beta[], int inrel,int lpoints);
 __device__ double mrqcof_end(freq_context *CUDA_LCC,  double *alpha);
 
 __device__ double mrqcof(freq_context *CUDA_LCC, double a[], int ia[], int ma,

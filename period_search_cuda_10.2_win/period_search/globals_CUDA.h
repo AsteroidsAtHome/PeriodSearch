@@ -19,8 +19,8 @@
 inline void __syncthreads() {};
 inline void atomicAdd(int*, int) {};
 
-template <class T>
-static __device__ T tex1Dfetch(texture<int2, 1> texObject, int x) { return {}; };
+//template <class T>
+//static __device__ T tex1Dfetch(texture<int2, 1> texObject, int x) { return {}; };
 
 __device__ __device_builtin__ double __hiloint2double(int hi, int lo);
 
