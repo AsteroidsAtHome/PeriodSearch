@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include "globals_CUDA.h"
+#include <device_launch_parameters.h>
 
 __device__ void matrix_neo(freq_context *CUDA_LCC, double cg[],int lnp1, int Lpoints)
 {

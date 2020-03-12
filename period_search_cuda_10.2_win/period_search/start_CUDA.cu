@@ -334,7 +334,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 
 	for (n = 1; n <= max_test_periods; n += CUDA_Grid_dim_precalc)
 	{
-		CUDACalculatePrepare<<<CUDA_Grid_dim_precalc, 1>>>(n, max_test_periods, freq_start, freq_step);
+		CudaCalculatePrepare<<<CUDA_Grid_dim_precalc, 1>>>(n, max_test_periods, freq_start, freq_step);
 		err = cudaDeviceSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
@@ -344,44 +344,43 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 			cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd), 0, cudaMemcpyHostToDevice);
 			//cudaGetSymbolAddress((void**)&endPtr, CUDA_End);
 			//
-			CUDACalculatePreparePole<<<CUDA_Grid_dim_precalc, 1>>>(m);
+			CudaCalculatePreparePole<<<CUDA_Grid_dim_precalc, 1>>>(m);
 			//
 #ifdef _DEBUG
-			printf("\n");
-
+			printf(".");
 #endif
 			auto count = 0;
 			while (!theEnd)
 			{
 				count++;
-				CUDACalculateIter1_Begin<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Begin<<<CUDA_Grid_dim_precalc, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqcof1_start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof1Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CUDACalculateIter1_mrqcof1_matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CUDACalculateIter1_mrqcof1_curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof1_end<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof1Curve1Last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1End<<<CUDA_Grid_dim_precalc, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqmin1_end<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin1End<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqcof2_start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof2Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CUDACalculateIter1_mrqcof2_matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CUDACalculateIter1_mrqcof2_curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof2_end<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof2Curve1Last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2End<<<CUDA_Grid_dim_precalc, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqmin2_end<<<CUDA_Grid_dim_precalc, 1>>>();
-				CUDACalculateIter2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin2End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
 				err = cudaDeviceSynchronize();
 				//cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
@@ -390,14 +389,15 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 
 				//break;//debug
 			}
-			CUDACalculateFinishPole<<<CUDA_Grid_dim_precalc, 1>>>();
+			CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, 1>>>();
 			err = cudaDeviceSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_Grid_dim_precalc);
 			//			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_Grid_dim_precalc);
 						//break; //debug
 		}
+		printf("\n");
 
-		CUDACalculateFinish<<<CUDA_Grid_dim_precalc, 1>>>();
+		CudaCalculateFinish<<<CUDA_Grid_dim_precalc, 1>>>();
 		//err=cudaThreadSynchronize(); memcpy is synchro itself
 
 		//read results here
@@ -568,7 +568,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		fprintf(stderr, "Fraction done: %.3f%%\n", fraction);
 #endif
 
-		CUDACalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
+		CudaCalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
 		err = cudaThreadSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
@@ -577,52 +577,52 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 			theEnd = 0;
 			cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd));
 			//
-			CUDACalculatePreparePole<<<CUDA_grid_dim, 1>>>(m);
+			CudaCalculatePreparePole<<<CUDA_grid_dim, 1>>>(m);
 			//
 			while (!theEnd)
 			{
-				CUDACalculateIter1_Begin<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Begin<<<CUDA_grid_dim, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqcof1_start<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof1Start<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CUDACalculateIter1_mrqcof1_matrix<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CUDACalculateIter1_mrqcof1_curve1<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Matrix<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve1<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof1_curve1_last<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof1_curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof1_end<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Mrqcof1Curve1Last<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1Curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqmin1_end<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin1End<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqcof2_start<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof2Start<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CUDACalculateIter1_mrqcof2_matrix<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CUDACalculateIter1_mrqcof2_curve1<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Matrix<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve1<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
 				}
-				CUDACalculateIter1_mrqcof2_curve1_last<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof2_curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CUDACalculateIter1_mrqcof2_end<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Mrqcof2Curve1Last<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2Curve2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim, 1>>>();
 				//mrqcof
-				CUDACalculateIter1_mrqmin2_end<<<CUDA_grid_dim, 1>>>();
-				CUDACalculateIter2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin2End<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
 				cudaMemcpyFromSymbol(&theEnd, CUDA_End, sizeof(theEnd));
 				theEnd = theEnd == CUDA_grid_dim;
 
 				//break;//debug
 			}
-			CUDACalculateFinishPole<<<CUDA_grid_dim, 1>>>();
+			CudaCalculateFinishPole<<<CUDA_grid_dim, 1>>>();
 			err = cudaThreadSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_grid_dim);
 			//			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_grid_dim);
 						//break; //debug
 		}
 
-		CUDACalculateFinish<<<CUDA_grid_dim, 1>>>();
+		CudaCalculateFinish<<<CUDA_grid_dim, 1>>>();
 		//err=cudaThreadSynchronize(); memcpy is synchro itself
 
 		//read results here

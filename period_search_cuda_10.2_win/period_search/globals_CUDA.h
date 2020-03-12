@@ -12,10 +12,16 @@
 #include <vector_types.h>
 #include <driver_types.h>
 #include <texture_types.h>
+#include <cuda_texture_types.h>
 //#define __CUDACC__
 #define __CUDA__
 inline void __syncthreads() {};
 inline void atomicAdd(int*, int) {};
+
+template <class T>
+static __device__ T tex1Dfetch(texture<int2, 1> texObject, int x) { return {}; };
+
+__device__ __device_builtin__ double __hiloint2double(int hi, int lo);
 
 //template<class T, int texType = cudaTextureType1D, enum cudaTextureReadMode mode = cudaReadModeElementType>
 //struct texture {};

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "globals_CUDA.h"
 #include "declarations_CUDA.h"
+#include <device_launch_parameters.h>
 
 //#define __device
 
