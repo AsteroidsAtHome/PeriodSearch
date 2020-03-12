@@ -123,7 +123,11 @@ __global__ void CudaCalculateIter1Begin(void)
 		{
 			atomicAdd(&CUDA_End, 1);
 #ifdef _DEBUG
-			//printf("%d ", CUDA_End);
+			/*const int is_precalc = CUDA_Is_Precalc;
+			if(is_precalc)
+			{
+				printf("%d ", CUDA_End);
+			}*/
 #endif
 			(*CUDA_LFR).isReported = 1;
 		}
@@ -139,7 +143,8 @@ __global__ void CudaCalculateIter1Mrqmin1End(void)
 
 	if (!(*CUDA_LCC).isNiter) return;
 
-	/*gauss_err=*/mrqmin_1_end(CUDA_LCC);
+	int block = CUDA_BLOCK_DIM;
+	/*gauss_err=*/mrqmin_1_end(CUDA_LCC, CUDA_ma, CUDA_mfit, CUDA_mfit1, block);
 }
 
 __global__ void CudaCalculateIter1Mrqmin2End(void)

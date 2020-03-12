@@ -7,10 +7,11 @@
 #include "declarations_CUDA.h"
 #include "boinc_api.h"
 #include "Start.cuh"
-//#include <cuda_runtime.h>
+//#include "cuda_runtime.h"
 #include <cuda_runtime_api.h>
 //#include <cuda_occupancy.h>
 #include <device_launch_parameters.h>
+#include <cuda_texture_types.h>
 
 #ifdef __GNUC__
 #include <time.h>
@@ -44,6 +45,13 @@ __device__ double CUDA_tim[MAX_N_OBS + 1];
 //__device__ double *CUDA_Weight/*[MAX_N_OBS+1]*/;
 __constant__ double CUDA_Phi_0;
 __device__ int CUDA_End;
+__device__ int CUDA_Is_Precalc;
+
+//__device__ int icol;
+//__device__ double pivinv;
+//__shared__ int sh_icol[CUDA_BLOCK_DIM];
+//__shared__ int sh_irow[CUDA_BLOCK_DIM];
+//__shared__ double sh_big[CUDA_BLOCK_DIM];
 
 texture<int2, 1> texWeight;
 texture<int2, 1> texbrightness;
@@ -105,20 +113,20 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 		}
 	}
 	else
-		if (deviceProp.major == 6) //CC 6.0, 6.1 & 6.2
-		{
+	if (deviceProp.major == 6) //CC 6.0, 6.1 & 6.2
+	{
 			SMXBlock = 32; //occupancy 100% = 32 blocks per SMX
-		}
-		else
-			if (deviceProp.major == 5) //CC 5.0, 5.2 & 5.3
-			{
+	}
+	else
+	if (deviceProp.major == 5) //CC 5.0, 5.2 & 5.3
+	{
 				SMXBlock = 32; //occupancy 100% = 32 blocks per SMX, instead as previous was 16 blocks per SMX which led to only 50%
-			}
-			else
-				if (deviceProp.major == 3) //CC 3.0, 3.2, 3.5 & 3.7
-				{
-					SMXBlock = 16; //occupancy 100% = 16 blocks per SMX
-				}
+	}
+	else
+	if (deviceProp.major == 3) //CC 3.0, 3.2, 3.5 & 3.7
+	{
+		SMXBlock = 16; //occupancy 100% = 16 blocks per SMX
+	}
 	/*else
 	if (deviceProp.major==2) //CC 2.0 and 2.1
 	{
@@ -185,10 +193,10 @@ void CUDAUnprepare(void)
 int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double stop_condition, int n_iter_min, double* conw_r,
 	int ndata, int* ia, int* ia_par, int* new_conw, double* cg_first, double* sig, int Numfac, double* brightness)
 {
-	int* endPtr;
+	//int* endPtr;
 	int max_test_periods, iC, theEnd;
 	double sum_dark_facet, ave_dark_facet;
-	int i, n, m, n_max = (int)((freq_start - freq_end) / freq_step) + 1;
+	int i, n, m;
 	int n_iter_max;
 	double iter_diff_max;
 	freq_result* res;
@@ -205,6 +213,8 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	sum_dark_facet = 0.0;
 	ave_dark_facet = 0.0;
 
+#ifdef _DEBUG
+	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
 	if (n_max < max_test_periods)
 	{
 		max_test_periods = n_max;
@@ -216,7 +226,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	}
 
 	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
-
+#endif
 
 	for (i = 1; i <= n_ph_par; i++)
 	{
@@ -238,6 +248,9 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	}
 
 	cudaError_t err;
+	int isPrecalc = 1;
+	/*int i_col, sh_icol_local[CUDA_BLOCK_DIM], sh_irow_local[CUDA_BLOCK_DIM];
+	double piv_inv, sh_big_local[CUDA_BLOCK_DIM];*/
 
 	//here move data to device
 	cudaMemcpyToSymbol(CUDA_Ncoef, &n_coef, sizeof(n_coef));
@@ -258,6 +271,12 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	cudaMemcpyToSymbol(CUDA_Pleg, pleg, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1) * (MAX_LM + 1));
 	cudaMemcpyToSymbol(CUDA_Darea, d_area, sizeof(double) * (MAX_N_FAC + 1));
 	cudaMemcpyToSymbol(CUDA_Dsph, d_sphere, sizeof(double) * (MAX_N_FAC + 1) * (MAX_N_PAR + 1));
+	cudaMemcpyToSymbol(CUDA_Is_Precalc, &isPrecalc, sizeof isPrecalc, 0, cudaMemcpyHostToDevice);
+	/*cudaMemcpyToSymbol(icol, &i_col, sizeof(i_col));
+	cudaMemcpyToSymbol(pivinv, &piv_inv, sizeof(piv_inv));
+	cudaMemcpyToSymbol(sh_icol, sh_icol_local, sizeof(int) * CUDA_BLOCK_DIM);
+	cudaMemcpyToSymbol(sh_irow, sh_irow_local, sizeof(int) * CUDA_BLOCK_DIM);
+	cudaMemcpyToSymbol(sh_big, sh_big_local, sizeof(double) * CUDA_BLOCK_DIM);*/
 
 	err = cudaMalloc(&pbrightness, (ndata + 1) * sizeof(double));
 	err = cudaMemcpy(pbrightness, brightness, (ndata + 1) * sizeof(double), cudaMemcpyHostToDevice);
@@ -266,6 +285,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	err = cudaMalloc(&psig, (ndata + 1) * sizeof(double));
 	err = cudaMemcpy(psig, sig, (ndata + 1) * sizeof(double), cudaMemcpyHostToDevice);
 	err = cudaBindTexture(0, texsig, psig, (ndata + 1) * sizeof(double));
+	if (err) printf("Error: %s\n", cudaGetErrorString(err));
 
 	/* number of fitted parameters */
 	int lmfit = 0, llastma = 0, llastone = 1, ma = n_coef + 5 + n_ph_par;
@@ -293,9 +313,12 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	cudaMemcpyToSymbol(CUDA_ncoef0, &m, sizeof(m));
 
 	int CUDA_Grid_dim_precalc = CUDA_grid_dim;
-	if (max_test_periods < CUDA_Grid_dim_precalc) {
+	if (max_test_periods < CUDA_Grid_dim_precalc)
+	{
 		CUDA_Grid_dim_precalc = max_test_periods;
+#ifdef _DEBUG
 		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
+#endif
 	}
 
 	err = cudaMalloc(&pcc, CUDA_Grid_dim_precalc * sizeof(freq_context));
@@ -410,6 +433,9 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 		}
 	} /* period loop */
 
+	isPrecalc = 0;
+	cudaMemcpyToSymbol(CUDA_Is_Precalc, &isPrecalc, sizeof(isPrecalc), 0, cudaMemcpyHostToDevice);
+
 	cudaUnbindTexture(texArea);
 	cudaUnbindTexture(texDg);
 	cudaUnbindTexture(texbrightness);
@@ -468,6 +494,9 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 	cudaError_t err;
 
+	/*int i_col, sh_icol_local[CUDA_BLOCK_DIM], sh_irow_local[CUDA_BLOCK_DIM];
+	double piv_inv, sh_big_local[CUDA_BLOCK_DIM];*/
+
 	//here move data to device
 	cudaMemcpyToSymbol(CUDA_Ncoef, &n_coef, sizeof(n_coef));
 	cudaMemcpyToSymbol(CUDA_Nphpar, &n_ph_par, sizeof(n_ph_par));
@@ -487,6 +516,12 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	cudaMemcpyToSymbol(CUDA_Pleg, pleg, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1) * (MAX_LM + 1));
 	cudaMemcpyToSymbol(CUDA_Darea, d_area, sizeof(double) * (MAX_N_FAC + 1));
 	cudaMemcpyToSymbol(CUDA_Dsph, d_sphere, sizeof(double) * (MAX_N_FAC + 1) * (MAX_N_PAR + 1));
+	/*cudaMemcpyToSymbol(icol, &i_col, sizeof(i_col));
+	cudaMemcpyToSymbol(pivinv, &piv_inv, sizeof(piv_inv));
+	cudaMemcpyToSymbol(sh_icol, sh_icol_local, sizeof(int) * CUDA_BLOCK_DIM);
+	cudaMemcpyToSymbol(sh_irow, sh_irow_local, sizeof(int) * CUDA_BLOCK_DIM);
+	cudaMemcpyToSymbol(sh_big, sh_big_local, sizeof(double) * CUDA_BLOCK_DIM);*/
+
 
 	err = cudaMalloc(&pbrightness, (ndata + 1) * sizeof(double));
 	err = cudaMemcpy(pbrightness, brightness, (ndata + 1) * sizeof(double), cudaMemcpyHostToDevice);
@@ -495,6 +530,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	err = cudaMalloc(&psig, (ndata + 1) * sizeof(double));
 	err = cudaMemcpy(psig, sig, (ndata + 1) * sizeof(double), cudaMemcpyHostToDevice);
 	err = cudaBindTexture(0, texsig, psig, (ndata + 1) * sizeof(double));
+	if (err) printf("Error: %s", cudaGetErrorString(err));
 
 	/* number of fitted parameters */
 	int lmfit = 0, llastma = 0, llastone = 1, ma = n_coef + 5 + n_ph_par;
@@ -555,7 +591,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 	res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
 
-	int firstreport = 0;//beta debug
+	//int firstreport = 0;//beta debug
 
 	for (n = n_start_from; n <= n_max; n += CUDA_grid_dim)
 	{
@@ -564,8 +600,11 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 #if _DEBUG
 		float fraction = fractionDone * 100;
-		printf("Fraction done: %.3f%%\n", fraction);
-		fprintf(stderr, "Fraction done: %.3f%%\n", fraction);
+		std::time_t t = std::time(nullptr);   // get time now
+		std::tm* now = std::localtime(&t);
+
+		printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
 #endif
 
 		CudaCalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
