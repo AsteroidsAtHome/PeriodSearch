@@ -1,35 +1,37 @@
 /* This program take the input lightcurves, scans over the
-   given period range and finds the best period+pole+shape+scattering 
-   solution. Shape is forgotten. The period, rms residual 
+   given period range and finds the best period+pole+shape+scattering
+   solution. Shape is forgotten. The period, rms residual
    of the fit, and pole solution (lamdda, beta) are given to the output.
    Is starts from six initial poles and selects the best period.
-   Reports also pole solution.   
-   
-   syntax:
-   period_search_BOINC 
+   Reports also pole solution.
 
-   output: period [hr], rms deviation, chi^2, dark facet [%] lambda_best beta_best  
+   syntax:
+   period_search_BOINC
+
+   output: period [hr], rms deviation, chi^2, dark facet [%] lambda_best beta_best
 
    8.11.2006
-   
+
    new version of lightcurve files (new input lcs format)
    testing the dark facet, finding the optimal value for convexity weight: 0.1, 0.2, 0.4, 0.8, ... <10.0
    first line of output: fourth column is the optimized conw (not dark facet), all other lines include dark facet
-    
-   16.4.2012 
-   
-   version for BOINC
-   
-*/
-   
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
-#include <memory.h>
 
+   16.4.2012
+
+   version for BOINC
+
+*/
+
+#include "stdafx.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cstring>
+#include <cstdlib>
+//#include <memory.h>
+
+#include "resource.h"
 #include "declarations.h"
 #include "constants.h"
 #include "globals.h"
@@ -55,14 +57,15 @@
 #include "boinc_win.h"
 
 #else
-#include "config.h"
+#include "../win_build/config.h"
 #include <cstdio>
 #include <cctype>
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
 #include <csignal>
-#include <unistd.h>
+#include <io.h>
+//#include <unistd.h>
 #endif
 
 #include "str_util.h"
@@ -70,8 +73,9 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-#include "graphics2.h"
+//#include "graphics2.h"
 #include "start_CUDA.h"
+#include <Shlwapi.h>
 
 #ifdef APP_GRAPHICS
 #include "uc2.h"
@@ -80,460 +84,519 @@ UC_SHMEM* shmem;
 
 using std::string;
 
-#define CHECKPOINT_FILE "period_search_state"
-#define INPUT_FILENAME "period_search_in"
-#define OUTPUT_FILENAME "period_search_out"
+constexpr auto checkpoint_file = "period_search_state";
+constexpr auto input_filename = "period_search_in";
+constexpr auto output_filename = "period_search_out";
 
-int do_checkpoint(MFILE& mf, int nlines, int new_conw,double conwr) {
-    int retval;
-    string resolved_name;
+int DoCheckpoint(MFILE& mf, const int nlines, const int newConw, const double conwr) {
+	string resolvedName;
 
-    FILE* f = fopen("temp", "w");
-    if (!f) return 1;
-    fprintf(f, "%d %d %.17g", nlines, new_conw, conwr);
-    fclose(f);
+	const auto f = fopen("temp", "w");
+	// const auto f = fopen("temp", "e");
+	if (!f) return 1;
+	fprintf(f, "%d %d %.17g", nlines, newConw, conwr);
+	fclose(f);
 
-    retval = mf.flush();
-    if (retval) return retval;
-    boinc_resolve_filename_s(CHECKPOINT_FILE, resolved_name);
-    retval = boinc_rename("temp", resolved_name.c_str());
-    if (retval) return retval;
+	auto retval = mf.flush();
+	if (retval) return retval;
+	boinc_resolve_filename_s(checkpoint_file, resolvedName);
+	retval = boinc_rename("temp", resolvedName.c_str());
+	if (retval) return retval;
 
-    return 0;
+	return 0;
 }
 
 #ifdef APP_GRAPHICS
 void update_shmem() {
-    if (!shmem) return;
+	if (!shmem) return;
 
-    // always do this; otherwise a graphics app will immediately
-    // assume we're not alive
-    shmem->update_time = dtime();
+	// always do this; otherwise a graphics app will immediately
+	// assume we're not alive
+	shmem->update_time = dtime();
 
-    // Check whether a graphics app is running,
-    // and don't bother updating shmem if so.
-    // This doesn't matter here,
-    // but may be worth doing if updating shmem is expensive.
-    //
-    if (shmem->countdown > 0) {
-        // the graphics app sets this to 5 every time it renders a frame
-        shmem->countdown--;
-    } else {
-        return;
-    }
-    shmem->fraction_done = boinc_get_fraction_done();
-    shmem->cpu_time = boinc_worker_thread_cpu_time();;
-    boinc_get_status(&shmem->status);
+	// Check whether a graphics app is running,
+	// and don't bother updating shmem if so.
+	// This doesn't matter here,
+	// but may be worth doing if updating shmem is expensive.
+	//
+	if (shmem->countdown > 0) {
+		// the graphics app sets this to 5 every time it renders a frame
+		shmem->countdown--;
+	}
+	else {
+		return;
+	}
+	shmem->fraction_done = boinc_get_fraction_done();
+	shmem->cpu_time = boinc_worker_thread_cpu_time();;
+	boinc_get_status(&shmem->status);
 }
 #endif
 
-/* global parameters */
-int Lmax, Mmax, Niter, Lastcall,
-    Ncoef, Numfac, Lcurves, Nphpar,
-    Lpoints[MAX_LC+1], Inrel[MAX_LC+1], 
-    Deallocate, n_iter,MaxLpoints;
-    
-double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
-       /*Area[MAX_N_FAC+1],*/ Darea[MAX_N_FAC+1], Sclnw[MAX_LC+1],
-       Yout[MAX_N_OBS+1],
-       Fc[MAX_N_FAC+1][MAX_LM+1], Fs[MAX_N_FAC+1][MAX_LM+1], 
-       Tc[MAX_N_FAC+1][MAX_LM+1], Ts[MAX_N_FAC+1][MAX_LM+1], 
-       Dsph[MAX_N_FAC+1][MAX_N_PAR+1], Dg[MAX_N_FAC+1][MAX_N_PAR+1],    
-       Nor[MAX_N_FAC+1][3], Blmat[4][4],
-       Pleg[MAX_N_FAC+1][MAX_LM+1][MAX_LM+1],
-       Dblm[3][4][4],
-       Weight[MAX_N_OBS+1];
-    
+// NOTE: global parameters
+int l_max, m_max, n_iter, last_call,
+n_coef, num_fac, l_curves, n_ph_par,
+l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
+deallocate, max_l_points; // n_iter,
+
+double o_chi_square, chi_square, a_lambda, a_lamda_incr, a_lamda_start, phi_0, scale,
+d_area[MAX_N_FAC + 1], sclnw[MAX_LC + 1], /*Area[MAX_N_FAC+1],*/
+y_out[MAX_N_OBS + 1],
+f_c[MAX_N_FAC + 1][MAX_LM + 1], f_s[MAX_N_FAC + 1][MAX_LM + 1],
+t_c[MAX_N_FAC + 1][MAX_LM + 1], t_s[MAX_N_FAC + 1][MAX_LM + 1],
+d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
+normal[MAX_N_FAC + 1][3], bl_matrix[4][4],
+pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
+d_bl_matrix[3][4][4],
+weight[MAX_N_OBS + 1];
+
 /*--------------------------------------------------------------*/
 
-int main(int argc, char **argv) {
-    int /*c,*/ nchars = 0, retval, nlines, checkpoint_exists, n_start_from;
-//    double fsize, fd;
-    char input_path[512], output_path[512], chkpt_path[512], buf[256];
-    MFILE out;
-    FILE* state, *infile;
+int main(int argc, char** argv)
+{
+	int retval, nlines, checkpointExists, nStartFrom;  //int c, nchars = 0 // double fsize, fd;
+	char inputPath[512], outputPath[512], chkptPath[512], buf[256];
+	MFILE out;
+	FILE* state, * infile;
 
-   int i, j, l, m, k, n, nrows, onlyrel, ndata, k2, ndir, i_temp, 
-       n_iter_min, 
-       *ia,  ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
-       lc_number, 
-       **ifp, new_conw; 
-  
-   double per_start, per_step_coef, per_end,
-          freq_start, freq_step, freq_end, jd_min, jd_max,
-          stop_condition,
-          *t, *f, *at, *af;
-   
-   double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis, 
-          cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
-          dth, dph, rfit, escl,
-          *brightness, e[4], e0[4], ee[MAX_N_OBS+1][3],
-          ee0[MAX_N_OBS+1][3], *cg, *cg_first,
-          *sig, 
-          *tim, *al,
-	  beta_pole[N_POLES+1], lambda_pole[N_POLES+1], par[4], *weight_lc;
+	int i, j, l, m, k, n, nrows, onlyrel, ndata, k2, ndir, iTemp, nIterMin,
+		* ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
+		lcNumber, ** ifp, newConw;
 
-   char *str_temp;
+	double startPeriod, periodStepCoef, endPeriod,
+		startFrequency, frequencyStep, endFrequency, //jdMin, jdMax,
+		stopCondition,
+		* t, * f, * at, * af;
+	/*Minimum JD*/
+	double jdMin;
+	/*Maximum JD*/
+	double jdMax;
+	/*Time in JD*/
+	double* tim;
+	/*Brightness*/
+	double* brightness;
+	/*Ecliptic astronomical tempocentric coordinates of the Sun in AU*/
+	double e0[4];
+	/*Ecliptic astronomical centric coordinates of the Earth in AU*/
+	double e[4];
 
-   str_temp = (char *) malloc (MAX_LINE_LENGTH);
+	double jd0, jd00, conw, conwR, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, cAxis,
+		cl, al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl,
+		ee[MAX_N_OBS + 1][3], // e[4], e0[4],
+		ee0[MAX_N_OBS + 1][3], * cg, * cgFirst, * sig, * al, // *tim, *brightness,
+		betaPole[N_POLES + 1], lambdaPole[N_POLES + 1], par[4], * weightLc;
 
-//   ee = matrix_double(MAX_N_OBS,3);
-//   ee0 = matrix_double(MAX_N_OBS,3);
-//   covar = matrix_double(MAX_N_PAR,MAX_N_PAR);
-//   aalpha = matrix_double(MAX_N_PAR,MAX_N_PAR);
-   ifp = matrix_int(MAX_N_FAC,4);
-   
-   tim = vector_double(MAX_N_OBS);
-   brightness = vector_double(MAX_N_OBS);
-   sig = vector_double(MAX_N_OBS);
-   cg = vector_double(MAX_N_PAR);
-   cg_first = vector_double(MAX_N_PAR);
-   t = vector_double(MAX_N_FAC);
-   f = vector_double(MAX_N_FAC);
-   at = vector_double(MAX_N_FAC);
-   af = vector_double(MAX_N_FAC);
-      
-   ia = vector_int(MAX_N_PAR);
+	char* stringTemp;
 
-    lambda_pole[1] = 0;    beta_pole[1] = 0;
-    lambda_pole[2] = 90;   beta_pole[2] = 0;
-    lambda_pole[3] = 180;  beta_pole[3] = 0;
-    lambda_pole[4] = 270;  beta_pole[4] = 0;
-    lambda_pole[5] = 60;   beta_pole[5] = 60;
-    lambda_pole[6] = 180;  beta_pole[6] = 60;
-    lambda_pole[7] = 300;  beta_pole[7] = 60;
-    lambda_pole[8] = 60;   beta_pole[8] = -60;
-    lambda_pole[9] = 180;  beta_pole[9] = -60;
-    lambda_pole[10] = 300; beta_pole[10] = -60;
-    
-    ia_lambda_pole = ia_beta_pole = 1;
-    
+	stringTemp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
+
+	//   ee = matrix_double(MAX_N_OBS,3);
+	//   ee0 = matrix_double(MAX_N_OBS,3);
+	//   covar = matrix_double(MAX_N_PAR,MAX_N_PAR);
+	//   aalpha = matrix_double(MAX_N_PAR,MAX_N_PAR);
+
+	ifp = matrix_int(MAX_N_FAC, 4);
+	tim = vector_double(MAX_N_OBS);
+	brightness = vector_double(MAX_N_OBS);
+	sig = vector_double(MAX_N_OBS);
+	cg = vector_double(MAX_N_PAR);
+	cgFirst = vector_double(MAX_N_PAR);
+	t = vector_double(MAX_N_FAC);
+	f = vector_double(MAX_N_FAC);
+	at = vector_double(MAX_N_FAC);
+	af = vector_double(MAX_N_FAC);
+
+	ia = vector_int(MAX_N_PAR);
+
+	lambdaPole[1] = 0;    betaPole[1] = 0;
+	lambdaPole[2] = 90;   betaPole[2] = 0;
+	lambdaPole[3] = 180;  betaPole[3] = 0;
+	lambdaPole[4] = 270;  betaPole[4] = 0;
+	lambdaPole[5] = 60;   betaPole[5] = 60;
+	lambdaPole[6] = 180;  betaPole[6] = 60;
+	lambdaPole[7] = 300;  betaPole[7] = 60;
+	lambdaPole[8] = 60;   betaPole[8] = -60;
+	lambdaPole[9] = 180;  betaPole[9] = -60;
+	lambdaPole[10] = 300; betaPole[10] = -60;
+
+	ia_lambda_pole = ia_beta_pole = 1;
+
 	BOINC_OPTIONS options;
-    boinc_options_defaults(options);
+	boinc_options_defaults(options);
 	options.normal_thread_priority = true;
-    retval = boinc_init_options(&options);
-//    retval = boinc_init();
-    if (retval) {
-        fprintf(stderr, "%s boinc_init returned %d\n",
-            boinc_msg_prefix(buf, sizeof(buf)), retval
-        );
-        exit(retval);
-    }
+	retval = boinc_init_options(&options);
 
-    // open the input file (resolve logical name first)
-    //
-    boinc_resolve_filename(INPUT_FILENAME, input_path, sizeof(input_path));
-    infile = boinc_fopen(input_path, "r");
-    if (!infile) {
-        fprintf(stderr,
-            "%s Couldn't find input file, resolved name %s.\n",
-            boinc_msg_prefix(buf, sizeof(buf)), input_path
-        );
-        exit(-1);
-    }
+	//    retval = boinc_init();
 
-    // output file
-    boinc_resolve_filename(OUTPUT_FILENAME, output_path, sizeof(output_path));
-//    out.open(output_path, "w");
+	if (retval) {
+		fprintf(stderr, "%s boinc_init returned %d\n",
+			boinc_msg_prefix(buf, sizeof(buf)), retval
+		);
+		exit(retval);
+	}
 
-    // See if there's a valid checkpoint file.
-    // If so seek input file and truncate output file
-    //
-    boinc_resolve_filename(CHECKPOINT_FILE, chkpt_path, sizeof(chkpt_path));
-    state = boinc_fopen(chkpt_path, "r");
-    if (state) {
-        n = fscanf(state, "%d %d %lf", &nlines,&new_conw,&conw_r);
-        fclose(state);
-    }
-    if (state && n==3) {
-        checkpoint_exists = 1;
-        n_start_from = nlines + 1;
-        retval = out.open(output_path, "a");
-    } else {
-        checkpoint_exists = 0;
-        n_start_from = 1;
-        retval = out.open(output_path, "w");
-    }
-    if (retval) {
-        fprintf(stderr, "%s APP: period_search output open failed:\n",
-            boinc_msg_prefix(buf, sizeof(buf))
-        );
-        fprintf(stderr, "%s resolved name %s, retval %d\n",
-            boinc_msg_prefix(buf, sizeof(buf)), output_path, retval
-        );
-        perror("open");
-        exit(1);
-    }
+	// -------------------
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, MAX_PATH);
+	string::size_type pos = string(buffer).find_last_of("\\/");
+	auto result = string(buffer).substr(0, pos);
+	//--------------------------------------------
+
+	// open the input file (resolve logical name first)
+	//
+	boinc_resolve_filename(input_filename, inputPath, sizeof(inputPath));
+	infile = boinc_fopen(inputPath, "r");
+	if (!infile) {
+		fprintf(stderr,
+			"%s Couldn't find input file, resolved name %s.\n",
+			boinc_msg_prefix(buf, sizeof(buf)), inputPath
+		);
+		exit(-1);
+	}
+
+	// output file
+	boinc_resolve_filename(output_filename, outputPath, sizeof(outputPath));
+	//    out.open(output_path, "w");
+
+		// See if there's a valid checkpoint file.
+		// If so seek input file and truncate output file
+		//
+	boinc_resolve_filename(checkpoint_file, chkptPath, sizeof(chkptPath));
+	state = boinc_fopen(chkptPath, "r");
+	if (state) {
+		n = fscanf(state, "%d %d %lf", &nlines, &newConw, &conwR);
+		fclose(state);
+	}
+	if (state && n == 3) {
+		checkpointExists = 1;
+		nStartFrom = nlines + 1;
+		retval = out.open(outputPath, "a");
+	}
+	else {
+		checkpointExists = 0;
+		nStartFrom = 1;
+		retval = out.open(outputPath, "w");
+	}
+	if (retval) {
+		fprintf(stderr, "%s APP: period_search output open failed:\n",
+			boinc_msg_prefix(buf, sizeof(buf))
+		);
+		fprintf(stderr, "%s resolved name %s, retval %d\n",
+			boinc_msg_prefix(buf, sizeof(buf)), outputPath, retval
+		);
+		perror("open");
+		exit(1);
+	}
 
 #ifdef APP_GRAPHICS
-    // create shared mem segment for graphics, and arrange to update it
-    //
-    shmem = (UC_SHMEM*)boinc_graphics_make_shmem("uppercase", sizeof(UC_SHMEM));
-    if (!shmem) {
-        fprintf(stderr, "%s failed to create shared mem segment\n",
-            boinc_msg_prefix(buf, sizeof(buf))
-        );
-    }
-    update_shmem();
-    boinc_register_timer_callback(update_shmem);
+	// create shared mem segment for graphics, and arrange to update it
+	//
+	shmem = (UC_SHMEM*)boinc_graphics_make_shmem("uppercase", sizeof(UC_SHMEM));
+	if (!shmem) {
+		fprintf(stderr, "%s failed to create shared mem segment\n",
+			boinc_msg_prefix(buf, sizeof(buf))
+		);
+	}
+	update_shmem();
+	boinc_register_timer_callback(update_shmem);
 #endif
 
+	// NOTE: Period interval (hours) fixed or free
+	fscanf(infile, "%lf %lf %lf %d", &startPeriod, &periodStepCoef, &endPeriod, &ia_prd); 	fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-   /* period interval (hrs) fixed or free */
-   fscanf(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);          fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* epoch of zero time t0 */
-   fscanf(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* initial fixed rotation angle fi0 */   
-   fscanf(infile, "%lf", &Phi_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* the weight factor for conv. reg. */
-   fscanf(infile, "%lf", &conw);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* degree and order of the Laplace series */
-   fscanf(infile, "%d %d", &Lmax, &Mmax);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* nr. of triangulation rows per octant */   
-   fscanf(infile, "%d", &nrows);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* Initial guesses for phase funct. params. */   
-   fscanf(infile, "%lf %d", &par[1], &ia_par[1]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-   fscanf(infile, "%lf %d", &par[2], &ia_par[2]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-   fscanf(infile, "%lf %d", &par[3], &ia_par[3]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* Initial Lambert coeff. (L-S=1) */
-   fscanf(infile, "%lf %d", &cl, &ia_cl);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* maximum number of iterations (when > 1) or
-      minimum difference in dev to stop (when < 1) */
-   fscanf(infile, "%lf", &stop_condition);                       fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* minimum number of iterations when stop_condition < 1 */
-   fscanf(infile, "%d", &n_iter_min);                            fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* multiplicative factor for Alamda */
-   fscanf(infile, "%lf", &Alamda_incr);                          fgets(str_temp, MAX_LINE_LENGTH, infile);
-   /* Alamda initial value*/
-   fscanf(infile, "%lf", &Alamda_start);                         fgets(str_temp, MAX_LINE_LENGTH, infile);
+	// NOTE: Epoch of zero time t0
+	fscanf(infile, "%lf", &jd00);                          	fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-   if (boinc_is_standalone())
-   {
-      printf("\n%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end , ia_prd);   
-      printf("%g epoch of zero time t0\n", jd_00);  
-      printf("%g  initial fixed rotation angle fi0\n", Phi_0);  
-      printf("%g  the weight factor for conv. reg.\n", conw);  
-      printf("%d %d  degree and order of the Laplace series\n", Lmax, Mmax);  
-      printf("%d  nr. of triangulation rows per octant\n", nrows);    
-      printf("%g %g %g  initial guesses for phase funct. params. (%d,%d,%d)\n", par[1], par[2], par[3], ia_par[1], ia_par[2], ia_par[3]);  
-      printf("%g  initial Lambert coeff. (L-S=1) (%d)\n", cl, ia_cl);   
-      printf("%g  stop condition\n", stop_condition);   
-      printf("%d  minimum number of iterations\n", n_iter_min);   
-      printf("%g  Alamda multiplicative factor\n", Alamda_incr);   
-      printf("%g  initial Alamda \n\n", Alamda_start);   
-   }
+	// NOTE: Initial fixed rotation angle fi0
+	fscanf(infile, "%lf", &phi_0);                          	fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-   
-      /* lightcurves + geometry file */   
-      /* number of lightcurves and the first realtive one */
-      fscanf(infile, "%d", &Lcurves);
-	       
-      if (Lcurves > MAX_LC)
-      {  fprintf(stderr, "\nError: Number of lcs  is greater than MAX_LC = %d\n", MAX_LC); fflush(stderr); exit(2); }
+	// NOTE: The weight factor for conv. reg.
+	fscanf(infile, "%lf", &conw);                           	fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-      al = vector_double(Lcurves);   
-      weight_lc = vector_double(Lcurves);   
-   
-      ndata = 0; /* total number of data */
-      k2 = 0;   /* index */
-      al0 = al0_abs= PI; /* the smallest solar phase angle */
-      ial0 = ial0_abs = -1; /* initialization, index of al0 */
-      jd_min = 1e20; /* initial minimum and minimum JD */
-      jd_max = -1e40; 
-      onlyrel = 1;
-      jd_0 = jd_00;
-      a = a0; b = b0; c_axis = c0;
-	  
-	  MaxLpoints=0;
-      /* loop over lightcurves */   
-      for (i = 1; i <= Lcurves; i++)
-      {
-         ave = 0; /* average */
-         fscanf(infile, "%d %d", &Lpoints[i], &i_temp); /* points in this lightcurve */
-         fgets(str_temp, MAX_LINE_LENGTH, infile); 
-         Inrel[i] = 1 - i_temp;
-         if (Inrel[i] == 0)
-            onlyrel = 0;
+	// NOTE: Degree and order of the Laplace series
+	fscanf(infile, "%d %d", &l_max, &m_max);                	fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-		 if (Lpoints[i]>MaxLpoints) MaxLpoints=Lpoints[i];
+	// NOTE: Number of triangulation rows per octant
+	fscanf(infile, "%d", &nrows);                               fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-         if (Lpoints[i] > POINTS_MAX)
-         {  fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2); }
+	// NOTE: Initial guesses for phase funct. params.
+	fscanf(infile, "%lf %d", &par[1], &ia_par[1]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	fscanf(infile, "%lf %d", &par[2], &ia_par[2]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	fscanf(infile, "%lf %d", &par[3], &ia_par[3]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-         /* loop over one lightcurve */
-         for (j = 1; j <= Lpoints[i]; j++)
-         {
-            ndata++;
-	 
-            if (ndata > MAX_N_OBS)
-            {  fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2); }
+	// NOTE: Initial Lambert coefficient (L - S = 1)
+	fscanf(infile, "%lf %d", &cl, &ia_cl);                      fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-            fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */	 
-            fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
-            fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */	 
-         
-	    /* selects the minimum and maximum JD */
-	    if (tim[ndata] < jd_min) jd_min = tim[ndata];
-	    if (tim[ndata] > jd_max) jd_max = tim[ndata];
-	 
-	    /* normals of distance vectors */
-            e0len=sqrt(e0[1]*e0[1] + e0[2]*e0[2] + e0[3]*e0[3]);
-            elen=sqrt(e[1]*e[1] + e[2]*e[2] + e[3]*e[3]);
+	// NOTE: Maximum number of iterations (when > 1) or  minimum difference in dev to stop (when < 1)
+	fscanf(infile, "%lf", &stopCondition);                     fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-            ave += brightness[ndata];
+	// NOTE: Minimum number of iterations when stop_condition < 1
+	fscanf(infile, "%d", &nIterMin);                          fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-	    /* normalization of distance vectors */
-            for (k = 1; k <= 3; k++)
-	    {
-               ee[ndata][k-1] = e[k] / elen;
-               ee0[ndata][k-1] = e0[k] / e0len;
-            }
+	// NOTE: Multiplicative factor for Alamda
+	fscanf(infile, "%lf", &a_lamda_incr);                       fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-            if (j == 1) 
-	    {
-               cos_alpha = host_dot_product(e, e0) / (elen * e0len); 
-               al[i] = acos(cos_alpha); /* solar phase angle */
-               /* Find the smallest solar phase al0 (not important, just for info) */
-               if (al[i] < al0) 
-	       {
-                  al0 = al[i];
-                  ial0 = ndata;
-               }
-	       if ((al[i] < al0_abs) && (Inrel[i] == 0))
-	       {
-                  al0_abs = al[i];
-                  ial0_abs = ndata;
-	       }   
-             }
-          } /* j, one lightcurve */           
-   
-          ave /= Lpoints[i];
+	// NOTE: Alamda initial value
+	fscanf(infile, "%lf", &a_lamda_start);                      fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
-         /* Mean brightness of lcurve
-            Use the mean brightness as 'sigma' to renormalize the
-            mean of each lightcurve to unity */
+	if (boinc_is_standalone())
+	{
+		printf("\n%g  %g  %g  period start/step/stop (%d)\n", startPeriod, periodStepCoef, endPeriod, ia_prd);
+		printf("%g epoch of zero time t0\n", jd00);
+		printf("%g  initial fixed rotation angle fi0\n", phi_0);
+		printf("%g  the weight factor for conv. reg.\n", conw);
+		printf("%d %d  degree and order of the Laplace series\n", l_max, m_max);
+		printf("%d  nr. of triangulation rows per octant\n", nrows);
+		printf("%g %g %g  initial guesses for phase funct. params. (%d,%d,%d)\n", par[1], par[2], par[3], ia_par[1], ia_par[2], ia_par[3]);
+		printf("%g  initial Lambert coeff. (L-S=1) (%d)\n", cl, ia_cl);
+		printf("%g  stop condition\n", stopCondition);
+		printf("%d  minimum number of iterations\n", nIterMin);
+		printf("%g  Alamda multiplicative factor\n", a_lamda_incr);
+		printf("%g  initial Alamda \n\n", a_lamda_start);
+	}
 
-         for (j = 1; j <= Lpoints[i]; j++)
-         {
-            k2++;
-            sig[k2] = ave;
-         }
-         
-      } /* i, all lightcurves */        
 
-      /* initiation of weights */
-      for (i = 1; i <= Lcurves; i++)
-         weight_lc[i] = -1;
+	// NOTE: light curves + geometry file
+	// NOTE: number of light curves and the first relative one
+	fscanf(infile, "%d", &l_curves);
 
-      /* reads weights */
-         while (feof(infile) == 0)
-         {
-            fscanf(infile, "%d", &lc_number);
-            fscanf(infile, "%lf", &weight_lc[lc_number]);
-            if (boinc_is_standalone())
-               printf("weights %d %g\n", lc_number, weight_lc[lc_number]);
-         }
-      
-      /* If input jd_0 <= 0 then the jd_0 is set to the day before the 
-         lowest JD in the data */
-      if (jd_0 <= 0)
-      {  
-         jd_0 = (int) jd_min;
-         if (boinc_is_standalone())
-            printf("\nNew epoch of zero time  %f\n", jd_0);
-      }      
-      
-      /* loop over data - subtraction of jd_0 */   
-      for (i = 1; i <= ndata; i++)
-         tim[i] = tim[i] - jd_0;         
-   
-      Phi_0 = Phi_0 * DEG2RAD;
+	if (boinc_is_standalone())
+	{
+		printf("%d  Number of light curves\n", l_curves);
+	}
 
-      k = 0;
-      for (i = 1; i <= Lcurves; i++)
-         for (j = 1; j <= Lpoints[i]; j++)
-         {
-            k++;
-            if (weight_lc[i] == -1) 
-               Weight[k] = 1;
-            else
-	       Weight[k] = weight_lc[i];
-          }	    
+	if (l_curves > MAX_LC)
+	{
+		fprintf(stderr, "\nError: Number of lcs  is greater than MAX_LC = %d\n", MAX_LC); fflush(stderr); exit(2);
+	}
 
-      for (i = 1; i <= 3; i++)
-         Weight[k+i] = 1;
-      
-      /* use calibrated data if possible */
-      if (onlyrel == 0)
-      {
-         al0 = al0_abs;
-         ial0 = ial0_abs;
-      }	      
-      
-      /* Initial shape guess */
-      rfit = sqrt(2 * sig[ial0] / (0.5 * PI * (1+cos(al0))));
-      escl = rfit / sqrt((a * b + b * c_axis + a * c_axis) / 3);
-      if (onlyrel == 0)
-         escl *= 0.8;
-      a = a * escl;
-      b = b * escl;
-      c_axis = c_axis * escl;
-      if (boinc_is_standalone())
-      {
-         printf("\nWild guess for initial sphere size is %g\n", rfit);
-         printf("Suggested scaled a,b,c: %g %g %g\n\n", a, b, c_axis);
-      }
- 
-      /* Convexity regularization: make one last 'lightcurve' that
-         consists of the three comps. of the residual nonconv. vect.
-         that should all be zero */
-      Lcurves = Lcurves + 1;
-      Lpoints[Lcurves] = 3;
-      Inrel[Lcurves] = 0;
+	al = vector_double(l_curves);
+	weightLc = vector_double(l_curves);
+
+	ndata = 0;              /* total number of data */
+	k2 = 0;                 /* index */
+	al0 = al0Abs = PI;      /* the smallest solar phase angle */
+	ial0 = ial0_abs = -1;   /* initialization, index of al0 */
+	jdMin = 1e20;           /* initial minimum and maximum JD */
+	jdMax = -1e40;
+	onlyrel = 1;
+	jd0 = jd00;
+	a = a0; b = b0; cAxis = c0;
+
+	max_l_points = 0;
+	/* loop over lightcurves */
+	for (i = 1; i <= l_curves; i++)
+	{
+		ave = 0; /* average */
+		fscanf(infile, "%d %d", &l_points[i], &iTemp); /* points in this lightcurve */
+		if (boinc_is_standalone())
+		{
+			printf("%d points in light curve[%d]\n", l_points[i], i);
+		}
+		fgets(stringTemp, MAX_LINE_LENGTH, infile);
+		in_rel[i] = 1 - iTemp;
+		if (in_rel[i] == 0)
+			onlyrel = 0;
+
+		if (l_points[i] > max_l_points) max_l_points = l_points[i];
+
+		if (l_points[i] > POINTS_MAX)
+		{
+			fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2);
+		}
+
+		// NOTE: loop over one light curve
+		for (j = 1; j <= l_points[i]; j++)
+		{
+			ndata++;
+
+			if (ndata > MAX_N_OBS)
+			{
+				fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
+			}
+
+			fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); // NOTE: JD, brightness
+			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]);      // NOTE: ecliptic astronomical tempocentric coordinates of the Sun in AU
+			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]);         // NOTE: ecliptic astronomical centric coordinates of the Earth in AU
+
+			// NOTE: selects the minimum and maximum JD
+			if (tim[ndata] < jdMin) jdMin = tim[ndata];
+			if (tim[ndata] > jdMax) jdMax = tim[ndata];
+
+
+			// NOTE: normals of distance vectors
+			e0Len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
+			elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
+
+			ave += brightness[ndata];
+
+			// NOTE: normalization of distance vectors
+			for (k = 1; k <= 3; k++)
+			{
+				ee[ndata][k - 1] = e[k] / elen;
+				ee0[ndata][k - 1] = e0[k] / e0Len;
+			}
+
+			if (j == 1)
+			{
+				cosAlpha = host_dot_product(e, e0) / (elen * e0Len);
+				al[i] = acos(cosAlpha); /* solar phase angle */
+				/* Find the smallest solar phase al0 (not important, just for info) */
+				if (al[i] < al0)
+				{
+					al0 = al[i];
+					ial0 = ndata;
+				}
+				if ((al[i] < al0Abs) && (in_rel[i] == 0))
+				{
+					al0Abs = al[i];
+					ial0_abs = ndata;
+				}
+			}
+		} /* j, one lightcurve */
+
+		ave /= l_points[i];
+
+		/* Mean brightness of lcurve
+		   Use the mean brightness as 'sigma' to renormalize the
+		   mean of each lightcurve to unity */
+
+		for (j = 1; j <= l_points[i]; j++)
+		{
+			k2++;
+			sig[k2] = ave;
+		}
+
+	} /* i, all lightcurves */
+
+	/* initiation of weights */
+	for (i = 1; i <= l_curves; i++)
+		weightLc[i] = -1;
+
+	/* reads weights */
+	while (feof(infile) == 0)
+	{
+		fscanf(infile, "%d", &lcNumber);
+		fscanf(infile, "%lf", &weightLc[lcNumber]);
+		if (boinc_is_standalone())
+		{
+			printf("Weights: Light curve[%d], Weight[%g]\n", lcNumber, weightLc[lcNumber]);
+		}
+	}
+
+	/* If input jd_0 <= 0 then the jd_0 is set to the day before the
+	   lowest JD in the data */
+	if (jd0 <= 0)
+	{
+		jd0 = static_cast<int>(jdMin);
+		if (boinc_is_standalone())
+		{
+			printf("\nNew epoch of zero time  %f\n", jd0);
+		}
+	}
+
+	/* loop over data - subtraction of jd_0 */
+	for (i = 1; i <= ndata; i++)
+		tim[i] = tim[i] - jd0;
+
+	phi_0 = phi_0 * DEG2RAD;
+
+	k = 0;
+	for (i = 1; i <= l_curves; i++)
+		for (j = 1; j <= l_points[i]; j++)
+		{
+			k++;
+			if (weightLc[i] == -1)
+				weight[k] = 1;
+			else
+				weight[k] = weightLc[i];
+		}
+
+	for (i = 1; i <= 3; i++)
+		weight[k + i] = 1;
+
+	/* use calibrated data if possible */
+	if (onlyrel == 0)
+	{
+		al0 = al0Abs;
+		ial0 = ial0_abs;
+	}
+
+	/* Initial shape guess */
+	rfit = sqrt(2 * sig[ial0] / (0.5 * PI * (1 + cos(al0))));
+	escl = rfit / sqrt((a * b + b * cAxis + a * cAxis) / 3);
+	if (onlyrel == 0)
+		escl *= 0.8;
+	a = a * escl;
+	b = b * escl;
+	cAxis = cAxis * escl;
+	if (boinc_is_standalone())
+	{
+		printf("\nWild guess for initial sphere size is %g\n", rfit);
+		printf("Suggested scaled a,b,c: %g %g %g\n\n", a, b, cAxis);
+	}
+
+	/* Convexity regularization: make one last 'lightcurve' that
+	   consists of the three comps. of the residual nonconv. vect.
+	   that should all be zero */
+	l_curves = l_curves + 1;
+	l_points[l_curves] = 3;
+	in_rel[l_curves] = 0;
 
 	// extract a --device option
-    int cudaDevice = -1;
-	for(int ii = 0; ii < argc; ii++) {
-		if(cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+	int cudaDevice = -1;
+	for (int ii = 0; ii < argc; ii++) {
+		if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
 			cudaDevice = atoi(argv[++ii]);
 	}
-	if(cudaDevice < 0)
+	if (cudaDevice < 0)
 		cudaDevice = 0;
 
-   retval=CUDAPrepare(cudaDevice,beta_pole,lambda_pole,par,cl,Alamda_start,Alamda_incr,ee,ee0,tim,Phi_0,checkpoint_exists,ndata);
-   if (!retval)
-   {
-	   fflush(stderr);
-	   exit(2);
-   }
+	int major, minor, build, revision;
+	TCHAR filepath[MAX_PATH]; // = getenv("_");
+	GetModuleFileName(nullptr, filepath, MAX_PATH);
+	auto filename = PathFindFileName(filepath);
+	GetVersionInfo(filename, major, minor, build, revision);
+	fprintf(stderr, "Application: %s\n", filename);
+	fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 
-/* optimization of the convexity weight **************************************************************/
-	if (!checkpoint_exists)
+	retval = CUDAPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
+	if (!retval)
 	{
-		conw_r = conw / escl / escl;
-		new_conw = 0;
-		boinc_fraction_done(0.0001); //signal start
+		fflush(stderr);
+		exit(2);
 	}
-	while ( (new_conw != 1) && ( (conw_r * escl * escl) < 10.0 ) )
+
+	/* optimization of the convexity weight **************************************************************/
+	if (!checkpointExists)
 	{
-		
+		conwR = conw / escl / escl;
+		newConw = 0;
+		boinc_fraction_done(0.0001); //signal start
+#if _DEBUG
+		printf("Fraction done: 0.0001 (start signal)\n");
+#endif
+
+	}
+	while ((newConw != 1) && ((conwR * escl * escl) < 10.0))
+	{
+
 		for (j = 1; j <= 3; j++)
 		{
 			ndata++;
 			brightness[ndata] = 0;
-			sig[ndata] = 1 / conw_r;
+			sig[ndata] = 1 / conwR;
 		}
 
 		/* the ordering of the coeffs. of the Laplace series */
-		Ncoef = 0; /* number of coeffs. */
-		for (m = 0; m <= Mmax; m++)
-			for (l = m; l <= Lmax; l++)
+		n_coef = 0; /* number of coeffs. */
+		for (m = 0; m <= m_max; m++)
+			for (l = m; l <= l_max; l++)
 			{
-			Ncoef++;
-			if (m != 0) Ncoef++;
+				n_coef++;
+				if (m != 0) n_coef++;
 			}
 
-		/*  Fix the directions of the triangle vertices of the Gaussian image sphere 
+		/*  Fix the directions of the triangle vertices of the Gaussian image sphere
 			t = theta angle, f = phi angle */
 		dth = PI / (2 * nrows); /* step in theta */
 		k = 1;
@@ -560,189 +623,201 @@ int main(int argc, char **argv) {
 				t[k] = PI - i * dth;
 				f[k] = j * dph;
 			}
-		}      
+		}
 
 		ndir = k + 1; /* number of vertices */
 
 		t[ndir] = PI;
 		f[ndir] = 0;
-		Numfac = 8 * nrows * nrows;
-   
-		if (Numfac > MAX_N_FAC)
-		{  fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n"); fflush(stderr); exit(2); }   
+		num_fac = 8 * nrows * nrows;
+
+		if (num_fac > MAX_N_FAC)
+		{
+			fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n"); fflush(stderr); exit(2);
+		}
 
 		/* makes indices to triangle vertices */
 		trifac(nrows, ifp);
 		/* areas and normals of the triangulated Gaussian image sphere */
-		areanorm(t,f,ndir,Numfac, ifp, at, af);
+		areanorm(t, f, ndir, num_fac, ifp, at, af);
 		/* Precompute some function values at each normal direction*/
-		sphfunc(Numfac, at, af);
-   
-		ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
+		sphfunc(num_fac, at, af);
 
-		freq_start = 1 / per_start;
-		freq_end = 1 / per_end;
-		freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
+		ellfit(cgFirst, a, b, cAxis, num_fac, n_coef, at, af);
+
+		startFrequency = 1 / startPeriod;
+		endFrequency = 1 / endPeriod;
+		frequencyStep = 0.5 / (jdMax - jdMin) / 24 * periodStepCoef;
 
 		/* Give ia the value 0/1 if it's fixed/free */
-		ia[Ncoef+1] = ia_beta_pole;
-		ia[Ncoef+2] = ia_lambda_pole;
-		ia[Ncoef+3] = ia_prd;
+		ia[n_coef + 1] = ia_beta_pole;
+		ia[n_coef + 2] = ia_lambda_pole;
+		ia[n_coef + 3] = ia_prd;
 		/* phase function parameters */
-		Nphpar = 3;
+		n_ph_par = 3;
 		/* shape is free to be optimized */
-		for (i = 1; i <= Ncoef; i++)
+		for (i = 1; i <= n_coef; i++)
 			ia[i] = 1;
 		/* The first shape param. fixed for relative br. fit */
 		if (onlyrel == 1)
 			ia[1] = 0;
-		ia[Ncoef+3+Nphpar+1] = ia_cl;
+		ia[n_coef + 3 + n_ph_par + 1] = ia_cl;
 		/* Lommel-Seeliger part is fixed */
-		ia[Ncoef+3+Nphpar+2] = 0;
- 
-		if ((Ncoef+3+Nphpar+1) > MAX_N_PAR)
-		{  fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2); }
+		ia[n_coef + 3 + n_ph_par + 2] = 0;
 
-		CUDAPrecalc(freq_start,freq_end,freq_step,stop_condition,n_iter_min,&conw_r,ndata,ia,ia_par,&new_conw,cg_first,sig,Numfac,brightness);
+		if ((n_coef + 3 + n_ph_par + 1) > MAX_N_PAR)
+		{
+			fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
+		}
 
-		ndata = ndata - 3;	
+		CUDAPrecalc(startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
+
+		ndata = ndata - 3;
 
 		if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
-			retval = do_checkpoint(out, 0,new_conw,conw_r); //zero lines
-			if (retval) {fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); CUDAUnprepare();}
-			boinc_checkpoint_completed(); 
+			retval = DoCheckpoint(out, 0, newConw, conwR); //zero lines
+			if (retval)
+			{
+				fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof buf), retval);
+				CUDAUnprepare();   // TODO: Double check why this was placed after exit() method?
+				exit(retval);
+			}
+			boinc_checkpoint_completed();
 		}
 	}
- /*end optimizing conw *********************************************************************************/
-    
-      for (j = 1; j <= 3; j++)
-      {
-         ndata++;
-         brightness[ndata] = 0;
-         sig[ndata] = 1 / conw_r;
-      }
+	/*end optimizing conw *********************************************************************************/
 
-      /* the ordering of the coeffs. of the Laplace series */
-      Ncoef = 0; /* number of coeffs. */
-      for (m = 0; m <= Mmax; m++)
-         for (l = m; l <= Lmax; l++)
-         {
-            Ncoef++;
-            if (m != 0) Ncoef++;
-         }
+	for (j = 1; j <= 3; j++)
+	{
+		ndata++;
+		brightness[ndata] = 0;
+		sig[ndata] = 1 / conwR;
+	}
 
-   /*  Fix the directions of the triangle vertices of the Gaussian image sphere 
-       t = theta angle, f = phi angle */
-   dth = PI / (2 * nrows); /* step in theta */
-   k = 1;
-   t[1] = 0;
-   f[1] = 0;
-   for (i = 1; i <= nrows; i++)
-   {
-      dph = PI / (2 * i); /* step in phi */
-      for (j = 0; j <= 4 * i - 1; j++)
-      {
-         k++;
-         t[k] = i * dth;
-         f[k] = j * dph;
-      }
-   }
+	/* the ordering of the coeffs. of the Laplace series */
+	n_coef = 0; /* number of coeffs. */
+	for (m = 0; m <= m_max; m++)
+		for (l = m; l <= l_max; l++)
+		{
+			n_coef++;
+			if (m != 0) n_coef++;
+		}
 
-   /* go to south pole (in the same rot. order, not a mirror image) */
-   for (i = nrows - 1; i >= 1; i--)
-   {
-      dph = PI / (2 * i);
-      for (j = 0; j <= 4 * i - 1; j++)
-      {
-         k++;
-         t[k] = PI - i * dth;
-         f[k] = j * dph;
-      }
-   }      
+	/*  Fix the directions of the triangle vertices of the Gaussian image sphere
+		t = theta angle, f = phi angle */
+	dth = PI / (2 * nrows); /* step in theta */
+	k = 1;
+	t[1] = 0;
+	f[1] = 0;
+	for (i = 1; i <= nrows; i++)
+	{
+		dph = PI / (2 * i); /* step in phi */
+		for (j = 0; j <= 4 * i - 1; j++)
+		{
+			k++;
+			t[k] = i * dth;
+			f[k] = j * dph;
+		}
+	}
 
-   ndir = k + 1; /* number of vertices */
+	/* go to south pole (in the same rot. order, not a mirror image) */
+	for (i = nrows - 1; i >= 1; i--)
+	{
+		dph = PI / (2 * i);
+		for (j = 0; j <= 4 * i - 1; j++)
+		{
+			k++;
+			t[k] = PI - i * dth;
+			f[k] = j * dph;
+		}
+	}
 
-   t[ndir] = PI;
-   f[ndir] = 0;
-   Numfac = 8 * nrows * nrows;
-   
-   if (Numfac > MAX_N_FAC)
-   {  fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n"); fflush(stderr); exit(2); }   
+	ndir = k + 1; /* number of vertices */
 
-   /* makes indices to triangle vertices */
-   trifac(nrows, ifp);
-   /* areas and normals of the triangulated Gaussian image sphere */
-   areanorm(t,f,ndir,Numfac, ifp, at, af);
-   /* Precompute some function values at each normal direction*/
-   sphfunc(Numfac, at, af);
-   
-   ellfit(cg_first, a, b, c_axis, Numfac, Ncoef, at, af);
+	t[ndir] = PI;
+	f[ndir] = 0;
+	num_fac = 8 * nrows * nrows;
 
-   freq_start = 1 / per_start;
-   freq_end = 1 / per_end;
-   freq_step = 0.5 / (jd_max - jd_min) / 24 * per_step_coef;
+	if (num_fac > MAX_N_FAC)
+	{
+		fprintf(stderr, "\nError: Number of facets is greater than MAX_N_FAC!\n"); fflush(stderr); exit(2);
+	}
 
-   /* Give ia the value 0/1 if it's fixed/free */
-   ia[Ncoef+1] = ia_beta_pole;
-   ia[Ncoef+2] = ia_lambda_pole;
-   ia[Ncoef+3] = ia_prd;
-   /* phase function parameters */
-   Nphpar = 3;
-   /* shape is free to be optimized */
-   for (i = 1; i <= Ncoef; i++)
-      ia[i] = 1;
-   /* The first shape param. fixed for relative br. fit */
-   if (onlyrel == 1)
-      ia[1] = 0;
-   ia[Ncoef+3+Nphpar+1] = ia_cl;
-   /* Lommel-Seeliger part is fixed */
-   ia[Ncoef+3+Nphpar+2] = 0;
- 
-   if ((Ncoef+3+Nphpar+1) > MAX_N_PAR)
-   {  fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2); }
+	/* makes indices to triangle vertices */
+	trifac(nrows, ifp);
+	/* areas and normals of the triangulated Gaussian image sphere */
+	areanorm(t, f, ndir, num_fac, ifp, at, af);
+	/* Precompute some function values at each normal direction*/
+	sphfunc(num_fac, at, af);
 
-   CUDAStart(n_start_from,freq_start,freq_end,freq_step,stop_condition,n_iter_min,conw_r,ndata,ia,ia_par,cg_first,out,escl,sig,Numfac,brightness);
+	ellfit(cgFirst, a, b, cAxis, num_fac, n_coef, at, af);
 
-  out.close();
+	startFrequency = 1 / startPeriod;
+	endFrequency = 1 / endPeriod;
+	frequencyStep = 0.5 / (jdMax - jdMin) / 24 * periodStepCoef;
 
-  CUDAUnprepare();
+	/* Give ia the value 0/1 if it's fixed/free */
+	ia[n_coef + 1] = ia_beta_pole;
+	ia[n_coef + 2] = ia_lambda_pole;
+	ia[n_coef + 3] = ia_prd;
+	/* phase function parameters */
+	n_ph_par = 3;
+	/* shape is free to be optimized */
+	for (i = 1; i <= n_coef; i++)
+		ia[i] = 1;
+	/* The first shape param. fixed for relative br. fit */
+	if (onlyrel == 1)
+		ia[1] = 0;
+	ia[n_coef + 3 + n_ph_par + 1] = ia_cl;
+	/* Lommel-Seeliger part is fixed */
+	ia[n_coef + 3 + n_ph_par + 2] = 0;
 
-//  deallocate_matrix_double(ee,MAX_N_OBS);
-//  deallocate_matrix_double(ee0,MAX_N_OBS);
-//  deallocate_matrix_double(covar,MAX_N_PAR);
-//  deallocate_matrix_double(aalpha,MAX_N_PAR);
-  deallocate_matrix_int(ifp,MAX_N_FAC);
- 
-  deallocate_vector(tim);  
-  deallocate_vector(brightness);  
-  deallocate_vector(sig);  
-  deallocate_vector(cg);  
-  deallocate_vector(cg_first);  
-  deallocate_vector(t);  
-  deallocate_vector(f);  
-  deallocate_vector(at);  
-  deallocate_vector(af);  
-  deallocate_vector(ia);  
-  deallocate_vector(al);  
-  deallocate_vector(weight_lc);  
-  free(str_temp);
+	if ((n_coef + 3 + n_ph_par + 1) > MAX_N_PAR)
+	{
+		fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
+	}
 
-    boinc_fraction_done(1);
+	CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+
+	out.close();
+
+	CUDAUnprepare();
+
+	//  deallocate_matrix_double(ee,MAX_N_OBS);
+	//  deallocate_matrix_double(ee0,MAX_N_OBS);
+	//  deallocate_matrix_double(covar,MAX_N_PAR);
+	//  deallocate_matrix_double(aalpha,MAX_N_PAR);
+	deallocate_matrix_int(ifp, MAX_N_FAC);
+
+	deallocate_vector(tim);
+	deallocate_vector(brightness);
+	deallocate_vector(sig);
+	deallocate_vector(cg);
+	deallocate_vector(cgFirst);
+	deallocate_vector(t);
+	deallocate_vector(f);
+	deallocate_vector(at);
+	deallocate_vector(af);
+	deallocate_vector(ia);
+	deallocate_vector(al);
+	deallocate_vector(weightLc);
+	free(stringTemp);
+
+	boinc_fraction_done(1);
 #ifdef APP_GRAPHICS
-    update_shmem();
+	update_shmem();
 #endif
-    boinc_finish(0);
+	boinc_finish(0);
 }
 
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR Args, int WinMode) {
-    LPSTR command_line;
-    char* argv[100];
-    int argc;
+	LPSTR command_line;
+	char* argv[100];
+	int argc;
 
-    command_line = GetCommandLine();
-    argc = parse_command_line( command_line, argv );
-    return main(argc, argv);
+	command_line = GetCommandLine();
+	argc = parse_command_line(command_line, argv);
+	return main(argc, argv);
 }
 #endif
-
