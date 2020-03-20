@@ -55,9 +55,11 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
+#include <Shlwapi.h>
+#include "../win_build/config.h"
 
 #else
-#include "../win_build/config.h"
+#include "config.h"
 #include <cstdio>
 #include <cctype>
 #include <ctime>
@@ -75,7 +77,6 @@
 #include "mfile.h"
 //#include "graphics2.h"
 #include "start_CUDA.h"
-#include <Shlwapi.h>
 
 #ifdef APP_GRAPHICS
 #include "uc2.h"
