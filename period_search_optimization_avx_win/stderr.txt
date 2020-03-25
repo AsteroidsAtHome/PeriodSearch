@@ -1,3 +1,0 @@
-21:25:44 (9192): Can't open init data file - running in standalone mode
-21:25:44 (9192): Couldn't find input file, resolved name period_search_in.
-21:26:14 (4340): Can't open init data file - running in standalone mode
