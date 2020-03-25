@@ -70,9 +70,9 @@ BEGIN
             VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
             VALUE "FileDescription", "Period search application"
             VALUE "FileVersion", "102.12.0.2"
-            VALUE "InternalName", "pssse3_v.exe"
+            VALUE "InternalName", "psavx_vs.exe"
             VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
-            VALUE "OriginalFilename", "Period_search_sse3.exe"
+            VALUE "OriginalFilename", "Period_search_avx.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
             VALUE "ProductVersion", "102.12.0.2"
         END

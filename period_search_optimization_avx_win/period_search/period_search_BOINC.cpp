@@ -22,12 +22,11 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cstring>
 #include <memory.h>
 
 #include "declarations.h"
@@ -53,6 +52,7 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
+#include <Shlwapi.h>
 #else
 #include "config.h"
 #include <cstdio>
@@ -69,33 +69,33 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-#include "graphics2.h"
 #include "arrayHelpers.hpp"
 
 #ifdef APP_GRAPHICS
+#include "graphics2.h"
 #include "uc2.h"
 UC_SHMEM* shmem;
 #endif
 
 using std::string;
 
-#define CHECKPOINT_FILE "period_search_state"
-#define INPUT_FILENAME "period_search_in"
-#define OUTPUT_FILENAME "period_search_out"
+constexpr auto checkpoint_file = "period_search_state";
+constexpr auto input_filename = "period_search_in";
+constexpr auto output_filename = "period_search_out";
 
-int do_checkpoint(MFILE& mf, int nlines, int newconw, double conwr, double sumdarkfacet, int testperiods) {
-    int retval;
-    string resolved_name;
+int DoCheckpoint(MFILE& mf, int nlines, int newconw, double conwr, double sumdarkfacet, int testperiods)
+{
+	string resolvedName;
 
-    FILE* f = fopen("temp", "w");
+    const auto f = fopen("temp", "w");
     if (!f) return 1;
     fprintf(f, "%d %d %.17g %.17g %d", nlines, newconw, conwr, sumdarkfacet, testperiods);
     fclose(f);
 
-    retval = mf.flush();
+	auto retval = mf.flush();
     if (retval) return retval;
-    boinc_resolve_filename_s(CHECKPOINT_FILE, resolved_name);
-    retval = boinc_rename("temp", resolved_name.c_str());
+    boinc_resolve_filename_s(checkpoint_file, resolvedName);
+    retval = boinc_rename("temp", resolvedName.c_str());
     if (retval) return retval;
 
     return 0;
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
     int i, j, l, m, k, n, nrows, ndata, k2, ndir, i_temp, onlyrel,
         n_iter_max, n_iter_min,
         *ia, //ia is zero indexed
-        ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl, 
+        ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
         lc_number,
         **ifp, new_conw, max_test_periods;
 
@@ -220,16 +220,15 @@ int main(int argc, char **argv) {
     ia_lambda_pole = ia_beta_pole = 1;
 
     retval = boinc_init();
-    if (retval) {
-        fprintf(stderr, "%s boinc_init returned %d\n",
-            boinc_msg_prefix(buf, sizeof(buf)), retval
-        );
+    if (retval)
+    {
+        fprintf(stderr, "%s boinc_init returned %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval);
         exit(retval);
     }
 
     // open the input file (resolve logical name first)
     //
-    boinc_resolve_filename(INPUT_FILENAME, input_path, sizeof(input_path));
+    boinc_resolve_filename(input_filename, input_path, sizeof(input_path));
     infile = boinc_fopen(input_path, "r");
     if (!infile) {
         fprintf(stderr,
@@ -240,13 +239,13 @@ int main(int argc, char **argv) {
     }
 
     // output file
-    boinc_resolve_filename(OUTPUT_FILENAME, output_path, sizeof(output_path));
+    boinc_resolve_filename(output_filename, output_path, sizeof(output_path));
     //    out.open(output_path, "w");
 
         // See if there's a valid checkpoint file.
         // If so seek input file and truncate output file
         //
-    boinc_resolve_filename(CHECKPOINT_FILE, chkpt_path, sizeof(chkpt_path));
+    boinc_resolve_filename(checkpoint_file, chkpt_path, sizeof(chkpt_path));
     state = boinc_fopen(chkpt_path, "r");
     if (state) {
         n = fscanf(state, "%d %d %lf %lf %d", &nlines, &new_conw, &conw_r, &sum_dark_facet, &ntestperiods);
@@ -525,6 +524,14 @@ int main(int argc, char **argv) {
     {
         conw_r = conw / escl / escl;
         new_conw = 0;
+
+        int major, minor, build, revision;
+        TCHAR filepath[MAX_PATH]; // = getenv("_");
+        GetModuleFileName(nullptr, filepath, MAX_PATH);
+        auto filename = PathFindFileName(filepath);
+        GetVersionInfo(filename, major, minor, build, revision);
+        fprintf(stderr, "Application: %s\n", filename);
+        fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
     }
 
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
@@ -593,7 +600,7 @@ int main(int argc, char **argv) {
 
         // NOTE: For unit tests arrange only
         //printArray(f, ndir, "f");
-        
+
         /* areas and normals of the triangulated Gaussian image sphere */
         areanorm(t, f, ndir, Numfac, ifp, at, af);
         /* Precompute some function values at each normal direction*/
@@ -788,7 +795,7 @@ int main(int argc, char **argv) {
             sum_dark_facet = sum_dark_facet + dark_best;
 
             if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
-                retval = do_checkpoint(out, 0, new_conw, conw_r, sum_dark_facet, n); //zero lines
+                retval = DoCheckpoint(out, 0, new_conw, conw_r, sum_dark_facet, n); //zero lines
                 if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
                 boinc_checkpoint_completed();
             }
@@ -805,8 +812,12 @@ int main(int argc, char **argv) {
 
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
-            retval = do_checkpoint(out, 0, new_conw, conw_r, 0.0, 0); //zero lines,zero sum dark facets, zero testperiods
-            if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
+            retval = DoCheckpoint(out, 0, new_conw, conw_r, 0.0, 0); //zero lines,zero sum dark facets, zero testperiods
+            if (retval)
+            {
+	            fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval);
+            }
+
             boinc_checkpoint_completed();
         }
 
@@ -909,6 +920,15 @@ int main(int argc, char **argv) {
     {
         fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
         boinc_fraction_done(fraction_done);
+
+#ifdef _DEBUG
+        auto fraction = fraction_done * 100;
+        auto time = std::time(nullptr);   // get time now
+        auto now = std::localtime(&time);
+
+        printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+        fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+#endif
 
         freq = freq_start - (n - 1) * freq_step;
 
@@ -1041,21 +1061,21 @@ int main(int argc, char **argv) {
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone())
         {
-            retval = do_checkpoint(out, n, new_conw, conw_r, 0.0, 0);
+            retval = DoCheckpoint(out, n, new_conw, conw_r, 0.0, 0);
             if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
             boinc_checkpoint_completed();
         }
 
-        if (boinc_is_standalone())
+#ifdef _DEBUG
+        /*if (boinc_is_standalone())
         {
             if (n == 1)
                 printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
             else
                 printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
-        }
+        }*/
 
-#ifdef _DEBUG
-        break;
+        //break;
 #endif
     } /* period loop */
 
@@ -1086,7 +1106,7 @@ int main(int argc, char **argv) {
     update_shmem();
 #endif
 
-    system("PAUSE");
+    //system("PAUSE");
 
     boinc_finish(0);
 }

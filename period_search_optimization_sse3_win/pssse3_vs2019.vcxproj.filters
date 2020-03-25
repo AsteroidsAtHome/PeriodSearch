@@ -35,6 +35,8 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />
+    <Image Include="..\period_search_optimization_avx_win\period_search\logo_Nta_icon.ico" />
+    <Image Include="logo_Nta_icon.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="period_search\pssse3_vs2019.rc">
