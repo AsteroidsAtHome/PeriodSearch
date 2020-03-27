@@ -412,7 +412,17 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
             }
 
+            auto min_double = std::numeric_limits<double>::min();
             fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
+            if (tim[ndata] < min_double)
+            {
+                tim[ndata] = min_double;
+            }
+
+            if (brightness[ndata] < min_double)
+            {
+                brightness[ndata] = min_double;
+            }
             fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
             fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
 
@@ -470,13 +480,18 @@ int main(int argc, char **argv) {
         weight_lc[i] = -1;
 
     /* reads weights */
-    while (feof(infile) == 0)
-    {
-        fscanf(infile, "%d", &lc_number);
-        fscanf(infile, "%lf", &weight_lc[lc_number]);
+    auto scanResult = 0;
+	while(true)
+	{
+        scanResult = fscanf(infile, "%d", &lc_number);
+        if (scanResult <= 0) break;
+        scanResult = fscanf(infile, "%lf", &weight_lc[lc_number]);
+        if (scanResult <= 0) break;
         if (boinc_is_standalone())
             printf("weights %d %g\n", lc_number, weight_lc[lc_number]);
-    }
+
+		if (feof(infile)) break;
+	}
 
     /* If input jd_0 <= 0 then the jd_0 is set to the day before the
        lowest JD in the data */

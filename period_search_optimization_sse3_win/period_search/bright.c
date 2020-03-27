@@ -56,7 +56,7 @@
             avx_dyda3=_mm_add_pd(avx_dyda3,_mm_mul_pd(avx_Area,_mm_add_pd(avx_sum3,avx_sum30))); \
 			\
 			avx_d=_mm_add_pd(avx_d,_mm_mul_pd(_mm_mul_pd(avx_lmu,avx_lmu0),avx_Area)); \
-			avx_d1=_mm_add_pd(avx_d1,_mm_div_pd(_mm_mul_pd(_mm_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm_add_pd(avx_lmu,avx_lmu0))); 
+			avx_d1=_mm_add_pd(avx_d1,_mm_div_pd(_mm_mul_pd(_mm_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm_add_pd(avx_lmu,avx_lmu0)));
 // end of inner_calc
 #define INNER_CALC_DSMU \
 	  avx_Area=_mm_load_pd(&Area[i]); \
@@ -77,15 +77,15 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 {
    int ncoef0, i, j, k,
 	   incl_count=0;
- 
-   double cos_alpha, br, cl, cls, alpha, 
+
+   double cos_alpha, br, cl, cls, alpha,
           e[4], e0[4],
           php[N_PHOT_PAR+1], dphp[N_PHOT_PAR+1],
 	  	  de[4][4], de0[4][4], tmat[4][4],
 	  dtm[4][4][4];
 
    __m128d *Dg_row[MAX_N_FAC+3], dbr[MAX_N_FAC+3];
-   
+
    ncoef0 = ncoef - 2 - Nphpar;
    cl = exp(cg[ncoef-1]); /* Lambert */
    cls = cg[ncoef];       /* Lommel-Seeliger */
@@ -100,7 +100,7 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 
 //   br = 0;
    /* Directions (and ders.) in the rotating system */
-  
+
    for (i = 1; i <= 3; i++)
    {
       e[i] = 0;
@@ -117,16 +117,16 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
             de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
          }
       }
-   } 
+   }
 
    /*Integrated brightness (phase coeff. used later) */
 
 #ifdef NO_SSE3
-   __m128d avx_e1=_mm_load1_pd(&e[1]); 
-   __m128d avx_e2=_mm_load1_pd(&e[2]); 
-   __m128d avx_e3=_mm_load1_pd(&e[3]); 
-   __m128d avx_e01=_mm_load1_pd(&e0[1]); 
-   __m128d avx_e02=_mm_load1_pd(&e0[2]); 
+   __m128d avx_e1=_mm_load1_pd(&e[1]);
+   __m128d avx_e2=_mm_load1_pd(&e[2]);
+   __m128d avx_e3=_mm_load1_pd(&e[3]);
+   __m128d avx_e01=_mm_load1_pd(&e0[1]);
+   __m128d avx_e02=_mm_load1_pd(&e0[2]);
    __m128d avx_e03=_mm_load1_pd(&e0[3]);
    __m128d avx_de11=_mm_load1_pd(&de[1][1]);
    __m128d avx_de12=_mm_load1_pd(&de[1][2]);
@@ -148,11 +148,11 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
    __m128d avx_de033=_mm_load1_pd(&de0[3][3]);
    __m128d avx_Scale=_mm_load1_pd(&Scale);
 #else
-   __m128d avx_e1=_mm_loaddup_pd(&e[1]); 
-   __m128d avx_e2=_mm_loaddup_pd(&e[2]); 
-   __m128d avx_e3=_mm_loaddup_pd(&e[3]); 
-   __m128d avx_e01=_mm_loaddup_pd(&e0[1]); 
-   __m128d avx_e02=_mm_loaddup_pd(&e0[2]); 
+   __m128d avx_e1=_mm_loaddup_pd(&e[1]);
+   __m128d avx_e2=_mm_loaddup_pd(&e[2]);
+   __m128d avx_e3=_mm_loaddup_pd(&e[3]);
+   __m128d avx_e01=_mm_loaddup_pd(&e0[1]);
+   __m128d avx_e02=_mm_loaddup_pd(&e0[2]);
    __m128d avx_e03=_mm_loaddup_pd(&e0[3]);
    __m128d avx_de11=_mm_loaddup_pd(&de[1][1]);
    __m128d avx_de12=_mm_loaddup_pd(&de[1][2]);
@@ -178,13 +178,13 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
    __m128d avx_tiny=_mm_set1_pd(TINY);
    __m128d avx_cl=_mm_set1_pd(cl),avx_cl1=_mm_set_pd(1,cl),avx_cls=_mm_set1_pd(cls),avx_11=_mm_set1_pd(1.0);
    __m128d res_br=_mm_setzero_pd();
-      __m128d avx_dyda1=_mm_setzero_pd(); 
-      __m128d avx_dyda2=_mm_setzero_pd(); 
-      __m128d avx_dyda3=_mm_setzero_pd(); 
+      __m128d avx_dyda1=_mm_setzero_pd();
+      __m128d avx_dyda2=_mm_setzero_pd();
+      __m128d avx_dyda3=_mm_setzero_pd();
       __m128d avx_d=_mm_setzero_pd();
       __m128d avx_d1=_mm_setzero_pd();
 
-   for (i=0;i<Numfac;i+=2)
+   for (i = 0; i < Numfac; i += 2)
    {
       __m128d avx_lmu,avx_lmu0,cmpe,cmpe0,cmp;
 	  __m128d avx_Nor1=_mm_load_pd(&Nor[0][i]);
@@ -193,19 +193,19 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 	  __m128d avx_s,avx_dnom,avx_dsmu,avx_dsmu0,avx_powdnom,avx_pdbr,avx_pbr;
 	  __m128d avx_Area;
 
-	  avx_lmu=_mm_mul_pd(avx_e1,avx_Nor1);	  
-	  avx_lmu=_mm_add_pd(avx_lmu,_mm_mul_pd(avx_e2,avx_Nor2));	  
-	  avx_lmu=_mm_add_pd(avx_lmu,_mm_mul_pd(avx_e3,avx_Nor3));	  
-	  avx_lmu0=_mm_mul_pd(avx_e01,avx_Nor1);	  
-	  avx_lmu0=_mm_add_pd(avx_lmu0,_mm_mul_pd(avx_e02,avx_Nor2));	  
-	  avx_lmu0=_mm_add_pd(avx_lmu0,_mm_mul_pd(avx_e03,avx_Nor3));	  
-	  
+	  avx_lmu=_mm_mul_pd(avx_e1,avx_Nor1);
+	  avx_lmu=_mm_add_pd(avx_lmu,_mm_mul_pd(avx_e2,avx_Nor2));
+	  avx_lmu=_mm_add_pd(avx_lmu,_mm_mul_pd(avx_e3,avx_Nor3));
+	  avx_lmu0=_mm_mul_pd(avx_e01,avx_Nor1);
+	  avx_lmu0=_mm_add_pd(avx_lmu0,_mm_mul_pd(avx_e02,avx_Nor2));
+	  avx_lmu0=_mm_add_pd(avx_lmu0,_mm_mul_pd(avx_e03,avx_Nor3));
+
 	  cmpe=_mm_cmpgt_pd(avx_lmu,avx_tiny);
 	  cmpe0=_mm_cmpgt_pd(avx_lmu0,avx_tiny);
 	  cmp=_mm_and_pd(cmpe,cmpe0);
 	  int icmp=_mm_movemask_pd(cmp);
-	  
-	  if(icmp&1)  //prvni a druhy nebo jen prvni
+
+	  if(icmp & 1)  //first and second or only first
       {
 		 INNER_CALC_DSMU
 		 if (icmp&2)
@@ -241,12 +241,12 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 #endif
 		 }
 		  INNER_CALC
-	  } 
+	  }
 	  else if (icmp&2)
 	  {
  		 INNER_CALC_DSMU
 		  avx_pbr=_mm_shuffle_pd(avx_pbr,_mm_setzero_pd(),1);
-		  avx_dsmu=_mm_shuffle_pd(_mm_setzero_pd(),avx_dsmu,_MM_SHUFFLE2(1,0)); 
+		  avx_dsmu=_mm_shuffle_pd(_mm_setzero_pd(),avx_dsmu,_MM_SHUFFLE2(1,0));
 		  avx_dsmu0=_mm_shuffle_pd(_mm_setzero_pd(),avx_dsmu0,_MM_SHUFFLE2(1,0));
 		  avx_lmu=_mm_shuffle_pd(_mm_setzero_pd(),avx_lmu,_MM_SHUFFLE2(1,0));
 		  avx_lmu0=_mm_shuffle_pd(avx_11,avx_lmu0,_MM_SHUFFLE2(1,0));
@@ -302,7 +302,7 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 		tmp3=_mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(pdbr,Dgrow[2]),_mm_mul_pd(pdbr1,Dgrow1[2])),_mm_mul_pd(pdbr2,Dgrow2[2])),_mm_mul_pd(pdbr3,Dgrow3[2]));
 		tmp4=_mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(pdbr,Dgrow[3]),_mm_mul_pd(pdbr1,Dgrow1[3])),_mm_mul_pd(pdbr2,Dgrow2[3])),_mm_mul_pd(pdbr3,Dgrow3[3]));
 		tmp5=_mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(pdbr,Dgrow[4]),_mm_mul_pd(pdbr1,Dgrow1[4])),_mm_mul_pd(pdbr2,Dgrow2[4])),_mm_mul_pd(pdbr3,Dgrow3[4]));
-	  
+
 	  for (j=4;j<incl_count;j+=4)
  	  {
 
@@ -338,7 +338,7 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 	  __m128d tmp1;
 	  __m128d tmp2;
 		__m128d *Dgrow,*Dgrow1,*Dgrow2,*Dgrow3,pdbr,pdbr1,pdbr2,pdbr3;
-	  
+
 		Dgrow = &Dg_row[0][dgi];
 		pdbr=dbr[0];
 		Dgrow1 = &Dg_row[1][dgi];
@@ -411,6 +411,6 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 
    /* Scaled brightness */
    br *= Scale;
-   
+
    return(br);
 }
