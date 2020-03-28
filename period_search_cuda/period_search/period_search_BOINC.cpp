@@ -56,6 +56,7 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
+#include <Shlwapi.h>
 
 #else
 #include "../win_build/config.h"
@@ -74,11 +75,10 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-//#include "graphics2.h"
 #include "start_CUDA.h"
-#include <Shlwapi.h>
 
 #ifdef APP_GRAPHICS
+#include "graphics2.h"
 #include "uc2.h"
 UC_SHMEM* shmem;
 #endif
@@ -563,6 +563,7 @@ int main(int argc, char** argv)
 	}
 
 	if (cudaDevice < 0) cudaDevice = 0;
+#ifdef _WIN32
 	if (!checkpointExists)
 	{
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
@@ -576,6 +577,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Application: %s\n", filename);
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 	}
+#endif
 
 	retval = CUDAPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (!retval)
