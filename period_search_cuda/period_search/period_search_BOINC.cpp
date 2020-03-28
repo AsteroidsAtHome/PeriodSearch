@@ -563,12 +563,12 @@ int main(int argc, char** argv)
 	}
 
 	if (cudaDevice < 0) cudaDevice = 0;
-#ifdef _WIN32
 	if (!checkpointExists)
 	{
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 		fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, cudaDevice, aid.slot);
 
+#ifdef _WIN32
 		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
@@ -576,8 +576,8 @@ int main(int argc, char** argv)
 		GetVersionInfo(filename, major, minor, build, revision);
 		fprintf(stderr, "Application: %s\n", filename);
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
-	}
 #endif
+	}
 
 	retval = CUDAPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (!retval)
