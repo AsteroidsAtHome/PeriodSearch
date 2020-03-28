@@ -29,6 +29,7 @@
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
+#include "cc_config.h"
 //#include <memory.h>
 
 #include "resource.h"
@@ -134,38 +135,38 @@ void update_shmem() {
 
 // NOTE: global parameters
 int l_max, m_max, n_iter, last_call,
-	n_coef, num_fac, l_curves, n_ph_par,
-	l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
-	deallocate, max_l_points; // n_iter,
+n_coef, num_fac, l_curves, n_ph_par,
+l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
+deallocate, max_l_points; // n_iter,
 
 double o_chi_square, chi_square, a_lambda, a_lamda_incr, a_lamda_start, phi_0, scale,
-	   d_area[MAX_N_FAC + 1], sclnw[MAX_LC + 1], /*Area[MAX_N_FAC+1],*/
-	   y_out[MAX_N_OBS + 1],
-	   f_c[MAX_N_FAC + 1][MAX_LM + 1], f_s[MAX_N_FAC + 1][MAX_LM + 1],
-	   t_c[MAX_N_FAC + 1][MAX_LM + 1], t_s[MAX_N_FAC + 1][MAX_LM + 1],
-	   d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
-	   normal[MAX_N_FAC + 1][3], bl_matrix[4][4],
-	   pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
-	   d_bl_matrix[3][4][4],
-	   weight[MAX_N_OBS + 1];
+d_area[MAX_N_FAC + 1], sclnw[MAX_LC + 1], /*Area[MAX_N_FAC+1],*/
+y_out[MAX_N_OBS + 1],
+f_c[MAX_N_FAC + 1][MAX_LM + 1], f_s[MAX_N_FAC + 1][MAX_LM + 1],
+t_c[MAX_N_FAC + 1][MAX_LM + 1], t_s[MAX_N_FAC + 1][MAX_LM + 1],
+d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
+normal[MAX_N_FAC + 1][3], bl_matrix[4][4],
+pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
+d_bl_matrix[3][4][4],
+weight[MAX_N_OBS + 1];
 
 /*--------------------------------------------------------------*/
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 	int retval, nlines, checkpointExists, nStartFrom;  //int c, nchars = 0 // double fsize, fd;
 	char inputPath[512], outputPath[512], chkptPath[512], buf[256];
 	MFILE out;
-	FILE* state, *infile;
+	FILE* state, * infile;
 
 	int i, j, l, m, k, n, nrows, onlyrel, ndata, k2, ndir, iTemp, nIterMin,
-		*ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
-		lcNumber, **ifp, newConw;
+		* ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
+		lcNumber, ** ifp, newConw;
 
 	double startPeriod, periodStepCoef, endPeriod,
 		startFrequency, frequencyStep, endFrequency, //jdMin, jdMax,
 		stopCondition,
-		*t, *f, *at, *af;
+		* t, * f, * at, * af;
 	/*Minimum JD*/
 	double jdMin;
 	/*Maximum JD*/
@@ -182,12 +183,12 @@ int main(int argc, char **argv)
 	double jd0, jd00, conw, conwR, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, cAxis,
 		cl, al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl,
 		ee[MAX_N_OBS + 1][3], // e[4], e0[4],
-		ee0[MAX_N_OBS + 1][3], *cg, *cgFirst, *sig, *al, // *tim, *brightness,
-		betaPole[N_POLES + 1], lambdaPole[N_POLES + 1], par[4], *weightLc;
+		ee0[MAX_N_OBS + 1][3], * cg, * cgFirst, * sig, * al, // *tim, *brightness,
+		betaPole[N_POLES + 1], lambdaPole[N_POLES + 1], par[4], * weightLc;
 
-	char *stringTemp;
+	char* stringTemp;
 
-	stringTemp = static_cast<char *>(malloc(MAX_LINE_LENGTH));
+	stringTemp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
 
 	//   ee = matrix_double(MAX_N_OBS,3);
 	//   ee0 = matrix_double(MAX_N_OBS,3);
@@ -225,12 +226,10 @@ int main(int argc, char **argv)
 	options.normal_thread_priority = true;
 	retval = boinc_init_options(&options);
 
-	//    retval = boinc_init();
-
 	if (retval) {
 		fprintf(stderr, "%s boinc_init returned %d\n",
 			boinc_msg_prefix(buf, sizeof(buf)), retval
-		);
+			);
 		exit(retval);
 	}
 
@@ -249,7 +248,7 @@ int main(int argc, char **argv)
 		fprintf(stderr,
 			"%s Couldn't find input file, resolved name %s.\n",
 			boinc_msg_prefix(buf, sizeof(buf)), inputPath
-		);
+			);
 		exit(-1);
 	}
 
@@ -279,10 +278,10 @@ int main(int argc, char **argv)
 	if (retval) {
 		fprintf(stderr, "%s APP: period_search output open failed:\n",
 			boinc_msg_prefix(buf, sizeof(buf))
-		);
+			);
 		fprintf(stderr, "%s resolved name %s, retval %d\n",
 			boinc_msg_prefix(buf, sizeof(buf)), outputPath, retval
-		);
+			);
 		perror("open");
 		exit(1);
 	}
@@ -294,7 +293,7 @@ int main(int argc, char **argv)
 	if (!shmem) {
 		fprintf(stderr, "%s failed to create shared mem segment\n",
 			boinc_msg_prefix(buf, sizeof(buf))
-		);
+			);
 	}
 	update_shmem();
 	boinc_register_timer_callback(update_shmem);
@@ -359,7 +358,7 @@ int main(int argc, char **argv)
 	// NOTE: number of light curves and the first relative one
 	fscanf(infile, "%d", &l_curves);
 
-	if(boinc_is_standalone())
+	if (boinc_is_standalone())
 	{
 		printf("%d  Number of light curves\n", l_curves);
 	}
@@ -543,21 +542,40 @@ int main(int argc, char **argv)
 	in_rel[l_curves] = 0;
 
 	// extract a --device option
-	int cudaDevice = -1;
-	for (int ii = 0; ii < argc; ii++) {
-		if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
-			cudaDevice = atoi(argv[++ii]);
-	}
-	if (cudaDevice < 0)
-		cudaDevice = 0;
+	auto cudaDevice = -1;
+	APP_INIT_DATA aid;
 
-	int major, minor, build, revision;
-	TCHAR filepath[MAX_PATH]; // = getenv("_");
-	GetModuleFileName(nullptr, filepath, MAX_PATH);
-	auto filename = PathFindFileName(filepath);
-	GetVersionInfo(filename, major, minor, build, revision);
-	fprintf(stderr, "Application: %s\n", filename);
-	fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+	// NOTE: Applications that use coprocessors https://boinc.berkeley.edu/trac/wiki/AppCoprocessor
+	// Some hosts have multiple GPUs. The BOINC client tells your application which instance to use.
+	// Call boinc_get_init_data() to get an APP_INIT_DATA structure; the device number (0, 1, ...) is in the gpu_device_num field. Old (pre-7.0.12) clients pass the device number via a command-line argument, --device N.
+	// In this case API_INIT_DATA::gpu_device_num will be -1, and your application must check its command-line args.
+	boinc_get_init_data(aid);
+	if (aid.gpu_device_num >= 0)
+	{
+		cudaDevice = aid.gpu_device_num;
+	}
+	else
+	{
+		for (auto ii = 0; ii < argc; ii++) {
+			if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+				cudaDevice = atoi(argv[++ii]);
+		}
+	}
+
+	if (cudaDevice < 0) cudaDevice = 0;
+	if (!checkpointExists)
+	{
+		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
+		fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, cudaDevice, aid.slot);
+
+		int major, minor, build, revision;
+		TCHAR filepath[MAX_PATH]; // = getenv("_");
+		GetModuleFileName(nullptr, filepath, MAX_PATH);
+		auto filename = PathFindFileName(filepath);
+		GetVersionInfo(filename, major, minor, build, revision);
+		fprintf(stderr, "Application: %s\n", filename);
+		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+	}
 
 	retval = CUDAPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (!retval)
@@ -573,7 +591,10 @@ int main(int argc, char **argv)
 		newConw = 0;
 		boinc_fraction_done(0.0001); //signal start
 #if _DEBUG
-		printf("Fraction done: 0.0001 (start signal)\n");
+		std::time_t time = std::time(nullptr);   // get time now
+		std::tm* now = std::localtime(&time);
+		printf("%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
+		fprintf(stderr, "%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
 #endif
 
 	}

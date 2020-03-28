@@ -67,12 +67,41 @@ texture<int2, 1> texDg;
 int CUDA_grid_dim;
 double* pee, * pee0, * pWeight;
 
+// NOTE: https://boinc.berkeley.edu/trac/wiki/CudaApps
+bool SetCUDABlockingSync(const int device) {
+	CUdevice  hcuDevice;
+	CUcontext hcuContext;
+
+	CUresult status = cuInit(0);
+	if (status != CUDA_SUCCESS)
+		return false;
+
+	status = cuDeviceGet(&hcuDevice, device);
+	if (status != CUDA_SUCCESS)
+		return false;
+
+	status = cuCtxCreate(&hcuContext, 0x4, hcuDevice);
+	if (status != CUDA_SUCCESS)
+		return false;
+
+	return true;
+}
+
 int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par, double cl, double Alamda_start, double Alamda_incr,
 	double ee[][3], double ee0[][3], double* tim, double Phi_0, int checkex, int ndata)
 {
 	//init gpu
+	auto initResult = SetCUDABlockingSync(cudadev);
+	if(!initResult)
+	{
+		fprintf(stderr, "%s CUDA: Error while initialising CUDA\n");
+		exit(999);
+	}
+
 	cudaSetDevice(cudadev);
-	cudaSetDeviceFlags(cudaDeviceBlockingSync);
+	// TODO: Check if this is obsolete when calling SetCUDABlockingSync()
+	//cudaSetDeviceFlags(cudaDeviceBlockingSync);
+
 	//determine gridDim
 	cudaDeviceProp deviceProp;
 	int SMXBlock; // Maximum number of resident thread blocks per multiprocessor
@@ -179,7 +208,12 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	res = cudaMemcpy(pee0, ee0, (ndata + 1) * 3 * sizeof(double), cudaMemcpyHostToDevice);
 	res = cudaMemcpyToSymbol(CUDA_ee0, &pee0, sizeof(void*));
 
-	if (res == cudaSuccess) return 1; else return 0;
+	if (res == cudaSuccess)
+	{
+		return 1;
+	}
+
+	else return 0;
 }
 
 void CUDAUnprepare(void)
@@ -213,20 +247,20 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	sum_dark_facet = 0.0;
 	ave_dark_facet = 0.0;
 
-#ifdef _DEBUG
-	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
-	if (n_max < max_test_periods)
-	{
-		max_test_periods = n_max;
-		fprintf(stderr, "n_max(%d) < max_test_periods (%d)\n", n_max, max_test_periods);
-	}
-	else
-	{
-		fprintf(stderr, "n_max(%d) > max_test_periods (%d)\n", n_max, max_test_periods);
-	}
-
-	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
-#endif
+//#ifdef _DEBUG
+//	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
+//	if (n_max < max_test_periods)
+//	{
+//		max_test_periods = n_max;
+//		fprintf(stderr, "n_max(%d) < max_test_periods (%d)\n", n_max, max_test_periods);
+//	}
+//	else
+//	{
+//		fprintf(stderr, "n_max(%d) > max_test_periods (%d)\n", n_max, max_test_periods);
+//	}
+//
+//	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
+//#endif
 
 	for (i = 1; i <= n_ph_par; i++)
 	{
@@ -316,9 +350,9 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	if (max_test_periods < CUDA_Grid_dim_precalc)
 	{
 		CUDA_Grid_dim_precalc = max_test_periods;
-#ifdef _DEBUG
-		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
-#endif
+//#ifdef _DEBUG
+//		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
+//#endif
 	}
 
 	err = cudaMalloc(&pcc, CUDA_Grid_dim_precalc * sizeof(freq_context));
@@ -603,12 +637,12 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		std::time_t t = std::time(nullptr);   // get time now
 		std::tm* now = std::localtime(&t);
 
-		printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
-		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+		printf("%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
 #endif
 
 		CudaCalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
-		err = cudaThreadSynchronize();
+		err = cudaDeviceSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
 		{
@@ -655,7 +689,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 				//break;//debug
 			}
 			CudaCalculateFinishPole<<<CUDA_grid_dim, 1>>>();
-			err = cudaThreadSynchronize();
+			err = cudaDeviceSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_grid_dim);
 			//			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_grid_dim);
 						//break; //debug

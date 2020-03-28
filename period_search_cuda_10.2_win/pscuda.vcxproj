@@ -461,9 +461,8 @@
       <OptimizeReferences>false</OptimizeReferences>
       <!-- <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries> -->
       <StackReserveSize>10000000</StackReserveSize>
-      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <!-- libcmtd.lib;libcpmtd.lib; -->
     </Link>
     <CudaCompile>
