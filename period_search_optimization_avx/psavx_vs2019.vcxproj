@@ -237,6 +237,7 @@
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\resource.h" />
+    <ClInclude Include="period_search\VersionInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="period_search\psavx_vs2019.rc" />

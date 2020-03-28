@@ -1,5 +1,5 @@
 #pragma once
-#include <windows.h>
+
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
@@ -36,10 +36,3 @@ void aligned_deallocate_matrix_double(double **p_x, int rows);
 void deallocate_matrix_int(int **p_x, int rows);
 double dot_product(double a[], double b[]);
 int gauss_errc(double **aa, int n, double b[]);
-
-bool GetVersionInfo(
-    LPCTSTR filename,
-    int& major,
-    int& minor,
-    int& build,
-    int& revision);

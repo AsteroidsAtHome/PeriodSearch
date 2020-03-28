@@ -79,6 +79,9 @@
     <ClInclude Include="period_search\resource.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="period_search\VersionInfo.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header files">

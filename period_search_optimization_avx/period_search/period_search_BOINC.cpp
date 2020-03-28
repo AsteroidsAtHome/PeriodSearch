@@ -52,6 +52,7 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
+#include "VersionInfo.h"
 #include <Shlwapi.h>
 #else
 #include "config.h"
