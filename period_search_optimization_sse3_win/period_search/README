@@ -1,6 +1,0 @@
-v10000	pocita dobre, ale je tam casta neshoda vystupu, casto se to lisi na poslednim miste, zbytecna presnost
-v10010	23.7.2012	uprava formatu vystupu - o jedno desetinne misto mene, snizi se pocet problemu s validaci, i kdyz to uplne nepomuze
-v10100	24.8.2012	10 misto 6ti pocatecnich polu - melo by spolehliveji konvergovat, 
-			format vystupu vracen na puvodni presnost, musi se to stejne validovat jinak
-
-gauss_1.c - nebylo to vubec potreba, smazano
