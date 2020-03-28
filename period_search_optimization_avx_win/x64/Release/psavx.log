@@ -1,9 +1,0 @@
-﻿Build started 7.9.2013 12:35:54.
-     1>Project "C:\psavx\psavx.vcxproj" on node 2 (clean target(s)).
-     1>_PrepareForClean:
-         Deleting file "x64\Release\psavx.lastbuildstate".
-     1>Done Building Project "C:\psavx\psavx.vcxproj" (clean target(s)).
-
-Build succeeded.
-
-Time Elapsed 00:00:00.01

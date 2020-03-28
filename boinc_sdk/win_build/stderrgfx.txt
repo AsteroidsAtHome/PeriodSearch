@@ -1,0 +1,60 @@
+10:12:26 (5740): Can't open init data file - running in standalone mode
+10:12:26 (5740): Starting graphics application.
+Failed to load 'logo.jpg'.
+10:12:56 (5740): Close event (WM_CLOSE) detected, shutting down.
+10:12:56 (5740): Shutting down graphics application.
+0 bytes in 0 Free Blocks.
+8 bytes in 1 Normal Blocks.
+8360 bytes in 13 CRT Blocks.
+0 bytes in 0 Ignore Blocks.
+0 bytes in 0 Client Blocks.
+Largest number used: 10103 bytes.
+Total allocations: 44084 bytes.
+Dumping objects ->
+{111} normal block at 0x000002A514B94560, 8 bytes long.
+ Data: <        > C0 80 B9 14 A5 02 00 00 
+{104} normal block at 0x000002A514B94A60, 16 bytes long.
+ Data: <   }            > 10 03 D9 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{103} normal block at 0x000002A514B948D0, 16 bytes long.
+ Data: <   }            > D0 01 D9 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{102} normal block at 0x000002A514B94B50, 16 bytes long.
+ Data: <8  }            > 38 A4 D7 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{101} normal block at 0x000002A514B944C0, 16 bytes long.
+ Data: <   }            > A0 EA D6 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{100} normal block at 0x000002A514B94AB0, 16 bytes long.
+ Data: <   }            > 80 EA D6 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{99} normal block at 0x000002A514B94420, 16 bytes long.
+ Data: <`  }            > 60 C8 D5 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+{98} normal block at 0x000002A514B94DD0, 16 bytes long.
+ Data: < j }            > C8 6A D4 7D F6 7F 00 00 00 00 00 00 00 00 00 00 
+Object dump complete.
+20:46:09 (27112): Can't open init data file - running in standalone mode
+20:46:09 (27112): Starting graphics application.
+Failed to load 'logo.jpg'.
+21:07:54 (27112): Close event (WM_CLOSE) detected, shutting down.
+21:07:54 (27112): Shutting down graphics application.
+0 bytes in 0 Free Blocks.
+8 bytes in 1 Normal Blocks.
+12496 bytes in 19 CRT Blocks.
+0 bytes in 0 Ignore Blocks.
+0 bytes in 0 Client Blocks.
+Largest number used: 17596 bytes.
+Total allocations: 1098282 bytes.
+Dumping objects ->
+{116} normal block at 0x00000186F5E39A80, 8 bytes long.
+ Data: <        > C0 94 E3 F5 86 01 00 00 
+{109} normal block at 0x00000186F5E352A0, 16 bytes long.
+ Data: <                > 10 03 9A 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{108} normal block at 0x00000186F5E350C0, 16 bytes long.
+ Data: <                > D0 01 9A 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{107} normal block at 0x00000186F5E34D50, 16 bytes long.
+ Data: <8               > 38 A4 98 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{106} normal block at 0x00000186F5E35390, 16 bytes long.
+ Data: <                > A0 EA 97 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{105} normal block at 0x00000186F5E34C60, 16 bytes long.
+ Data: <                > 80 EA 97 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{104} normal block at 0x00000186F5E35250, 16 bytes long.
+ Data: <`               > 60 C8 96 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+{103} normal block at 0x00000186F5E34EE0, 16 bytes long.
+ Data: < j              > C8 6A 95 88 F7 7F 00 00 00 00 00 00 00 00 00 00 
+Object dump complete.

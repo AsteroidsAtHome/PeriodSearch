@@ -1,9 +1,0 @@
-﻿Build started 7.9.2013 12:13:01.
-     1>Project "C:\pssse2\pssse.vcxproj" on node 2 (clean target(s)).
-     1>_PrepareForClean:
-         Deleting file "ReleaseSSE2\pssse.lastbuildstate".
-     1>Done Building Project "C:\pssse2\pssse.vcxproj" (clean target(s)).
-
-Build succeeded.
-
-Time Elapsed 00:00:00.03
