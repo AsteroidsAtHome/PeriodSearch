@@ -1,9 +1,9 @@
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 
-#include <math.h>
+#include <cmath>
 #include <malloc.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include "declarations.h"
 #ifdef NO_SSE3
  #include <emmintrin.h>

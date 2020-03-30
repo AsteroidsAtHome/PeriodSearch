@@ -4,10 +4,10 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "declarations.h"
-#include "../period_search/arrayHelpers.hpp"
+//#include "../period_search/arrayHelpers.hpp"
 
 void sphfunc(int ndir, double at[], double af[])
 {
@@ -132,7 +132,7 @@ void sphfunc(int ndir, double at[], double af[])
             printf("};\n");
         }
     }*/
-    
+
     /*printf("\nDsph[%d][%d]:\n", i - 1, 16);
     for (int q = 0; q <= 16; q++)
     {

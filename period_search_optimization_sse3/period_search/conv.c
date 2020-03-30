@@ -1,11 +1,11 @@
-/* Convexity regularization function 
+/* Convexity regularization function
 
    8.11.2006
 */
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
 #include "globals.h"
 #include "declarations.h"
 #ifdef NO_SSE3
@@ -17,9 +17,9 @@
 double conv(int nc, double dres[], int ma)
 {
    int i, j;
-   
+
    double res;
-   
+
    res = 0;
    for (j = 1; j <= ma; j++)
       dres[j] = 0;
@@ -33,12 +33,12 @@ double conv(int nc, double dres[], int ma)
 	 {
        __m128d avx_dres=_mm_load_pd(&dres[j]);
 	   __m128d avx_Dg=_mm_load_pd(&Dg_row[j]);
-	   
+
 	   avx_dres=_mm_add_pd(avx_dres,_mm_mul_pd(_mm_mul_pd(avx_Darea,avx_Dg),avx_Nor));
 
 	   _mm_store_pd(&dres[j],avx_dres);
 	 }
    }
-   
+
    return(res);
-}   
+}

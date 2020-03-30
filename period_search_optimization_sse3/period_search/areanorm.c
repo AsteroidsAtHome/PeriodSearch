@@ -1,15 +1,15 @@
-/* Areas and normals of the triangulated Gaussian image sphere 
+/* Areas and normals of the triangulated Gaussian image sphere
 
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "declarations.h"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {
-   int i, j;	  
+   int i, j;
 
    double  st, clen2, clen;
 
@@ -19,7 +19,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
    x = vector_double(ndir);
    y = vector_double(ndir);
    z = vector_double(ndir);
-   
+
    for (i = 1; i <= ndir; i++)
    {
       st = sin(t[i]);
@@ -53,7 +53,7 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
       /* triangle area */
       Darea[i-1]= 0.5 * clen;
    }
-   
+
    deallocate_vector((void *) x);
    deallocate_vector((void *) y);
    deallocate_vector((void *) z);

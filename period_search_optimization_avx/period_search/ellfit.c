@@ -4,10 +4,10 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "declarations.h"
-#include "../period_search/arrayHelpers.hpp"
+//#include "../period_search/arrayHelpers.hpp"
 
 
 void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])
@@ -74,7 +74,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
 
     // For Unit test reference only
     //printArray(fitmat, ncoef, ncoef, "fitmat[x][y]:");
-    
+
     ludcmp(fitmat, ncoef, indx, d);
     //printArray(fitmat, ncoef, ncoef, "fitvec_after_lubksb");
     //printArray(fitvec, ncoef, "fitvec_before_lubksb");
@@ -88,7 +88,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
 
     // For Unit tests reference only
     //printArray(cg, ncoef, "cg[x]:");
-    
+
     deallocate_matrix_double(fitmat, ncoef);
     deallocate_matrix_double(fmat, ndir);
     deallocate_vector((void *)fitvec);

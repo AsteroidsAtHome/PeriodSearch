@@ -4,9 +4,9 @@
    8.11.2006
 */
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"

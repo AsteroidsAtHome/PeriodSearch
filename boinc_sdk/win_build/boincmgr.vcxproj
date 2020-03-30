@@ -37,25 +37,32 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Template|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Template|Win32'">
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -251,7 +258,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../win_build;..;..\..\boinc_depends_win_vs2010\wxwidgets\include;..\..\boinc_depends_win_vs2010\wxwidgets\mswin\$(Platform)\$(Configuration)\lib\vc_lib\mswud;..\..\boinc_depends_win_vs2010\sqlite3\include;..\lib;..\api;..\clientgui;..\client\win;../coprocs/OpenCL/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc_depends_win_vs2010\wxWidgets\include;..\win_build;..;..\..\boinc_depends_win_vs2010\wxWidgets\include;..\..\boinc_depends_win_vs2010\wxWidgets\lib;..\..\boinc_depends_win_vs2010\sqlite3\include;..\lib;..\api;..\clientgui;..\client\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32;_DEBUG;_WINDOWS;_MT;_UNICODE;UNICODE;wxUSE_GUI=1</PreprocessorDefinitions>
       <StringPooling>false</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
@@ -279,7 +286,7 @@
     <Link>
       <AdditionalDependencies>MSVCRTD.LIB;MSVCPRTD.LIB;kernel32.lib;user32.lib;gdi32.lib;ole32.lib;oleaut32.lib;oleacc.lib;shell32.lib;comdlg32.lib;advapi32.lib;oldnames.lib;uuid.lib;rpcrt4.lib;comctl32.lib;wsock32.lib;wininet.lib;userenv.lib;winspool.lib;wxbase30ud.lib;wxbase30ud_net.lib;wxbase30ud_xml.lib;wxmsw30ud_adv.lib;wxmsw30ud_core.lib;wxmsw30ud_html.lib;wxmsw30ud_qa.lib;wxmsw30ud_webview.lib;wxregexud.lib;wxexpatd.lib;wxpngd.lib;wxtiffd.lib;wxjpegd.lib;wxzlibd.lib;sqlite3.lib</AdditionalDependencies>
       <OutputFile>.\Build\$(Platform)\$(Configuration)\$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>$(OutDir);..\..\boinc_depends_win_vs2010\wxwidgets\mswin\$(Platform)\$(Configuration)\lib\vc_lib;..\..\boinc_depends_win_vs2010\sqlite3\mswin\$(Platform)\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);..\..\boinc_depends_win_vs2010\wxWidgets\lib;..\..\boinc_depends_win_vs2010\sqlite3\mswin\$(Platform)\$(Configuration)\lib;C:\boincsdk\boinc_depends_win_vs2010\wxWidgets\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Build\$(Platform)\$(Configuration)\$(ProjectName).pdb</ProgramDatabaseFile>

@@ -68,11 +68,11 @@ BEGIN
         BLOCK "040004b0"
         BEGIN
             VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
-            VALUE "FileDescription", "Period search application"
+            VALUE "FileDescription", "Period search application x86 AVX"
             VALUE "FileVersion", "102.12.0.2"
             VALUE "InternalName", "psavx_vs.exe"
             VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
-            VALUE "OriginalFilename", "Period_search_avx.exe"
+            VALUE "OriginalFilename", "Period_search_x86_avx.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
             VALUE "ProductVersion", "102.12.0.2"
         END

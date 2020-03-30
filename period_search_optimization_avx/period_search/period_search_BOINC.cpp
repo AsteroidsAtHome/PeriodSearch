@@ -521,10 +521,14 @@ int main(int argc, char **argv) {
     //printArray(Inrel, 10, "Inrel");
 
     /* optimization of the convexity weight **************************************************************/
+    APP_INIT_DATA aid;
+    boinc_get_init_data(aid);
     if (!checkpoint_exists)
     {
         conw_r = conw / escl / escl;
         new_conw = 0;
+
+        fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
 #ifdef _WIN32
         int major, minor, build, revision;

@@ -3,10 +3,10 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "declarations.h"
-#include "../period_search/arrayHelpers.hpp"
+//#include "../period_search/arrayHelpers.hpp"
 
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[], double af[])
 {

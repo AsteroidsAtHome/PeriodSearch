@@ -1,9 +1,9 @@
-/* Curvature function (and hence facet area) from Laplace series 
+/* Curvature function (and hence facet area) from Laplace series
 
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals.h"
 #include "constants.h"
 #ifdef NO_SSE3
@@ -14,8 +14,8 @@
 
 void curv(double cg[])
 {
-   int i, m,  l, k; 
- 
+   int i, m,  l, k;
+
    for (i = 1; i <= Numfac; i++)
    {
       double g = 0;
@@ -42,7 +42,7 @@ void curv(double cg[])
       g = exp(g);
       Area[i-1] = Darea[i-1] * g;
 
-	  __m128d avx_g=_mm_set1_pd(g); 
+	  __m128d avx_g=_mm_set1_pd(g);
       for (k = 1; k < n; k+=2)
 	  {
 		__m128d avx_pom=_mm_loadu_pd(&Dsph[i][k]);
@@ -52,4 +52,4 @@ void curv(double cg[])
       if (k==n) Dg[i-1][k-1] = g * Dsph[i][k]; //last odd value
 
    }
-} 
+}

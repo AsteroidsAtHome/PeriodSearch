@@ -4,7 +4,7 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
 #include "globals.h"
@@ -52,7 +52,7 @@
             avx_dyda3=_mm256_add_pd(avx_dyda3,_mm256_mul_pd(avx_Area,_mm256_add_pd(avx_sum3,avx_sum30))); \
 			\
 			avx_d=_mm256_add_pd(avx_d,_mm256_mul_pd(_mm256_mul_pd(avx_lmu,avx_lmu0),avx_Area)); \
-			avx_d1=_mm256_add_pd(avx_d1,_mm256_div_pd(_mm256_mul_pd(_mm256_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm256_add_pd(avx_lmu,avx_lmu0))); 
+			avx_d1=_mm256_add_pd(avx_d1,_mm256_div_pd(_mm256_mul_pd(_mm256_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm256_add_pd(avx_lmu,avx_lmu0)));
 // end of inner_calc
 #define INNER_CALC_DSMU \
 	  avx_Area=_mm256_load_pd(&Area[i]); \
