@@ -33,6 +33,8 @@
 x64/
 x64/**
 x86/
+Win32/
+Win32/**
 build
 bld/
 [Bb]in/

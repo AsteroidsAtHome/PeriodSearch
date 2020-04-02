@@ -65,7 +65,7 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug_7' or '$(Configuration)'=='Release_7'" Label="Globals">
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -90,7 +90,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -247,9 +247,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_7|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>D:\boincsdk\boinc_repo\win_build\Build\Win32\Release;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\Win32;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
+    <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(Platform)\$(Configuration)_7\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -267,9 +267,11 @@
     <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_7|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <LibraryPath>D:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_7\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)_7\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -399,8 +401,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Full</Optimization>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\api;D:\boincsdk\boinc_repo\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\api;D:\boincsdk\boinc_repo\lib;$(CudaToolkitLibDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DebugInformationFormat>None</DebugInformationFormat>
@@ -416,10 +418,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <StackReserveSize>10000000</StackReserveSize>
+      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>20000000</StackReserveSize>
       <OptimizeReferences>true</OptimizeReferences>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);%(AdditionalLibraryDirectories);</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>32</TargetMachinePlatform>
@@ -563,23 +566,25 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\boincsdk\boinc_repo\lib;D:\boincsdk\boinc_repo\api;$(CudaToolkitLibDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <OmitFramePointers>false</OmitFramePointers>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <SupportJustMyCode>true</SupportJustMyCode>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <StackReserveSize>10000000</StackReserveSize>
-      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>20000000</StackReserveSize>
+      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(CudaToolkitIncludeDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
@@ -670,17 +675,17 @@
       <OmitFramePointers>false</OmitFramePointers>
       <BrowseInformation>false</BrowseInformation>
       <LanguageStandard>Default</LanguageStandard>
-      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-      <StackReserveSize>20000000</StackReserveSize>
+      <StackReserveSize>10000000</StackReserveSize>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);%(AdditionalLibraryDirectories);</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>

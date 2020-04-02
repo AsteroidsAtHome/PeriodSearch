@@ -23,7 +23,7 @@
     <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pssse3</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <!-- <PropertyGroup Label="Globals">
     <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
@@ -87,7 +87,7 @@
     <OutDir>$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <GenerateManifest>true</GenerateManifest>
-    <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_sse3_$(Configuration)</TargetName>
+    <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_sse2_$(Configuration)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -101,7 +101,7 @@
     <OutDir>$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\Win32\Release;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_sse3</TargetName>
+    <TargetName>Period_search_$(SDKDisplayName)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_sse2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -185,29 +185,32 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\api;C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\win_build\Build\Win32\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
-      <ExceptionHandling>Async</ExceptionHandling>
+      <OmitFramePointers>false</OmitFramePointers>
+      <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <CompileAs>CompileAsCpp</CompileAs>
-      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <AdditionalOptions>/arch:SSE3;%(AdditionalOptions)</AdditionalOptions>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <AdditionalOptions>/arch:SSE2;%(AdditionalOptions)</AdditionalOptions>
+      <AssemblerOutput>AssemblyCode</AssemblerOutput>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
       <AdditionalDependencies>libboincapi_staticcrt.lib;libboinc.lib;psapi.lib;ShLwApi.lib;Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
-      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
       <AdditionalLibraryDirectories>C:\boincsdk\boinc_repo\win_build\Build\Win32\Release;$(WindowsSdk_71A_LibraryPath_x86);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <EnableUAC>false</EnableUAC>
+      <EnableUAC>true</EnableUAC>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29920.165
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psavx_vs2019_XP", "psavx_vs2019_XP.vcxproj", "{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Debug|Win32.Build.0 = Debug|Win32
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Debug|x64.ActiveCfg = Debug|x64
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Debug|x64.Build.0 = Debug|x64
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Release|Win32.ActiveCfg = Release|Win32
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Release|Win32.Build.0 = Release|Win32
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Release|x64.ActiveCfg = Release|x64
+		{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DC757E93-0172-4608-9849-79488651E79C}
+	EndGlobalSection
+EndGlobal

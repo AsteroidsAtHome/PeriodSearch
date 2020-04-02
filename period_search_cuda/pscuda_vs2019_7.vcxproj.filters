@@ -1,0 +1,131 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="period_search\blmatrix.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\bright.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\conv.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\curv.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\curve2_CUDA.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\gauss_errc.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\mrqcof.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\mrqmin.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\Start.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="period_search\start_CUDA.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\areanorm.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\dot_product.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\lubksb.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ludcmp.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ellfit.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\memory.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\sphfunc.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\trifac.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\stdfax.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\error.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\VersionInfo.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\constants.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations_CUDA.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\globals.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\start_CUDA.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\uc2.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\globals_CUDA.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\resource.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\stdafx.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Intellisense_cuda_intrinsics.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Start.cuh">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="period_search\clear_files.bat" />
+    <None Include="period_search\cpp.hint" />
+    <None Include="period_search\origin1.bin" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{4086c787-ce4f-4ca6-bfbe-9b0184de2e1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{b1125ffe-1573-4fa7-986f-38e74e931a73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{43455d60-d566-400a-b7e4-7dfa14fe3a38}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="period_search\pscuda.rc">
+      <Filter>Resource files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+</Project>
