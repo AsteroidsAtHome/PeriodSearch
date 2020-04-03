@@ -792,7 +792,7 @@ int main(int argc, char **argv) {
                 la_best += 360;
 
 #ifdef __GNUC__
-            if (isnan(dark_best) == 1)
+            if (std::isnan(dark_best) == 1)
                 dark_best = 1.0;
 #else
             if (_isnan(dark_best) == 1)
@@ -1052,7 +1052,7 @@ int main(int argc, char **argv) {
             la_best += 360;
 
 #ifdef __GNUC__
-        if (isnan(dark_best) == 1)
+        if (std::isnan(dark_best) == 1)
             dark_best = 1.0;
 #else
         if (_isnan(dark_best) == 1)

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include "declarations.h"
 #include <math.h>
-#include "../period_search/arrayHelpers.hpp"
+//#include "../period_search/arrayHelpers.hpp"
 
 void ludcmp(double **a, int n, int indx[], double d[])
 {

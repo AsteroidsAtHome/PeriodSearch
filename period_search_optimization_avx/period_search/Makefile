@@ -1,6 +1,6 @@
 # This should work on Linux.  Modify as needed for other platforms.
 
-BOINC_DIR = ../..
+BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
