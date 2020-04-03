@@ -742,6 +742,7 @@
     <ClInclude Include="period_search\start_CUDA.h" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\uc2.h" />
+    <ClInclude Include="period_search\Version.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.c" />

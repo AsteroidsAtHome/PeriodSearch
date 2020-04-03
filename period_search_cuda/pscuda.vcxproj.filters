@@ -102,6 +102,9 @@
     <ClInclude Include="period_search\Start.cuh">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="period_search\Version.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

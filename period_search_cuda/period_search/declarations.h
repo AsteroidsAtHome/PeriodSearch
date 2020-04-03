@@ -1,5 +1,4 @@
 #pragma once
-#include <windows.h>
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
 			  double at[], double af[]);
@@ -75,11 +74,3 @@ double bright_ell_YORP(double ee[], double ee0[], double t, double cg[],
 			double dyda[], int ncoef);
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
 void ErrorFunction(const char* buffer, int no_conversions);
-
-
-bool GetVersionInfo(
-	LPCTSTR filename,
-	int& major,
-	int& minor,
-	int& build,
-	int& revision);

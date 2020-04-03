@@ -23,7 +23,7 @@
     <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pssse3</RootNamespace>
-    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <!-- <PropertyGroup Label="Globals">
     <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
@@ -243,7 +243,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;psapi.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;psapi.lib;Version.lib;ShLwApi.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <!-- <AdditionalDependencies>libcmt.lib;libcpmt.lib;libboinc_staticcrt.lib;libboincapi_staticcrt.lib;%(AdditionalDependencies)</AdditionalDependencies> -->
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
@@ -277,6 +277,7 @@
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\resource.h" />
+    <ClInclude Include="period_search\Version.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />

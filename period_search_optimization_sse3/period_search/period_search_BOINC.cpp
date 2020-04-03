@@ -52,8 +52,9 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
-#include <windows.h>
+#include <Windows.h>
 #include <Shlwapi.h>
+#include "Version.h"
 #else
 #include "config.h"
 #include <cstdio>
@@ -152,43 +153,6 @@ Dg[MAX_N_FAC + 4][MAX_N_PAR + 10] __attribute__((aligned(16)));
 #else
 __declspec(align(16)) double Nor[3][MAX_N_FAC + 2], Area[MAX_N_FAC + 2], Darea[MAX_N_FAC + 2], Dg[MAX_N_FAC + 4][MAX_N_PAR + 10]; //Nor,Dg ARE ZERO INDEXED
 #endif
-
-/*--------------------------------------------------------------*/
-
-//bool GetAppVersionInfo(LPSTR filename, int major, int minor, int build, int revision)
-//{
-//    DWORD verBufferSize;
-//    char verBuffer[2048];
-//
-//    //  Get the size of the version info block in the file
-//    verBufferSize = GetFileVersionInfoSize(filename, NULL);
-//    if (verBufferSize > 0 && verBufferSize <= sizeof(verBuffer))
-//    {
-//        //  get the version block from the file
-//        if (TRUE == GetFileVersionInfo(filename, NULL, verBufferSize, verBuffer))
-//        {
-//            UINT length;
-//            VS_FIXEDFILEINFO* verInfo = NULL;
-//
-//            //  Query the version information for neutral language
-//            if (TRUE == VerQueryValue(
-//                verBuffer,
-//                _T("\\"),
-//                reinterpret_cast<LPVOID*>(&verInfo),
-//                &length))
-//            {
-//                //  Pull the version values.
-//                major = HIWORD(verInfo->dwProductVersionMS);
-//                minor = LOWORD(verInfo->dwProductVersionMS);
-//                build = HIWORD(verInfo->dwProductVersionLS);
-//                revision = LOWORD(verInfo->dwProductVersionLS);
-//                return true;
-//            }
-//        }
-//    }
-//
-//    return false;
-//}
 
 int main(int argc, char **argv) {
     int /*c,*/ /*nchars = 0,*/ retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
@@ -551,11 +515,16 @@ int main(int argc, char **argv) {
     Inrel[Lcurves] = 0;
 
     /* optimization of the convexity weight **************************************************************/
+	APP_INIT_DATA aid;
+    boinc_get_init_data(aid);
     if (!checkpoint_exists)
     {
         conw_r = conw / escl / escl;
         new_conw = 0;
 
+        fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
+
+#ifdef _WIN32
         int major, minor, build, revision;
         TCHAR filepath[MAX_PATH]; // = getenv("_");
         GetModuleFileName(nullptr, filepath, MAX_PATH);
@@ -563,6 +532,7 @@ int main(int argc, char **argv) {
         GetVersionInfo(filename, major, minor, build, revision);
         fprintf(stderr, "Application: %s\n", filename);
         fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#endif
     }
 
     while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
@@ -794,7 +764,7 @@ int main(int argc, char **argv) {
                 la_best += 360;
 
 #ifdef __GNUC__
-            if (isnan(dark_best) == 1)
+            if (std::isnan(dark_best) == 1)
                 dark_best = 1.0;
 #else
             if (_isnan(dark_best) == 1)
@@ -1057,7 +1027,7 @@ int main(int argc, char **argv) {
             la_best += 360;
 
 #ifdef __GNUC__
-        if (isnan(dark_best) == 1)
+        if (std::isnan(dark_best) == 1)
             dark_best = 1.0;
 #else
         if (_isnan(dark_best) == 1)
