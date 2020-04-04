@@ -26,8 +26,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
-#include <cstring>
-#include <memory.h>
+//#include <cstring>
+//#include <memory.h>
 
 #include "declarations.h"
 #include "constants.h"
@@ -64,6 +64,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <unistd.h>
+#include <limits>
 #endif
 
 #include "str_util.h"
@@ -71,6 +72,7 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
+#include "float.h"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
