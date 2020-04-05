@@ -1,6 +1,6 @@
 /* Numerical Recipes */
 
-constexpr auto tiny = 1.0e-20;;
+constexpr auto tiny = 1.0e-20;
 #include <cstdio>
 #include <cstdlib>
 #include "declarations.h"
