@@ -1,3 +1,0 @@
-11:36:27 (16174): Can't open init data file - running in standalone mode
-12:00:51 (16549): Can't open init data file - running in standalone mode
-12:02:48 (16657): Can't open init data file - running in standalone mode

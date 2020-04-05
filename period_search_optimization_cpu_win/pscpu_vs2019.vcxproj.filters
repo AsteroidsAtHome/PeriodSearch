@@ -56,6 +56,9 @@
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\VersionInfo.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\Version.h">
@@ -73,6 +76,9 @@
     <ClInclude Include="period_search\uc2.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header files">
@@ -84,5 +90,13 @@
     <Filter Include="Resource files">
       <UniqueIdentifier>{1e74d198-f97a-4568-902c-d7b00e6c910e}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="pscpu_vs2019.rc">
+      <Filter>Resource files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
 </Project>

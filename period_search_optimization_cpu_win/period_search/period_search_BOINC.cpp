@@ -22,13 +22,10 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
 
 #include "declarations.h"
 #include "constants.h"
@@ -82,22 +79,22 @@ UC_SHMEM* shmem;
 
 using std::string;
 
-constexpr auto CHECKPOINT_FILE = "period_search_state";
-constexpr auto INPUT_FILENAME = "period_search_in";
-constexpr auto OUTPUT_FILENAME = "period_search_out";
+constexpr auto checkpoint_file = "period_search_state";
+constexpr auto input_filename = "period_search_in";
+constexpr auto output_filename = "period_search_out";
 
 int DoCheckpoint(MFILE& mf, const int nlines, const int newconw, const double conwr, const double sumdarkfacet, const int testperiods)
 {
 	string resolvedName;
 
-	const auto f = fopen("temp", "w");
-	if (!f) return 1;
-	fprintf(f, "%d %d %.17g %.17g %d", nlines, newconw, conwr, sumdarkfacet, testperiods);
-	fclose(f);
+	const auto file = fopen("temp", "w");
+	if (!file) return 1;
+	fprintf(file, "%d %d %.17g %.17g %d", nlines, newconw, conwr, sumdarkfacet, testperiods);
+	fclose(file);
 
 	auto retval = mf.flush();
 	if (retval) return retval;
-	boinc_resolve_filename_s(CHECKPOINT_FILE, resolvedName);
+	boinc_resolve_filename_s(checkpoint_file, resolvedName);
 	retval = boinc_rename("temp", resolvedName.c_str());
 	if (retval) return retval;
 
@@ -164,7 +161,7 @@ int main(int argc, char** argv) {
 	double per_start, per_step_coef, per_end,
 		freq, freq_start, freq_step, freq_end, jd_min, jd_max,
 		dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
-		totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
+		totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best,
 		* t, * f, * at, * af, sum_dark_facet, ave_dark_facet;
 
 	double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
@@ -221,7 +218,7 @@ int main(int argc, char** argv) {
 
 	// open the input file (resolve logical name first)
 	//
-	boinc_resolve_filename(INPUT_FILENAME, input_path, sizeof(input_path));
+	boinc_resolve_filename(input_filename, input_path, sizeof(input_path));
 	infile = boinc_fopen(input_path, "r");
 	if (!infile) {
 		fprintf(stderr,
@@ -232,13 +229,13 @@ int main(int argc, char** argv) {
 	}
 
 	// output file
-	boinc_resolve_filename(OUTPUT_FILENAME, output_path, sizeof(output_path));
+	boinc_resolve_filename(output_filename, output_path, sizeof(output_path));
 	//    out.open(output_path, "w");
 
 		// See if there's a valid checkpoint file.
 		// If so seek input file and truncate output file
 		//
-	boinc_resolve_filename(CHECKPOINT_FILE, chkpt_path, sizeof(chkpt_path));
+	boinc_resolve_filename(checkpoint_file, chkpt_path, sizeof(chkpt_path));
 	state = boinc_fopen(chkpt_path, "r");
 	if (state) {
 		n = fscanf(state, "%d %d %lf %lf %d", &nlines, &new_conw, &conw_r, &sum_dark_facet, &ntestperiods);
@@ -371,7 +368,17 @@ int main(int argc, char** argv) {
 				fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
 			}
 
+			auto min_double = std::numeric_limits<double>::min();
 			fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
+			if (tim[ndata] < min_double)
+			{
+				tim[ndata] = min_double;
+			}
+
+			if (brightness[ndata] < min_double)
+			{
+				brightness[ndata] = min_double;
+			}
 			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
 			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
 
@@ -429,12 +436,17 @@ int main(int argc, char** argv) {
 		weight_lc[i] = -1;
 
 	/* reads weights */
-	while (feof(infile) == 0)
+	auto scanResult = 0;
+	while (true)
 	{
-		fscanf(infile, "%d", &lc_number);
-		fscanf(infile, "%lf", &weight_lc[lc_number]);
+		scanResult = fscanf(infile, "%d", &lc_number);
+		if (scanResult <= 0) break;
+		scanResult = fscanf(infile, "%lf", &weight_lc[lc_number]);
+		if (scanResult <= 0) break;
 		if (boinc_is_standalone())
 			printf("weights %d %g\n", lc_number, weight_lc[lc_number]);
+
+		if (feof(infile)) break;
 	}
 
 	/* If input jd_0 <= 0 then the jd_0 is set to the day before the
@@ -636,6 +648,9 @@ int main(int argc, char** argv) {
 			dev_best = 1e40;
 			for (m = 1; m <= N_POLES; m++)
 			{
+#ifdef _DEBUG
+				printf(".");
+#endif
 				prd = 1 / freq;
 
 				/* starts from the initial ellipsoid */
@@ -741,11 +756,13 @@ int main(int argc, char** argv) {
 				}
 			} /* pole loop */
 
+			printf("\n");
+
 			if (la_best < 0)
 				la_best += 360;
 
 #ifdef __GNUC__
-			if (isnan(dark_best) == 1)
+			if (std::isnan(dark_best) == 1)
 				dark_best = 1.0;
 #else
 			if (_isnan(dark_best) == 1)
@@ -756,7 +773,11 @@ int main(int argc, char** argv) {
 
 			if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
 				retval = DoCheckpoint(out, 0, new_conw, conw_r, sum_dark_facet, n); //zero lines
-				if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
+				if (retval)
+				{
+					fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval);
+				}
+
 				boinc_checkpoint_completed();
 			}
 
@@ -772,7 +793,11 @@ int main(int argc, char** argv) {
 
 		if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
 			retval = DoCheckpoint(out, 0, new_conw, conw_r, 0.0, 0); //zero lines,zero sum dark facets, zero testperiods
-			if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
+			if (retval)
+			{
+				fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval);
+			}
+
 			boinc_checkpoint_completed();
 		}
 
@@ -874,8 +899,17 @@ int main(int argc, char** argv) {
 
 	for (n = n_start_from; n <= (int)((freq_start - freq_end) / freq_step) + 1; n++)
 	{
-		fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
+		auto fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
 		boinc_fraction_done(fraction_done);
+
+#ifdef _DEBUG
+		auto fraction = fraction_done * 100;
+		auto time = std::time(nullptr);   // get time now
+		auto now = std::localtime(&time);
+
+		printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+#endif
 
 		freq = freq_start - (n - 1) * freq_step;
 
@@ -992,7 +1026,7 @@ int main(int argc, char** argv) {
 			la_best += 360;
 
 #ifdef __GNUC__
-		if (isnan(dark_best) == 1)
+		if (std::isnan(dark_best) == 1)
 			dark_best = 1.0;
 #else
 		if (_isnan(dark_best) == 1)
@@ -1009,21 +1043,24 @@ int main(int argc, char** argv) {
 		if (boinc_time_to_checkpoint() || boinc_is_standalone())
 		{
 			retval = DoCheckpoint(out, n, new_conw, conw_r, 0.0, 0);
-			if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
+			if (retval)
+			{
+				fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval);
+			}
+
 			boinc_checkpoint_completed();
 		}
 
-
-		if (boinc_is_standalone())
-		{
-			if (n == 1)
-				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
-			else
-				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
-		}
-#ifdef _DEBUG
-		break;
-#endif
+//#ifdef _DEBUG
+//		if (boinc_is_standalone())
+//		{
+//			if (n == 1)
+//				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
+//			else
+//				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
+//		}
+//		break;
+//#endif
 	} /* period loop */
 
 	out.close();

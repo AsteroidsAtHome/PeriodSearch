@@ -72,7 +72,6 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-#include "float.h"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"

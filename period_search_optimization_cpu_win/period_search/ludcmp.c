@@ -1,17 +1,17 @@
 /* Numerical Recipes */
 
-constexpr auto tiny = 1.0e-20;
-#include <cstdio>
-#include <cstdlib>
+const double tiny = 1.0e-20;
+#include <stdio.h>
+#include <stdlib.h>
 #include "declarations.h"
-#include <cmath>
+#include <math.h>
 
 void ludcmp(double** a, int n, int indx[], double d[])
 {
 	int i, imax = -999, j, k;
 	double big, dum, sum, temp;
 
-	const auto v = vector_double(n);
+	double* v = vector_double(n);
 
 	*d = 1.0;
 	for (i = 1; i <= n; i++)
@@ -23,16 +23,18 @@ void ludcmp(double** a, int n, int indx[], double d[])
 			{
 				big = temp;
 			}
-
-			if (big == 0.0)
-			{
-				fprintf(stderr, "Singular matrix in routine ludcmp\n");
-				fflush(stderr);
-				exit(4);
-			}
-			v[i] = 1.0 / big;
 		}
+
+		if (big == 0.0)
+		{
+			fprintf(stderr, "Singular matrix in routine ludcmp\n");
+			fflush(stderr);
+			exit(4);
+		}
+
+		v[i] = 1.0 / big;
 	}
+
 	for (j = 1; j <= n; j++)
 	{
 		for (i = 1; i < j; i++)
@@ -74,5 +76,5 @@ void ludcmp(double** a, int n, int indx[], double d[])
 		}
 	}
 
-	deallocate_vector(static_cast<void*>(v));
+	deallocate_vector((void*)v);
 }
