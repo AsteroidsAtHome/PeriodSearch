@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\areanorm.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\blmatrix.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\bright.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\conv.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\covsrt.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\curv.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\dot_product.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ellfit.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\gauss_errc.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\lubksb.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ludcmp.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\matrix.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\memory.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\mrqcof.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\mrqmin.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\phasec.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\sphfunc.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\trifac.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\VersionInfo.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\Version.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\constants.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\globals.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\uc2.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{56c42994-0f5d-46a6-9a57-d30716100ca9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{545896fb-e832-4f30-94cd-0547f91eae00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{1e74d198-f97a-4568-902c-d7b00e6c910e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="pscpu_vs2019.rc">
+      <Filter>Resource files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+</Project>

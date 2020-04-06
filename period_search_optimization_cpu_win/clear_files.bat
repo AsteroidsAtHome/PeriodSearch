@@ -1,4 +1,0 @@
-del boinc_finish_called
-del boinc_lockfile
-del period_search_out
-del period_search_state
