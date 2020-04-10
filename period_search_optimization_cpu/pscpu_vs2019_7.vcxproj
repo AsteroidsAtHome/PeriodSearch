@@ -152,6 +152,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CompileAs>CompileAsCpp</CompileAs>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -179,6 +180,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
