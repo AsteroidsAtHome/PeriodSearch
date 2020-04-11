@@ -235,7 +235,7 @@ int main(int argc, char** argv)
 		exit(retval);
 	}
 
-#ifdef _WIN32_
+#ifdef _WIN32
 	// -------------------
 	char buffer[MAX_PATH];
 	GetModuleFileName(NULL, buffer, MAX_PATH);
