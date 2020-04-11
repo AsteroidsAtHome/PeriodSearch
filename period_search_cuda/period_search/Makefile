@@ -16,9 +16,10 @@ CXXFLAGS = -g \
 # There were two cases from the legacy code - first was using --maxrregcount=80 which is very ineficient on block occupancy.
 # After precise wxamination on results from NVIDIA Nsight Performance Analysis both are set to 32 now. This way we achieve 100% block occupancy (most of the time).
 
+# CUDA 5.5: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_20,code=sm_20 --generate-code arch=compute_20,code=sm_21 --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_35,code=compute_35 --maxrregcount=80 -rdc=true
 # CUDA 10.2 - CC: compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75
-NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_30,sm_30 --generate-code arch=compute_35,sm_35 --generate-code arch=compute_37,sm_37 --generate-code arch=compute_50,sm_50 --generate-code arch=compute_52,sm_52 --generate-code arch=compute_60,sm_60 --generate-code arch=compute_61,sm_61 --generate-code arch=compute_70,sm_70 --generate-code arch=compute_75,sm_75 --maxrregcount=32 -rdc=true
-NVCCFLAGScv2 = --ptxas-options=-v --generate-code arch=compute_30,sm_30 --generate-code arch=compute_35,sm_35 --generate-code arch=compute_37,sm_37 --generate-code arch=compute_50,sm_50 --generate-code arch=compute_52,sm_52 --generate-code arch=compute_60,sm_60 --generate-code arch=compute_61,sm_61 --generate-code arch=compute_70,sm_70 --generate-code arch=compute_75,sm_75 --maxrregcount=32 -rdc=true
+NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=32 -rdc=true
+NVCCFLAGScv2 = --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=32 -rdc=true
 
 CC=g++
 CXX=g++
