@@ -56,7 +56,7 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 	int err_code = gauss_errc(CUDA_LCC, ma);
 	if(err_code)
 	{
-		return;
+		return err_code;
 	}
 
 	//err_code = gauss_errc(CUDA_LCC, CUDA_mfit, (*CUDA_LCC).da);
@@ -78,7 +78,7 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 	}
 	__syncthreads();
 
-	return(err_code);
+	return err_code;
 }
 
 __device__ void mrqmin_2_end(freq_context* CUDA_LCC, int ia[], int ma)
@@ -105,4 +105,3 @@ __device__ void mrqmin_2_end(freq_context* CUDA_LCC, int ia[], int ma)
 
 	return;
 }
-
