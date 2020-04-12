@@ -67,7 +67,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <csignal>
-#include <io.h>
+//#include <io.h>
 #include <unistd.h>
 #include <limits>
 #endif
