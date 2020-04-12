@@ -1,6 +1,6 @@
 # This should work on Linux.  Modify as needed for other platforms.
 
-BOINC_DIR = ../..
+BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 CUDA_PATH = /usr/local/cuda-10.2
@@ -42,20 +42,23 @@ libstdc++.a:
 libcudart.so.10.2:
 	ln -s $(CUDA_PATH)/lib64/libcudart.so.10.2 libcudart.so.10.2
 
+libcuda.so:
+	ln -s $(CUDA_PATH)/lib64/stubs/libcuda.so libcuda.so
+
 clean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2 libcuda.so
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2 libcuda.so
 
 install: period_search_BOINC_cuda102
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
 
-period_search_BOINC_cuda102: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so.10.2
+period_search_BOINC_cuda102: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so.10.2 libcuda.so
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
-	$(BOINC_API_DIR)/libboinc_api.a libcudart.so.10.2 \
+	$(BOINC_API_DIR)/libboinc_api.a libcudart.so.10.2 libcuda.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
 curve2_CUDA.o: curve2_CUDA.cu
