@@ -94,13 +94,15 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	auto initResult = SetCUDABlockingSync(cudadev);
 	if(!initResult)
 	{
-		fprintf(stderr, "%s CUDA: Error while initialising CUDA\n");
+		fprintf(stderr, "CUDA: Error while initialising CUDA\n");
 		exit(999);
 	}
 
 	cudaSetDevice(cudadev);
 	// TODO: Check if this is obsolete when calling SetCUDABlockingSync()
-	//cudaSetDeviceFlags(cudaDeviceBlockingSync);
+	cudaSetDeviceFlags(cudaDeviceBlockingSync);
+	// TODO: Check if this will help to free some CPU core utilization
+	//cudaSetDeviceFlags(cudaDeviceScheduleYield);
 
 	//determine gridDim
 	cudaDeviceProp deviceProp;
@@ -392,6 +394,7 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 	for (n = 1; n <= max_test_periods; n += CUDA_Grid_dim_precalc)
 	{
 		CudaCalculatePrepare<<<CUDA_Grid_dim_precalc, 1>>>(n, max_test_periods, freq_start, freq_step);
+		//err = cudaThreadSynchronize();
 		err = cudaDeviceSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
@@ -441,12 +444,13 @@ int CUDAPrecalc(double freq_start, double freq_end, double freq_step, double sto
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
 				err = cudaDeviceSynchronize();
 				//cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
-				cudaMemcpyFromSymbol(&theEnd, CUDA_End, sizeof(theEnd), 0, cudaMemcpyDeviceToHost);
+				cudaMemcpyFromSymbolAsync(&theEnd, CUDA_End, sizeof theEnd, 0, cudaMemcpyDeviceToHost);
 				theEnd = theEnd == CUDA_Grid_dim_precalc;
 
 				//break;//debug
 			}
 			CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, 1>>>();
+			//err = cudaThreadSynchronize();
 			err = cudaDeviceSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_Grid_dim_precalc);
 			//			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_Grid_dim_precalc);
@@ -642,6 +646,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 #endif
 
 		CudaCalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
+		//err = cudaThreadSynchronize();
 		err = cudaDeviceSynchronize();
 
 		for (m = 1; m <= N_POLES; m++)
@@ -683,12 +688,15 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 				CudaCalculateIter1Mrqmin2End<<<CUDA_grid_dim, 1>>>();
 				CudaCalculateIter2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
-				cudaMemcpyFromSymbol(&theEnd, CUDA_End, sizeof(theEnd));
+				err=cudaDeviceSynchronize();
+				cudaMemcpyFromSymbolAsync(&theEnd, CUDA_End, sizeof theEnd, 0, cudaMemcpyDeviceToHost);
+				//cudaMemcpyFromSymbol(&theEnd, CUDA_End, sizeof(theEnd));
 				theEnd = theEnd == CUDA_grid_dim;
 
 				//break;//debug
 			}
 			CudaCalculateFinishPole<<<CUDA_grid_dim, 1>>>();
+			//err = cudaThreadSynchronize();
 			err = cudaDeviceSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_grid_dim);
 			//			err=cudaMemcpyFromSymbol(&resc,CUDA_CC,sizeof(freq_context)*CUDA_grid_dim);

@@ -560,12 +560,12 @@ int main(int argc, char** argv)
 	// extract a --device option
 	auto cudaDevice = -1;
 	APP_INIT_DATA aid;
+	boinc_get_init_data(aid);	
 
 	// NOTE: Applications that use coprocessors https://boinc.berkeley.edu/trac/wiki/AppCoprocessor
 	// Some hosts have multiple GPUs. The BOINC client tells your application which instance to use.
 	// Call boinc_get_init_data() to get an APP_INIT_DATA structure; the device number (0, 1, ...) is in the gpu_device_num field. Old (pre-7.0.12) clients pass the device number via a command-line argument, --device N.
 	// In this case API_INIT_DATA::gpu_device_num will be -1, and your application must check its command-line args.
-	boinc_get_init_data(aid);
 	if (aid.gpu_device_num >= 0)
 	{
 		cudaDevice = aid.gpu_device_num;
@@ -613,6 +613,7 @@ int main(int argc, char** argv)
 		std::tm* now = std::localtime(&time);
 		printf("%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
 		fprintf(stderr, "%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
+		fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 #endif
 
 	}
@@ -845,6 +846,10 @@ int main(int argc, char** argv)
 	boinc_fraction_done(1);
 #ifdef APP_GRAPHICS
 	update_shmem();
+#endif
+#ifdef _DEBUG
+	boinc_get_init_data(aid);
+	fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 #endif
 	boinc_finish(0);
 }

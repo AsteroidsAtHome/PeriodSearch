@@ -10,7 +10,7 @@ bool GetVersionInfo(
     int &revision)
 {
     DWORD verBufferSize;
-    char verBuffer[2048];
+    char verBuffer[8192];
 
     //  Get the size of the version info block in the file
     verBufferSize = GetFileVersionInfoSize(filename, NULL);

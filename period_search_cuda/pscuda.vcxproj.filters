@@ -25,10 +25,10 @@
     <CudaCompile Include="period_search\mrqmin.cu">
       <Filter>Source files</Filter>
     </CudaCompile>
-    <CudaCompile Include="period_search\Start.cu">
+    <CudaCompile Include="period_search\start_CUDA.cu">
       <Filter>Source files</Filter>
     </CudaCompile>
-    <CudaCompile Include="period_search\start_CUDA.cu">
+    <CudaCompile Include="period_search\Start.cu">
       <Filter>Source files</Filter>
     </CudaCompile>
   </ItemGroup>
