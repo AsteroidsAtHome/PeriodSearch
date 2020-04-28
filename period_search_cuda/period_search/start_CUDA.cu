@@ -630,20 +630,21 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
 
 	//int firstreport = 0;//beta debug
+	float oldFractionDone = 0.0001;
 
 	for (n = n_start_from; n <= n_max; n += CUDA_grid_dim)
 	{
 		auto fractionDone = (double)n / (double)n_max;
-		boinc_fraction_done(fractionDone);
-
-#if _DEBUG
-		float fraction = fractionDone * 100;
-		std::time_t t = std::time(nullptr);   // get time now
-		std::tm* now = std::localtime(&t);
-
-		printf("%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
-		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
-#endif
+		//boinc_fraction_done(fractionDone);
+		
+//#if _DEBUG
+//		float fraction = fractionDone * 100;
+//		std::time_t t = std::time(nullptr);   // get time now
+//		std::tm* now = std::localtime(&t);
+//
+//		printf("%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+//		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+//#endif
 
 		CudaCalculatePrepare<<<CUDA_grid_dim, 1>>>(n, n_max, freq_start, freq_step);
 		//err = cudaThreadSynchronize();
@@ -651,6 +652,21 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 		for (m = 1; m <= N_POLES; m++)
 		{
+			auto mid = (double(fractionDone) - double(oldFractionDone));
+			auto inner = (double(mid) / double(N_POLES) * (double(m)));
+			//printf("mid: %.4f, inner: %.4f\n", mid, inner);
+			auto fractionDone2 = oldFractionDone + inner;
+			boinc_fraction_done(fractionDone2);
+			
+#ifdef _DEBUG
+			float fraction2 = fractionDone2 * 100;
+			//float fraction = fractionDone * 100;
+			std::time_t t = std::time(nullptr);   // get time now
+			std::tm* now = std::localtime(&t);
+
+			printf("%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction2);
+			fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction2);
+#endif
 			//zero global End signal
 			theEnd = 0;
 			cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd));
@@ -709,6 +725,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//read results here
 		err = cudaMemcpy(res, pfr, sizeof(freq_result) * CUDA_grid_dim, cudaMemcpyDeviceToHost);
 
+		oldFractionDone = fractionDone;
 		LinesWritten = 0;
 		for (m = 1; m <= CUDA_grid_dim; m++)
 		{
@@ -722,7 +739,8 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, res[m - 1].la_best, res[m - 1].be_best);
 			}
 		}
-		if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
+		if (boinc_time_to_checkpoint() || boinc_is_standalone()) 
+		{
 			retval = DoCheckpoint(mf, (n - 1) + LinesWritten, 1, conw_r); //zero lines
 			if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
 			boinc_checkpoint_completed();
