@@ -111,6 +111,7 @@
     <None Include="period_search\clear_files.bat" />
     <None Include="period_search\cpp.hint" />
     <None Include="period_search\origin1.bin" />
+    <None Include="period_search\Makefile" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header files">

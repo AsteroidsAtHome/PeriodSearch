@@ -6,19 +6,20 @@ BOINC_LIB_DIR = $(BOINC_DIR)/lib
 CUDA_PATH = /usr/local/cuda-10.2
 
 CXXFLAGS = -g \
-    -I$(BOINC_DIR) \
-    -I$(BOINC_LIB_DIR) \
-    -I$(BOINC_API_DIR) \
-    -I$(CUDA_PATH)/include \
-    -L /usr/X11R6/lib \
-    -L.
+	-I$(BOINC_DIR) \
+	-I$(BOINC_LIB_DIR) \
+	-I$(BOINC_API_DIR) \
+	-I$(CUDA_PATH)/include \
+	-L /usr/X11R6/lib \
+	-L.
 
 # There were two cases from the legacy code - first was using --maxrregcount=80 which is very ineficient on block occupancy.
 # After precise wxamination on results from NVIDIA Nsight Performance Analysis both are set to 32 now. This way we achieve 100% block occupancy (most of the time).
+# 28 APR 2020 - Temporaryly '--maxrregcount' is set back to '80' for the NVCCFLAGS until further research proves it needs to be set back to '32' 
 
 # CUDA 5.5: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_20,code=sm_20 --generate-code arch=compute_20,code=sm_21 --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_35,code=compute_35 --maxrregcount=80 -rdc=true
 # CUDA 10.2 - CC: compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75
-NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=32 -rdc=true
+NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=80 -rdc=true
 NVCCFLAGScv2 = --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=32 -rdc=true
 
 CC=g++
@@ -29,7 +30,7 @@ LDFLAGS=-lm -lrt -Xlinker -rpath .
 
 
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
-        curv.o blmatrix.o conv.o covsrt.o matrix.o bright.o memory.o\
+		curv.o blmatrix.o conv.o covsrt.o matrix.o bright.o memory.o\
 	dot_product.o gauss_errc.o pscuda.device-link.o start_CUDA.o curve2_CUDA.o Start.o
 
 PROGS = period_search_BOINC_cuda102
@@ -131,7 +132,7 @@ pscuda.device-link.o: start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gau
 	$(CUDA_PATH)/bin/nvcc -dlink -o pscuda.device-link.o --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
 		$(NVCCFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
-    start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o
+	start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
