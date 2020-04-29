@@ -36,6 +36,8 @@
 #include "declarations.h"
 #include "constants.h"
 #include "globals.h"
+#include "cuda.h"
+#include <cuda_runtime.h>
 
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
@@ -613,7 +615,7 @@ int main(int argc, char** argv)
 		std::tm* now = std::localtime(&time);
 		printf("%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
 		fprintf(stderr, "%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
-		fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
+		//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 #endif
 
 	}
@@ -710,7 +712,7 @@ int main(int argc, char** argv)
 			fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
 		}
 
-		CUDAPrecalc(startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
+		CUDAPrecalc(cudaDevice, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
 
 		ndata = ndata - 3;
 
@@ -817,7 +819,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
 	}
 
-	CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+	CUDAStart(cudaDevice, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
 
@@ -843,13 +845,14 @@ int main(int argc, char** argv)
 	deallocate_vector(weightLc);
 	free(stringTemp);
 
+	//auto clockRate = cudaDeviceGetAttribute()
 	boinc_fraction_done(1);
 #ifdef APP_GRAPHICS
 	update_shmem();
 #endif
 #ifdef _DEBUG
 	boinc_get_init_data(aid);
-	fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
+	//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 #endif
 	boinc_finish(0);
 }
