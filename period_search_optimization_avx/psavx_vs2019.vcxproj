@@ -54,6 +54,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -206,9 +207,8 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
-      <OmitFramePointers>false</OmitFramePointers>
-      <EnableParallelCodeGeneration>
-      </EnableParallelCodeGeneration>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -218,8 +218,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>libcmt.lib;libcpmt.lib;libboinc.lib;libboincapi_staticcrt.lib;psapi.lib;ShLwApi.lib;Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
       <AdditionalLibraryDirectories>C:\boincsdk\boinc_repo\win_build\Build\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -260,6 +259,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\Makefile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

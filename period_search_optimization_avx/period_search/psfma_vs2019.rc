@@ -71,7 +71,7 @@ BEGIN
             VALUE "FileDescription", "Period search application AVX"
             VALUE "FileVersion", "102.14.0.1"
             VALUE "InternalName", "psavx_vs.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2020 Astronomical Institute at Charles University in Prague"
+            VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_avx.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
             VALUE "ProductVersion", "102.14.0.1"

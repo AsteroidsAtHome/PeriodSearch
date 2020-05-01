@@ -102,4 +102,7 @@
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\Makefile" />
+  </ItemGroup>
 </Project>
