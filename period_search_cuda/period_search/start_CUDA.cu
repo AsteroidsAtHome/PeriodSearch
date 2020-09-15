@@ -17,6 +17,7 @@
 #ifdef __GNUC__
 #include <time.h>
 #endif
+#include "ComputeCapability.h"
 
 //global to all freq
 __constant__ int /*CUDA_n,*/CUDA_Ncoef, CUDA_Nphpar, CUDA_Numfac, CUDA_Numfac1, CUDA_Dg_block;
@@ -142,7 +143,7 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	
 	//determine gridDim
 	cudaDeviceProp deviceProp;
-	int SMXBlock; // Maximum number of resident thread blocks per multiprocessor
+	
 	cudaGetDeviceProperties(&deviceProp, cudadev);
 	if (!checkex)
 	{
@@ -164,63 +165,26 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 
 	}
 
+
 	//int cudaBlockDim = CUDA_BLOCK_DIM;
 	// NOTE: See this https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities , Table 15.
 	// NOTE: Also this https://stackoverflow.com/questions/4391162/cuda-determining-threads-per-block-blocks-per-grid
 	// NOTE: NB - Always set MaxUsedRegisters to 32 in order to achieve 100% SM occupancy (project's Configuration properties -> CUDA C/C++ -> Device)
-	if (deviceProp.major == 7)
-	{
-		switch (deviceProp.minor)
-		{
-		case 0:
-		case 2:
-			SMXBlock = 32;	// CC 7.0 & 7.2, occupancy 100% = 32 blocks per SMX
-			break;
-		case 5:
-			SMXBlock = 16;	// CC 7.5, occupancy 100% = 16 blocks per SMX
-			break;
-		default:
-			SMXBlock = 16;	// unknown CC, occupancy unknown, 16 blocks per SMX
-		}
-	}
-	else
-	if (deviceProp.major == 6) //CC 6.0, 6.1 & 6.2
-	{
-			SMXBlock = 32; //occupancy 100% = 32 blocks per SMX
-	}
-	else
-	if (deviceProp.major == 5) //CC 5.0, 5.2 & 5.3
-	{
-				SMXBlock = 32; //occupancy 100% = 32 blocks per SMX, instead as previous was 16 blocks per SMX which led to only 50%
-	}
-	else
-	if (deviceProp.major == 3) //CC 3.0, 3.2, 3.5 & 3.7
-	{
-		SMXBlock = 16; //occupancy 100% = 16 blocks per SMX
-	}
-	/*else
-	if (deviceProp.major==2) //CC 2.0 and 2.1
-	{
-		SMXBlock=8; //occupancy 67% = 8 blocks per SMX
-	}
-	else
-	if ((deviceProp.major==1) && (deviceProp.major==3)) //CC 1.3
-	{
-		SMXBlock=8; //occupancy 50% = 8 blocks per SMX
-		CUDA_BLOCK_DIM=64;
-	}*/
-	else
-	{
-		fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d). Supported Compute Capabilities are between 3.0 and 7.5.\n", deviceProp.major, deviceProp.minor);
-		return 0;
-	}
 
-	CUDA_grid_dim = deviceProp.multiProcessorCount * SMXBlock;
+	Cc cc(deviceProp);
+#ifndef CUDART_VERSION 
+#error CUDART_VERSION Undefined!
+#endif
+	
+	// Maximum number of resident thread blocks per multiprocessor
+	auto smxBlock = cc.GetSmxBlock(); 
+	
+	CUDA_grid_dim = deviceProp.multiProcessorCount * smxBlock;
 
 	if (!checkex)
 	{
-		fprintf(stderr, "Resident blocks per multiprocessor: %d\n", SMXBlock);
-		fprintf(stderr, "Grid dim: %d = %d*%d\n", CUDA_grid_dim, deviceProp.multiProcessorCount, SMXBlock);
+		fprintf(stderr, "Resident blocks per multiprocessor: %d\n", smxBlock);
+		fprintf(stderr, "Grid dim: %d = %d*%d\n", CUDA_grid_dim, deviceProp.multiProcessorCount, smxBlock);
 		fprintf(stderr, "Block dim: %d\n", CUDA_BLOCK_DIM);
 	}
 

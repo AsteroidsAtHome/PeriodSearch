@@ -67,6 +67,9 @@
     <ClCompile Include="period_search\VersionInfo.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\ComputeCapability.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">
@@ -105,6 +108,9 @@
     <ClInclude Include="period_search\Version.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="period_search\ComputeCapability.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
@@ -125,11 +131,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="period_search\pscuda.rc">
-      <Filter>Resource files</Filter>
-    </ResourceCompile>
+    <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="period_search\logo_Nta_icon.ico" />
+    <ResourceCompile Include="period_search\pscuda102.rc">
+      <Filter>Resource files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
