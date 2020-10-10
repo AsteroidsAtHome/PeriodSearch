@@ -33,7 +33,7 @@ int Cc::GetSmxBlockCuda11() const
 	switch (deviceCcMajor)
 	{
 	case 8:
-		smxBlock = GetSmxBlockCc8();
+		smxBlock = GetSmxBlockCc8(); // Ampere micro architecture CC 8.x
 		break;
 	case 7:
 		smxBlock = GetSmxBlockCc7();
@@ -86,9 +86,11 @@ int Cc::GetSmxBlockCc8() const
 	switch (deviceCcMinor)
 	{
 	case 0:
-		smxBlock = 16;	// CC 8.0, occupancy 100% = 16 blocks per SMX
+		smxBlock = 32;	// Tesla A100 | occupancy 100% = 32 blocks per SMX
 		break;
-	case 1:
+	case 6:
+		smxBlock = 16;	// GeForce RTX 3080 etc.; Quadro A6000 | occupancy 100% = 16 blocks per SMX
+		break;		
 	default:
 		Exit();
 		break;

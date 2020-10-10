@@ -3,7 +3,7 @@
 BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
-CUDA_PATH = /usr/local/cuda-10.2
+CUDA_PATH = /usr/local/cuda-11.1
 
 CXXFLAGS = -g \
 	-I$(BOINC_DIR) \
@@ -19,8 +19,9 @@ CXXFLAGS = -g \
 
 # CUDA 5.5: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_20,code=sm_20 --generate-code arch=compute_20,code=sm_21 --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_35,code=compute_35 --maxrregcount=80 -rdc=true
 # CUDA 10.2 - CC: compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75
-NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=80 -rdc=true
-NVCCFLAGScv2 = --ptxas-options=-v --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --maxrregcount=32 -rdc=true
+# CUDA 11.1 - CC: compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86
+NVCCFLAGS =    --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=80 -rdc=true
+NVCCFLAGScv2 = --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=32 -rdc=true
 
 CC=g++
 CXX=g++
@@ -40,26 +41,26 @@ all: $(PROGS)
 libstdc++.a:
 	ln -s `g++ -print-file-name=libstdc++.a`
 
-libcudart.so.10.2:
-	ln -s $(CUDA_PATH)/lib64/libcudart.so.10.2 libcudart.so.10.2
+libcudart.so.11.1:
+	ln -s $(CUDA_PATH)/lib64/libcudart.so.11.1 libcudart.so.11.1
 
 libcuda.so:
 	ln -s $(CUDA_PATH)/lib64/stubs/libcuda.so libcuda.so
 
 clean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2 libcuda.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.11.1 libcuda.so
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.10.2 libcuda.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.11.1 libcuda.so
 
 install: period_search_BOINC_cuda102
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
 
-period_search_BOINC_cuda102: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so.10.2 libcuda.so
+period_search_BOINC_cuda102: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so.11.1 libcuda.so
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
-	$(BOINC_API_DIR)/libboinc_api.a libcudart.so.10.2 libcuda.so \
+	$(BOINC_API_DIR)/libboinc_api.a libcudart.so.11.1 libcuda.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
 curve2_CUDA.o: curve2_CUDA.cu
