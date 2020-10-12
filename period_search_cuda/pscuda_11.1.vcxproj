@@ -819,6 +819,9 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="period_search\cpp.hint" />
+    <None Include="period_search\Makefile" />
+    <None Include="period_search\Makefile_CUDAv10.2" />
+    <None Include="period_search\Makefile_CUDAv11.1" />
     <None Include="period_search\origin1.bin" />
   </ItemGroup>
   <ItemGroup>
