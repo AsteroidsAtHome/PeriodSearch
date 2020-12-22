@@ -4,7 +4,7 @@
    8.11.2006
 */
 
-#include <math.h>
+#include <cmath>
 #include "globals_CUDA.h"
 #include <device_launch_parameters.h>
 
@@ -14,7 +14,7 @@ __device__ void matrix_neo(freq_context *CUDA_LCC, double cg[],int lnp1, int Lpo
   double ee_1,ee_2,ee_3, ee0_1,ee0_2,ee0_3, t,tmat;
   int lnp,jp;
 
-    int brtmph,brtmpl;
+	int brtmph,brtmpl;
 	brtmph=Lpoints/CUDA_BLOCK_DIM;
 	if(Lpoints%CUDA_BLOCK_DIM) brtmph++;
 	brtmpl=threadIdx.x*brtmph;
@@ -23,17 +23,17 @@ __device__ void matrix_neo(freq_context *CUDA_LCC, double cg[],int lnp1, int Lpo
 	brtmpl++;
 
 
-      lnp=lnp1+brtmpl-1;
-      for (jp = brtmpl; jp <= brtmph; jp++)
-      {
-         lnp++;
-            ee_1 = CUDA_ee[lnp*3+0];// position vectors
-            ee0_1 = CUDA_ee0[lnp*3+0];
-            ee_2 = CUDA_ee[lnp*3+1];
-            ee0_2 = CUDA_ee0[lnp*3+1];
-            ee_3 = CUDA_ee[lnp*3+2];
-            ee0_3 = CUDA_ee0[lnp*3+2];
-            t=CUDA_tim[lnp];
+	  lnp=lnp1+brtmpl-1;
+	  for (jp = brtmpl; jp <= brtmph; jp++)
+	  {
+		 lnp++;
+			ee_1 = CUDA_ee[lnp*3+0];// position vectors
+			ee0_1 = CUDA_ee0[lnp*3+0];
+			ee_2 = CUDA_ee[lnp*3+1];
+			ee0_2 = CUDA_ee0[lnp*3+1];
+			ee_3 = CUDA_ee[lnp*3+2];
+			ee0_3 = CUDA_ee0[lnp*3+2];
+			t=CUDA_tim[lnp];
 
 		alpha = acos(ee_1 * ee0_1 + ee_2 * ee0_2 + ee_3 * ee0_3);
 		/* Exp-lin model (const.term=1.) */
@@ -188,11 +188,11 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 		/* derivatives */
 
 	e_1=(*CUDA_LCC).e_1[jp];
-    e_2=(*CUDA_LCC).e_2[jp];
-    e_3=(*CUDA_LCC).e_3[jp];
-    e0_1=(*CUDA_LCC).e0_1[jp];
-    e0_2=(*CUDA_LCC).e0_2[jp];
-    e0_3=(*CUDA_LCC).e0_3[jp];
+	e_2=(*CUDA_LCC).e_2[jp];
+	e_3=(*CUDA_LCC).e_3[jp];
+	e0_1=(*CUDA_LCC).e0_1[jp];
+	e0_2=(*CUDA_LCC).e0_2[jp];
+	e0_3=(*CUDA_LCC).e0_3[jp];
 	de[1][1]=(*CUDA_LCC).de[jp][1][1];
 	de[1][2]=(*CUDA_LCC).de[jp][1][2];
 	de[1][3]=(*CUDA_LCC).de[jp][1][3];
@@ -247,8 +247,12 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 			dbr[incl_count] = CUDA_Darea[i] * s;
 			incl_count++;
 			//
-			dsmu = cls * pow(lmu0 / dnom,2) + cl * lmu0;
-			dsmu0 = cls * pow(lmu / dnom,2) + cl * lmu;
+			//double dnom_lmu0 = (lmu0 / dnom); // *(lmu0 / dnom);
+			//double dnom_lmu = (lmu / dnom); // *(lmu / dnom);
+			//dsmu = cls * pow(dnom_lmu0, 2.0) + cl * lmu0;
+			//dsmu0 = cls * pow(dnom_lmu, 2.0) + cl * lmu;
+			dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
+			dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
 
 			sum1 = CUDA_Nor[i][0] * de[1][1] + CUDA_Nor[i][1] * de[2][1] + CUDA_Nor[i][2] * de[3][1];
 			sum10 = CUDA_Nor[i][0] * de0[1][1] + CUDA_Nor[i][1] * de0[2][1] + CUDA_Nor[i][2] * de0[3][1];
@@ -263,7 +267,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 			tmp4 += lmu * lmu0 * ar;
 			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
 		}
-    }
+	}
 	   Scale = (*CUDA_LCC).jp_Scale[jp];
 		i=jp+(ncoef0-3+1)*Lpoints1;
 	   /* Ders. of brightness w.r.t. rotation parameters */
@@ -284,7 +288,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 	   (*CUDA_LCC).dytemp[jp+(ncoef-1)*(Lpoints1)]= Scale * tmp4 * cl;
 	   (*CUDA_LCC).dytemp[jp+(ncoef)*(Lpoints1)]= Scale * tmp5;
 	   /* Scaled brightness */
-      (*CUDA_LCC).ytemp[jp]=br * Scale;
+	  (*CUDA_LCC).ytemp[jp]=br * Scale;
 
 	ncoef0-=3;
 	int m,m1,mr,iStart;
@@ -308,7 +312,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
    /* Derivatives of brightness w.r.t. g-coeffs */
 	if (incl_count)
 	{
-  		for (i = iStart; i <= ncoef0; i+=2,m+=mr,m1+=mr,d+=dr,d1+=dr)
+		for (i = iStart; i <= ncoef0; i+=2,m+=mr,m1+=mr,d+=dr,d1+=dr)
 		{
 		   double tmp=0,tmp1=0;
 

@@ -317,7 +317,7 @@ __global__ void CudaCalculateIter2(void)
 						(*CUDA_LCC).chck[i] = (*CUDA_LCC).chck[i] + (*CUDA_LCC).Area[j] * CUDA_Nor[j][i - 1];
 					}
 				}
-				(*CUDA_LCC).rchisq = (*CUDA_LCC).Chisq - (pow((*CUDA_LCC).chck[1], 2) + pow((*CUDA_LCC).chck[2], 2) + pow((*CUDA_LCC).chck[3], 2)) * pow(CUDA_conw_r, 2);
+				(*CUDA_LCC).rchisq = (*CUDA_LCC).Chisq - (pow((*CUDA_LCC).chck[1], 2.0) + pow((*CUDA_LCC).chck[2], 2.0) + pow((*CUDA_LCC).chck[3], 2.0)) * pow(CUDA_conw_r, 2.0);
 			}
 		}
 		if (threadIdx.x == 0)
@@ -348,7 +348,7 @@ __global__ void CudaCalculateFinishPole(void)
 		totarea = totarea + (*CUDA_LCC).Area[i];
 	}
 
-	const auto sum = pow((*CUDA_LCC).chck[1], 2) + pow((*CUDA_LCC).chck[2], 2) + pow((*CUDA_LCC).chck[3], 2);
+	const auto sum = pow((*CUDA_LCC).chck[1], 2.0) + pow((*CUDA_LCC).chck[2], 2.0) + pow((*CUDA_LCC).chck[3], 2.0);
 	const auto dark = sqrt(sum);
 
 	/* period solution */
