@@ -1,6 +1,6 @@
 # This should work on Linux.  Modify as needed for other platforms.
 
-BOINC_DIR = ../../../boinc
+BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 CUDA_PATH = /usr/local/cuda-11.1
@@ -32,7 +32,8 @@ LDFLAGS=-lm -lrt -Xlinker -rpath .
 
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
 		curv.o blmatrix.o conv.o covsrt.o matrix.o bright.o memory.o\
-	dot_product.o gauss_errc.o pscuda.device-link.o Cc.o start_CUDA.o curve2_CUDA.o Start.o
+	dot_product.o gauss_errc.o pscuda.device-link.o start_CUDA.o curve2_CUDA.o Start.o\
+	ComputeCapability.o
 
 PROGS = period_search_BOINC_cuda11010
 
@@ -41,26 +42,26 @@ all: $(PROGS)
 libstdc++.a:
 	ln -s `g++ -print-file-name=libstdc++.a`
 
-libcudart.so.11.0:
-	ln -s $(CUDA_PATH)/lib64/libcudart.so.11.0 libcudart.so.11.0
+libcudart.so:
+	ln -s $(CUDA_PATH)/lib64/libcudart.so libcudart.so
 
 libcuda.so:
 	ln -s $(CUDA_PATH)/lib64/stubs/libcuda.so libcuda.so
 
 clean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.11.0 libcuda.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so libcuda.so
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so.11.0 libcuda.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libcudart.so libcuda.so
 
 install: period_search_BOINC_cuda11010
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
 
-period_search_BOINC_cuda11010: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so.11.0 libcuda.so
+period_search_BOINC_cuda11010: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libcudart.so libcuda.so
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
-	$(BOINC_API_DIR)/libboinc_api.a libcudart.so.11.0 libcuda.so \
+	$(BOINC_API_DIR)/libboinc_api.a libcudart.so libcuda.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
 curve2_CUDA.o: curve2_CUDA.cu
@@ -69,11 +70,11 @@ curve2_CUDA.o: curve2_CUDA.cu
 		--compiler-options="$(CXXFLAGS)" \
 		--compile curve2_CUDA.cu
 
-Cc.o: Cc.cu
+ComputeCapability.o: ComputeCapability.cu
 	$(CUDA_PATH)/bin/nvcc --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
 		$(NVCCFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
-		--compile Cc.cu
+		--compile ComputeCapability.cu
 
 start_CUDA.o: start_CUDA.cu
 	$(CUDA_PATH)/bin/nvcc --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
@@ -135,11 +136,11 @@ matrix.o: matrix.cu
 		--compiler-options="$(CXXFLAGS)" \
 		--compile matrix.cu
 
-pscuda.device-link.o: start_CUDA.o Cc.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o
+pscuda.device-link.o: start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o ComputeCapability.o
 	$(CUDA_PATH)/bin/nvcc -dlink -o pscuda.device-link.o --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
 		$(NVCCFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
-	start_CUDA.o Cc.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o
+	start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o ComputeCapability.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
