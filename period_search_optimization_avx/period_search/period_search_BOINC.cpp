@@ -78,6 +78,12 @@
 UC_SHMEM* shmem;
 #endif
 
+#ifdef _WIN64
+bool x64 = true;
+#elif
+bool x64 = false;
+#endif
+
 using std::string;
 
 constexpr auto checkpoint_file = "period_search_state";
@@ -317,7 +323,8 @@ int main(int argc, char **argv) {
 
 	if (boinc_is_standalone())
 	{
-		printf("\n%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end, ia_prd);
+		std::cout << std::endl << "Application build: " << (x64 ? "64" : "32") << "-bit" << std::endl;
+		printf("%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end, ia_prd);
 		printf("%g epoch of zero time t0\n", jd_00);
 		printf("%g  initial fixed rotation angle fi0\n", Phi_0);
 		printf("%g  the weight factor for conv. reg.\n", conw);
