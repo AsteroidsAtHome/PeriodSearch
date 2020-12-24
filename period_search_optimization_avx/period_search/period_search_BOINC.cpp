@@ -80,7 +80,7 @@ UC_SHMEM* shmem;
 
 #ifdef _WIN64
 bool x64 = true;
-#elif
+#else
 bool x64 = false;
 #endif
 
