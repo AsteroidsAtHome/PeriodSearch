@@ -34,7 +34,7 @@ double mrqcof_fma(double **x1, double **x2, double x3[], double y[],
 {
     int i, j, k, l, m, np, np1, np2, jp, ic;
 
-    __m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
+    //__m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
 
     /* N.B. curv and blmatrix called outside bright
        because output same for all points */

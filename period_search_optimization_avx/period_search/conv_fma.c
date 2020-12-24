@@ -14,7 +14,7 @@ double conv_fma(int nc, double dres[], int ma)
 {
     int i, j;
     double res;
-    __m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
+    //__m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
 
     res = 0;
     for (j = 1; j <= ma; j++)
