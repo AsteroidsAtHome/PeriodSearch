@@ -68,9 +68,9 @@
     <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>pscuda_11.1</ProjectName>
+    <ProjectName>pscuda_11.2</ProjectName>
     <ProjectGuid>{A951F6EF-E3DD-4FBE-8A91-87F53D6CA18B}</ProjectGuid>
-    <CudaToolkitCustomDir>$(CUDA_PATH_V11_1)</CudaToolkitCustomDir>
+    <CudaToolkitCustomDir>$(CUDA_PATH_V11_2)</CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -158,10 +158,10 @@
   <Import Project="$(VCTargetsPath16)\Microsoft.Cpp.props" />
   <!-- CUDA props -->
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath16)\BuildCustomizations\CUDA 11.1.props" Condition="exists('$(VCTargetsPath16)\BuildCustomizations\CUDA 11.1.props')" />
+    <Import Project="$(VCTargetsPath16)\BuildCustomizations\CUDA 11.2.props" Condition="exists('$(VCTargetsPath16)\BuildCustomizations\CUDA 11.2.props')" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath16)\BuildCustomizations\CUDA 11.1.props" Condition="exists('$(VCTargetsPath16)\BuildCustomizations\CUDA 11.1.props')" />
+    <Import Project="$(VCTargetsPath16)\BuildCustomizations\CUDA 11.2.props" Condition="exists('$(VCTargetsPath16)\BuildCustomizations\CUDA 11.2.props')" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'" Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.props" Condition="exists('$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.props')" />
@@ -293,6 +293,7 @@
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -467,7 +468,7 @@
       <!-- <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries> -->
       <StackReserveSize>10000000</StackReserveSize>
       <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_1)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <!-- libcmtd.lib;libcpmtd.lib; -->
     </Link>
     <CudaCompile>
@@ -482,7 +483,7 @@
       <MaxRegCount>32</MaxRegCount>
     </CudaCompile>
     <CudaLink>
-      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_1)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_8_1|x64'">
@@ -688,9 +689,9 @@
       <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-      <StackReserveSize>10000000</StackReserveSize>
+      <StackReserveSize>20000000</StackReserveSize>
       <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
-      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_1)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
@@ -713,7 +714,7 @@
       <ResourceOutputFileName>$(IntDir)$(TargetName)$(TargetExt).embed.manifest.res</ResourceOutputFileName>
     </ManifestResourceCompile>
     <CudaLink>
-      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_1)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GPUDebugInfo>false</GPUDebugInfo>
       <Optimization>O3</Optimization>
     </CudaLink>
@@ -838,9 +839,9 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath16)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' or '$(Configuration)|$(Platform)'=='Release|x64' or '$(Configuration)|$(Platform)'=='Debug|Win32' or '$(Configuration)|$(Platform)'=='Release|Win32'" Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.2.targets" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_7|x64' or '$(Configuration)|$(Platform)'=='Debug_8_1|x64' or '$(Configuration)|$(Platform)'=='Debug_7|Win32' or '$(Configuration)|$(Platform)'=='Debug_8_1|Win32' or '$(Configuration)|$(Platform)'=='Release_7|x64'  or '$(Configuration)|$(Platform)'=='Release_7|Win32'  or '$(Configuration)|$(Platform)'=='Release_8_1|x64'  or '$(Configuration)|$(Platform)'=='Release_8_1|Win32'" Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath14)\BuildCustomizations\CUDA 11.1.targets" />
+    <Import Project="$(VCTargetsPath14)\BuildCustomizations\CUDA 11.2.targets" />
   </ImportGroup>
 </Project>
