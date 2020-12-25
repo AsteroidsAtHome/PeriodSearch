@@ -293,6 +293,8 @@
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -676,9 +678,8 @@
       <OmitFramePointers>false</OmitFramePointers>
       <BrowseInformation>false</BrowseInformation>
       <LanguageStandard>Default</LanguageStandard>
-      <EnableParallelCodeGeneration>
-      </EnableParallelCodeGeneration>
-      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -702,7 +703,7 @@
       <PtxAsOptionV>true</PtxAsOptionV>
       <CudaRuntime>Static</CudaRuntime>
       <NvccCompilation>compile</NvccCompilation>
-      <Optimization>O3</Optimization>
+      <Optimization>O2</Optimization>
       <Runtime>MT</Runtime>
       <ExtensibleWholeProgramCompilation>false</ExtensibleWholeProgramCompilation>
     </CudaCompile>

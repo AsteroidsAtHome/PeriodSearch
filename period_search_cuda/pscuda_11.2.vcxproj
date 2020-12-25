@@ -69,7 +69,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>pscuda_11.2</ProjectName>
-    <ProjectGuid>{A951F6EF-E3DD-4FBE-8A91-87F53D6CA18B}</ProjectGuid>
+    <ProjectGuid>{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}</ProjectGuid>
     <CudaToolkitCustomDir>$(CUDA_PATH_V11_2)</CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -294,6 +294,7 @@
     <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -674,12 +675,11 @@
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <OmitFramePointers>false</OmitFramePointers>
+      <OmitFramePointers>true</OmitFramePointers>
       <BrowseInformation>false</BrowseInformation>
       <LanguageStandard>Default</LanguageStandard>
-      <EnableParallelCodeGeneration>
-      </EnableParallelCodeGeneration>
-      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -689,7 +689,7 @@
       <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-      <StackReserveSize>20000000</StackReserveSize>
+      <StackReserveSize>10000000</StackReserveSize>
       <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
       <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -706,6 +706,7 @@
       <Optimization>O3</Optimization>
       <Runtime>MT</Runtime>
       <ExtensibleWholeProgramCompilation>false</ExtensibleWholeProgramCompilation>
+      <InterleaveSourceInPTX>false</InterleaveSourceInPTX>
     </CudaCompile>
     <Manifest>
       <OutputManifestFile>$(IntDir)$(TargetName)$(TargetExt).embed.manifest</OutputManifestFile>
@@ -716,7 +717,7 @@
     <CudaLink>
       <AdditionalLibraryDirectories>$(CUDA_PATH_V11_2)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GPUDebugInfo>false</GPUDebugInfo>
-      <Optimization>O3</Optimization>
+      <Optimization>O2</Optimization>
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'">
@@ -764,7 +765,6 @@
     <ClInclude Include="period_search\declarations_CUDA.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\globals_CUDA.h" />
-    <ClInclude Include="period_search\Intellisense_cuda_intrinsics.h" />
     <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\Start.cuh" />
     <ClInclude Include="period_search\start_CUDA.h" />

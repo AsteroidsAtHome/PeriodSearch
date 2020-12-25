@@ -31,8 +31,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
    for (i = 1; i <= ndir; i++)
    {
       st = sin(at[i]);
-      sum = pow(a * st * cos(af[i]), 2) + pow(b * st * sin(af[i]), 2) +
-            pow(c * cos(at[i]), 2);
+      sum = pow(a * st * cos(af[i]), 2) + pow(b * st * sin(af[i]), 2) + pow(c * cos(at[i]), 2);
       er[i] = 2 * (log(a * b * c) - log(sum));
    }
    /* Compute the sph. harm. values at each direction and

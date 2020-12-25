@@ -251,8 +251,15 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
 			//double dnom_lmu = (lmu / dnom); // *(lmu / dnom);
 			//dsmu = cls * pow(dnom_lmu0, 2.0) + cl * lmu0;
 			//dsmu0 = cls * pow(dnom_lmu, 2.0) + cl * lmu;
-			dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
-			dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
+
+			//dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
+			//dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
+
+			auto lmu0_dnom = lmu0 / dnom;
+			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
+			auto lmu_dnom = lmu / dnom;
+			dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
+		  	
 
 			sum1 = CUDA_Nor[i][0] * de[1][1] + CUDA_Nor[i][1] * de[2][1] + CUDA_Nor[i][2] * de[3][1];
 			sum10 = CUDA_Nor[i][0] * de0[1][1] + CUDA_Nor[i][1] * de0[2][1] + CUDA_Nor[i][2] * de0[3][1];
