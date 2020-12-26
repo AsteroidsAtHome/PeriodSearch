@@ -773,7 +773,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.c" />
-    <ClCompile Include="period_search\ComputeCapability.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
     <CudaCompile Include="period_search\blmatrix.cu">
       <FileType>CppCode</FileType>
@@ -781,6 +780,7 @@
     <CudaCompile Include="period_search\bright.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <CudaCompile Include="period_search\ComputeCapability.cu" />
     <CudaCompile Include="period_search\conv.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
