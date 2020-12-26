@@ -63,6 +63,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <unistd.h>
+#include <iostream>
 #endif
 
 #include "str_util.h"
@@ -323,7 +324,9 @@ int main(int argc, char **argv) {
 
 	if (boinc_is_standalone())
 	{
+#ifdef _DEBUG
 		std::cout << std::endl << "Application build: " << (x64 ? "64" : "32") << "-bit" << std::endl;
+#endif
 		printf("%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end, ia_prd);
 		printf("%g epoch of zero time t0\n", jd_00);
 		printf("%g  initial fixed rotation angle fi0\n", Phi_0);
