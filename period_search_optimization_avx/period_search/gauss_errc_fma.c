@@ -75,9 +75,12 @@ int gauss_errc_fma(double **a, int n, double b[])
                 __m256d avx_dum = _mm256_set1_pd(dum);
                 for (l = 0; l < cyklus; l += 4)
                 {
-                    __m256d avx_a = _mm256_load_pd(&a[ll][l]), avx_aa = _mm256_load_pd(&a[icol][l]);
-                    avx_a = _mm256_fmsub_pd(avx_aa, avx_dum, avx_a);
-                    //avx_a = _mm256_sub_pd(avx_a, _mm256_mul_pd(avx_aa, avx_dum));
+                    __m256d avx_a = _mm256_load_pd(&a[ll][l]);
+                	__m256d avx_aa = _mm256_load_pd(&a[icol][l]);
+                	
+                    //avx_a = _mm256_fmsub_pd(avx_aa, avx_dum, avx_a);
+                	avx_a = _mm256_sub_pd(avx_a, _mm256_mul_pd(avx_aa, avx_dum));
+                	
                     _mm256_store_pd(&a[ll][l], avx_a);
                 }
                 if (l < n) a[ll][l] -= a[icol][l] * dum; //last odd value

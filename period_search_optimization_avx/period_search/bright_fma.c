@@ -267,6 +267,16 @@ double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[
 			Dgrow1 = &Dg_row[j + 1][dgi];
 			pdbr1 = dbr[j + 1];
 
+			//tmp1 = _mm256_add_pd(_mm256_add_pd(tmp1, _mm256_mul_pd(pdbr, Dgrow[0])), _mm256_mul_pd(pdbr1, Dgrow1[0]));
+			//auto a1 = _mm256_mul_pd(pdbr, Dgrow[0]);
+			//auto c1 = _mm256_add_pd(tmp1, a1);
+			//
+			//auto b1 = _mm256_mul_pd(pdbr1, Dgrow1[0]);
+			//tmp1 = _mm256_add_pd(c1, b1);
+
+			//auto c = _mm256_fmadd_pd(pdbr, Dgrow[0], tmp1);
+			//tmp1 = _mm256_fmadd_pd(pdbr1, Dgrow1[0], c);
+			
 			tmp1 = _mm256_fmadd_pd(pdbr1, Dgrow1[0], _mm256_fmadd_pd(pdbr, Dgrow[0], tmp1));
 		}
 		dgi++;
