@@ -154,6 +154,10 @@ pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 d_bl_matrix[3][4][4],
 weight[MAX_N_OBS + 1];
 
+auto cuda_device = -1;
+APP_INIT_DATA aid;
+const char project_name[] = "asteroidsathome";
+
 /*--------------------------------------------------------------*/
 
 int main(int argc, char** argv)
@@ -236,27 +240,29 @@ int main(int argc, char** argv)
 			);
 		exit(retval);
 	}
+	
+	boinc_get_init_data(aid);
 
-#ifdef _WIN32
-	// -------------------
-	char buffer[MAX_PATH];
-	GetModuleFileName(NULL, buffer, MAX_PATH);
-	string::size_type pos = string(buffer).find_last_of("\\/");
-	auto result = string(buffer).substr(0, pos);
-	//--------------------------------------------
-#else
-	// open the input file (resolve logical name first)
-	//
-	boinc_resolve_filename(input_filename, inputPath, sizeof(inputPath));
-	infile = boinc_fopen(inputPath, "r");
-	if (!infile) {
-		fprintf(stderr,
-			"%s Couldn't find input file, resolved name %s.\n",
-			boinc_msg_prefix(buf, sizeof(buf)), inputPath
-		);
-		exit(-1);
-	}
-#endif
+//#ifdef _WIN32
+//	// -------------------
+//	char buffer[MAX_PATH];
+//	GetModuleFileName(NULL, buffer, MAX_PATH);
+//	string::size_type pos = string(buffer).find_last_of("\\/");
+//	auto result = string(buffer).substr(0, pos);
+//	//--------------------------------------------
+//#else
+//	// open the input file (resolve logical name first)
+//	//
+//	boinc_resolve_filename(input_filename, inputPath, sizeof(inputPath));
+//	infile = boinc_fopen(inputPath, "r");
+//	if (!infile) {
+//		fprintf(stderr,
+//			"%s Couldn't find input file, resolved name %s.\n",
+//			boinc_msg_prefix(buf, sizeof(buf)), inputPath
+//		);
+//		exit(-1);
+//	}
+//#endif
 
 	// open the input file (resolve logical name first)
 	//
@@ -307,7 +313,12 @@ int main(int argc, char** argv)
 #ifdef APP_GRAPHICS
 	// create shared mem segment for graphics, and arrange to update it
 	//
-	shmem = (UC_SHMEM*)boinc_graphics_make_shmem("uppercase", sizeof(UC_SHMEM));
+	//shmem = (UC_SHMEM*)boinc_graphics_make_shmem("uppercase", sizeof(UC_SHMEM));
+
+	char shmemName[256];
+	snprintf(shmemName, sizeof shmemName, "%s_%s", project_name, inputPath);
+	
+	shmem = (UC_SHMEM*)boinc_graphics_make_shmem(shmemName, sizeof(UC_SHMEM));
 	if (!shmem) {
 		fprintf(stderr, "%s failed to create shared mem segment\n",
 			boinc_msg_prefix(buf, sizeof(buf))
@@ -560,9 +571,6 @@ int main(int argc, char** argv)
 	in_rel[l_curves] = 0;
 
 	// extract a --device option
-	auto cudaDevice = -1;
-	APP_INIT_DATA aid;
-	boinc_get_init_data(aid);	
 
 	// NOTE: Applications that use coprocessors https://boinc.berkeley.edu/trac/wiki/AppCoprocessor
 	// Some hosts have multiple GPUs. The BOINC client tells your application which instance to use.
@@ -570,21 +578,21 @@ int main(int argc, char** argv)
 	// In this case API_INIT_DATA::gpu_device_num will be -1, and your application must check its command-line args.
 	if (aid.gpu_device_num >= 0)
 	{
-		cudaDevice = aid.gpu_device_num;
+		cuda_device = aid.gpu_device_num;
 	}
 	else
 	{
 		for (auto ii = 0; ii < argc; ii++) {
-			if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
-				cudaDevice = atoi(argv[++ii]);
+			if (cuda_device < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+				cuda_device = atoi(argv[++ii]);
 		}
 	}
 
-	if (cudaDevice < 0) cudaDevice = 0;
+	if (cuda_device < 0) cuda_device = 0;
 	if (!checkpointExists)
 	{
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
-		fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, cudaDevice, aid.slot);
+		fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, cuda_device, aid.slot);
 
 #ifdef _WIN32
 		int major, minor, build, revision;
@@ -597,7 +605,7 @@ int main(int argc, char** argv)
 #endif
 	}
 
-	retval = CUDAPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
+	retval = CUDAPrepare(cuda_device, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (!retval)
 	{
 		fflush(stderr);
@@ -612,7 +620,7 @@ int main(int argc, char** argv)
 		boinc_fraction_done(0.0001); //signal start
 #if _DEBUG
 		std::time_t time = std::time(nullptr);   // get time now
-		std::tm* now = std::localtime(&time);
+		auto now = std::localtime(&time);
 		printf("%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
 		fprintf(stderr, "%02d:%02d:%02d | Fraction done: 0.0001%% (start signal)\n", now->tm_hour, now->tm_min, now->tm_sec);
 		//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
@@ -712,7 +720,7 @@ int main(int argc, char** argv)
 			fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
 		}
 
-		CUDAPrecalc(cudaDevice, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
+		CUDAPrecalc(cuda_device, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
 
 		ndata = ndata - 3;
 
@@ -819,7 +827,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); exit(2);
 	}
 
-	CUDAStart(cudaDevice, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+	CUDAStart(cuda_device, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
 
@@ -850,10 +858,12 @@ int main(int argc, char** argv)
 #ifdef APP_GRAPHICS
 	update_shmem();
 #endif
-#ifdef _DEBUG
-	boinc_get_init_data(aid);
-	//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
-#endif
+	
+//#ifdef _DEBUG
+//	boinc_get_init_data(aid);
+//	//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
+//#endif
+	
 	boinc_finish(0);
 }
 

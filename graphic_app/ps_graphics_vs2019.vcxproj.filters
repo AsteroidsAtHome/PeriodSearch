@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="app\ttfont.cpp" />
+    <ClCompile Include="app\uc2_graphics.cpp" />
+    <ClCompile Include="app\Helpers.cpp" />
+    <ClCompile Include="app\PeriodChart.cpp" />
+    <ClCompile Include="app\shader.cpp" />
+    <ClCompile Include="common\shader_utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="app\ttfont.h" />
+    <ClInclude Include="app\uc2.h" />
+    <ClInclude Include="app\SdbdStructs.h" />
+    <ClInclude Include="app\PeriodStruct.h" />
+    <ClInclude Include="app\Helpers.h" />
+    <ClInclude Include="app\PeriodChart.h" />
+    <ClInclude Include="app\shader.hpp" />
+    <ClInclude Include="common\shader_utils.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ttf">
+      <UniqueIdentifier>{b05e2379-f36c-4e39-b9a6-5fb779b7f4cd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ttf\AUTHORS">
+      <Filter>ttf</Filter>
+    </None>
+    <None Include="ttf\ChangeLog">
+      <Filter>ttf</Filter>
+    </None>
+    <None Include="ttf\LICENSE">
+      <Filter>ttf</Filter>
+    </None>
+    <None Include="ttf\README">
+      <Filter>ttf</Filter>
+    </None>
+    <None Include="graph.f.glsl" />
+    <None Include="graph.v.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="ttf\LiberationMono-Bold.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationMono-BoldItalic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationMono-Italic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationMono-Regular.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSans-Bold.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSans-BoldItalic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSans-Italic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSans-Regular.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSerif-Bold.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSerif-BoldItalic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSerif-Italic.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+    <Font Include="ttf\LiberationSerif-Regular.ttf">
+      <Filter>ttf</Filter>
+    </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="asteroid_240x152.jpg" />
+    <Image Include="logo.jpg" />
+    <Image Include="logo_100x100_graph_83y_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ps_graphics.rc" />
+  </ItemGroup>
+</Project>
