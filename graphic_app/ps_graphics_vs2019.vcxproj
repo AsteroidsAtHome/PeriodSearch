@@ -38,6 +38,7 @@
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_dll|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -247,7 +248,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>c:/boincsdk/boinc_repo/api;c:/boincsdk/boinc_repo/lib;c:/boincsdk/boinc_repo/samples/image_libs;c:/boincsdk/boinc_repo/samples/jpeglib;c:/boincsdk/boinc_repo/samples/glut;c:/boincsdk/boinc_repo/coprocs/OpenCL/include;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/curl;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/nlohmann;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/GLFW;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/gl;../common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>c:/boincsdk/boinc_repo/api;c:/boincsdk/boinc_repo/lib;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/curl;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/nlohmann;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/GLFW;c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/include/gl;../common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;FTGL_LIBRARY_STATIC;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -267,10 +268,10 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;kernel32.lib;user32.lib;gdi32.lib;opengl32.lib;glu32.lib;ole32.lib;psapi.lib;delayimp.lib;freetyped.lib;ftgld.lib;libpng16d.lib;bz2d.lib;zlibd.lib;libboinc.lib;libboincapi_staticcrt.lib;libgraphics2.lib;jpeglib.lib;libcurl-d.lib;libssl.lib;libcrypto.lib;Ws2_32.Lib;Crypt32.Lib;glew32d.lib;glfw3.lib;freeglutd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;libgraphics2.lib;opengl32.lib;glu32.lib;ftgld.lib;jpeglib.lib;freetyped.lib;libpng16d.lib;bz2d.lib;zlibd.lib;brotlicommon-static.lib;brotlidec-static.lib;glew32d.lib;libcurl-d.lib;glfw3.lib;libssl.lib;libcrypto.lib;Ws2_32.Lib;Crypt32.Lib;freeglutd.lib;Wldap32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/debug/lib;c:/boincsdk/boinc_repo/win_build/Build/x64/Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>c:/boincsdk/boinc_repo/3rdParty/Windows/vcpkg/installed/x64-windows-static/debug/lib/;c:/boincsdk/boinc_repo/win_build/Build/x64/Debug/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <DelayLoadDLLs>GDI32.DLL;OPENGL32.DLL;GLU32.DLL;%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>

@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Here we define json structure as defined by the NASA's JPL  SBDB (Small-Body DataBase)
  * Definition can be found here: https://ssd-api.jpl.nasa.gov/doc/sbdb.html#object
@@ -7,7 +8,6 @@
  * More information about the json library can be found here: https://github.com/nlohmann/json#examples
  */
 
-#pragma once
 #include <string>
 using std::string;
 
@@ -477,7 +477,7 @@ namespace sdbd
 		//{
 		//	auto element = (*it).get<Elements>();
 		//	auto t = element.at("value").get_to()
-		//	
+		//
 		//	//orbit.elements.assign(element);
 		//	//std::cerr << *it << '\n';
 		//}

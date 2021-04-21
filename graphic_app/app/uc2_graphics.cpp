@@ -23,8 +23,8 @@
 // - handle mouse input (in this case, to zoom and rotate)
 // - draw text and 3D objects using OpenGL
 //
-// - Expects TrueType font 0 (by default, LiberationSans-Regular.ttf) 
-//   to be in the current directory.  
+// - Expects TrueType font 0 (by default, LiberationSans-Regular.ttf)
+//   to be in the current directory.
 // - Must be linked with api/ttfont.cpp, libfreetype.a and libftgl.a.
 //   (libfreetype.a may also require linking with -lz and -lbz2.)
 //   See comments at top of api/ttfont.cpp for more information.
@@ -66,6 +66,7 @@
 #include "PeriodChart.h"
 #include "shader.hpp"
 #include "glut.h"
+
 
 #include "res_texture.c"
 #include "../common/shader_utils.h"
@@ -710,9 +711,9 @@ void SetAntialias()
 }
 
 void app_graphics_render(int xs, int ys, double time_of_day) {
-	// boinc_graphics_get_shmem() must be called after 
+	// boinc_graphics_get_shmem() must be called after
 	// boinc_parse_init_data_file()
-	// Put this in the main loop to allow retries if the 
+	// Put this in the main loop to allow retries if the
 	// worker application has not yet created shared memory
 	//
 	if (shmem == NULL) {
@@ -923,7 +924,7 @@ void GetAsteroidData()
 	ReadAsteroidData();
 }
 
-// Init 
+// Init
 void app_graphics_init()
 {
 	char path[256];
@@ -987,7 +988,7 @@ int main(int argc, char** argv) {
 	if (uc_aid.project_preferences) {
 		parse_project_prefs(uc_aid.project_preferences);
 	}
-	
+
 	boinc_graphics_loop(argc, argv);
 
 	boinc_finish_diag();

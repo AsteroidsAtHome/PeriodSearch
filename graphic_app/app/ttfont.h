@@ -1,3 +1,4 @@
+#pragma once
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
 // Copyright (C) 2010 University of California
