@@ -31,6 +31,9 @@
     <CudaCompile Include="period_search\Start.cu">
       <Filter>Source files</Filter>
     </CudaCompile>
+    <CudaCompile Include="period_search\ComputeCapability.cu">
+      <Filter>Source files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
@@ -65,9 +68,6 @@
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\VersionInfo.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\ComputeCapability.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
   </ItemGroup>

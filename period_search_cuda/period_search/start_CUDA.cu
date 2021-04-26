@@ -87,7 +87,7 @@ double* pee, * pee0, * pWeight;
 //	const auto memoryClock = deviceProp.memoryClockRate / 1000 /2;
 //	fprintf(stderr, "CUDA Device SM clock [base|current]: %u MHz | %u MHz\n", deviceClock, currentSmClock);
 //	fprintf(stderr, "CUDA Device Memory clock [base|current]: %u MHz | %u MHz\n", memoryClock, currentMemoryClock);
-//	
+//
 //	if_freq_measured = true;
 //}
 
@@ -140,10 +140,10 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 //	{
 //		nvml_enabled = false;
 //	}
-	
+
 	//determine gridDim
 	cudaDeviceProp deviceProp;
-	
+
 	cudaGetDeviceProperties(&deviceProp, cudadev);
 	if (!checkex)
 	{
@@ -172,13 +172,13 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	// NOTE: NB - Always set MaxUsedRegisters to 32 in order to achieve 100% SM occupancy (project's Configuration properties -> CUDA C/C++ -> Device)
 
 	Cc cc(deviceProp);
-#ifndef CUDART_VERSION 
+#ifndef CUDART_VERSION
 #error CUDART_VERSION Undefined!
 #endif
-	
+
 	// Maximum number of resident thread blocks per multiprocessor
-	auto smxBlock = cc.GetSmxBlock(); 
-	
+	auto smxBlock = cc.GetSmxBlock();
+
 	CUDA_grid_dim = deviceProp.multiProcessorCount * smxBlock;
 
 	if (!checkex)
@@ -477,7 +477,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 	isPrecalc = 0;
 	cudaMemcpyToSymbol(CUDA_Is_Precalc, &isPrecalc, sizeof(isPrecalc), 0, cudaMemcpyHostToDevice);
-	
+
 	cudaUnbindTexture(texArea);
 	cudaUnbindTexture(texDg);
 	cudaUnbindTexture(texbrightness);
@@ -693,12 +693,12 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 				CudaCalculateIter1Mrqcof1End << <CUDA_grid_dim, 1 >> > ();
 				//mrqcof
 				CudaCalculateIter1Mrqmin1End << <CUDA_grid_dim, CUDA_BLOCK_DIM >> > ();
-				
+
 				/*if (!if_freq_measured && nvml_enabled && n == n_start_from && m == N_POLES)
 				{
 					GetPeakClock(cudadev);
 				}*/
-				
+
 				//mrqcof
 				CudaCalculateIter1Mrqcof2Start << <CUDA_grid_dim, CUDA_BLOCK_DIM >> > ();
 				for (iC = 1; iC < l_curves; iC++)
@@ -743,10 +743,14 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 			{
 				LinesWritten++;
 				/* output file */
-				if ((n == 1) && (m == 1))
-					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, res[m - 1].la_best, res[m - 1].be_best);
+				if (n == 1 && m == 1)
+				{
+					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best));
+				}
 				else
-					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, res[m - 1].la_best, res[m - 1].be_best);
+				{
+					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best));
+				}
 			}
 		}
 		if (boinc_time_to_checkpoint() || boinc_is_standalone())
@@ -755,7 +759,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 			if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); exit(retval); }
 			boinc_checkpoint_completed();
 		}
-		
+
 		//		break;//debug
 	} /* period loop */
 
