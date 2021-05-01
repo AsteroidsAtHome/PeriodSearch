@@ -1035,9 +1035,9 @@ int main(int argc, char** argv) {
 
 		/* output file */
 		if (n == 1)
-			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best);
+			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, round(la_best), round(be_best));
 		else
-			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best);
+			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, round(la_best), round(be_best));
 
 
 		if (boinc_time_to_checkpoint() || boinc_is_standalone())
@@ -1050,17 +1050,6 @@ int main(int argc, char** argv) {
 
 			boinc_checkpoint_completed();
 		}
-
-//#ifdef _DEBUG
-//		if (boinc_is_standalone())
-//		{
-//			if (n == 1)
-//				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, la_best, be_best, fraction_done);
-//			else
-//				printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f  done %.2f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, la_best, be_best, fraction_done);
-//		}
-//		break;
-//#endif
 	} /* period loop */
 
 	out.close();

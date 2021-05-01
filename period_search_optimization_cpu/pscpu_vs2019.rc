@@ -51,8 +51,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 102,13,0,1
- PRODUCTVERSION 102,13,0,1
+ FILEVERSION 103,1,0,1
+ PRODUCTVERSION 103,1,0,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +69,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
             VALUE "FileDescription", "Period search application"
-            VALUE "FileVersion", "102.13.0.1"
+            VALUE "FileVersion", "103.1.0.1"
             VALUE "InternalName", "pscpu.exe"
             VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_psu.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
-            VALUE "ProductVersion", "102.13.0.1"
+            VALUE "ProductVersion", "103.1.0.1"
         END
     END
     BLOCK "VarFileInfo"
