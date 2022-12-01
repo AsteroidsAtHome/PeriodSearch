@@ -25,8 +25,8 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 102,16,0,0
- PRODUCTVERSION 102,16,0,0
+ FILEVERSION 102,16,1,0
+ PRODUCTVERSION 102,16,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -43,12 +43,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
             VALUE "FileDescription", "Period search application Windows 10 x64 CUDA 11.8"
-            VALUE "FileVersion", "102.16.0.0"
-            VALUE "InternalName", "pscuda.exe"
+            VALUE "FileVersion", "102.16.1.0"
+            VALUE "InternalName", "Period_search_Windows_10_x64_cuda_v11080.exe"
             VALUE "LegalCopyright", "(C) 2020 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_Windows_10_x64_cuda_v11080.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
-            VALUE "ProductVersion", "102.16.0.0"
+            VALUE "ProductVersion", "102.16.1.0"
         END
     END
     BLOCK "VarFileInfo"
