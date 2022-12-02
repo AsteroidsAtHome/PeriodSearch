@@ -27,7 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{defe7518-dfda-4070-b482-bba4bd73f1af}</ProjectGuid>
+    <ProjectGuid>{72CFD1B9-D8C6-430A-90EC-77336EB214BF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pspurecpu_vs2015</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
