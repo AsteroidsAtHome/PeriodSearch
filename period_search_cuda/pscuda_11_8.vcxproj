@@ -260,6 +260,8 @@
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>D:\boincsdk\boinc\win_build\Build\x64\Debug;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)_$(Configuration)</TargetName>
+    <PublicIncludeDirectories>
+    </PublicIncludeDirectories>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -468,7 +470,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <!-- <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries> -->
       <StackReserveSize>10000000</StackReserveSize>
-      <AdditionalDependencies>libboinc.lib;libboincapi.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;libgraphics2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libboinc.lib;libboincapi.lib;cuda.lib;cudart.lib;nvml.lib;Version.lib;ShLwApi.lib;libgraphics2.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_PATH_V11_8)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <!-- libcmtd.lib;libcpmtd.lib; -->
     </Link>
@@ -686,7 +688,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libboinc.lib;libboincapi.lib;cuda.lib;cudart.lib;Version.lib;ShLwApi.lib;libgraphics2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libboinc.lib;libboincapi.lib;cuda.lib;cudart.lib;nvml.lib;Version.lib;ShLwApi.lib;libgraphics2.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <StackReserveSize>10000000</StackReserveSize>
@@ -825,6 +827,7 @@
     <None Include="period_search\Makefile" />
     <None Include="period_search\Makefile_CUDAv10.2" />
     <None Include="period_search\Makefile_CUDAv11.1" />
+    <None Include="period_search\Makefile_CUDAv11.8" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />
