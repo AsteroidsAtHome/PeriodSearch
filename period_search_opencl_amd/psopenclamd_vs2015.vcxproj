@@ -27,7 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{defe7518-dfda-4070-b482-bba4bd73f1af}</ProjectGuid>
+    <ProjectGuid>{C2D1BC3F-4270-4E7F-81CA-E86F459F23A4}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>psopenclamd_vs2015</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>

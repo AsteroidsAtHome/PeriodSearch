@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}</ProjectGuid>
+    <ProjectGuid>{1CA83AD6-74C5-4270-AD7C-FFDE62ACD843}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>psavx</RootNamespace>
     <ProjectName>psavx_vs2019_XP</ProjectName>

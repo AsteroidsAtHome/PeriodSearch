@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
+    <ProjectGuid>{1A2F5CE4-ED7F-4884-9D3E-5A7C605E0D74}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pscpu</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
