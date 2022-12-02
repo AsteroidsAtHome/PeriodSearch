@@ -1,3 +1,8 @@
+#ifndef NVML_NO_UNVERSIONED_FUNC_DEFS
+#define NVML_NO_UNVERSIONED_FUNC_DEFS
+#endif
+
+
 #include <cuda.h>
 #include <cstdio>
 #include "mfile.h"
@@ -12,7 +17,7 @@
 //#include <cuda_occupancy.h>
 #include <device_launch_parameters.h>
 #include <cuda_texture_types.h>
-//#include <nvml.h>
+#include <nvml.h>
 
 #ifdef __GNUC__
 #include <time.h>
@@ -68,7 +73,7 @@ texture<int2, 1> texDg;
 
 int CUDA_grid_dim;
 double* pee, * pee0, * pWeight;
-//bool nvml_enabled = false;
+bool nvml_enabled = false;
 //bool if_freq_measured = false;
 
 //void GetPeakClock(const int cudadev)
@@ -116,7 +121,7 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 {
 	//init gpu
 	auto initResult = SetCUDABlockingSync(cudadev);
-	if(!initResult)
+	if (!initResult)
 	{
 		fprintf(stderr, "CUDA: Error while initialising CUDA\n");
 		exit(999);
@@ -128,18 +133,15 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	// TODO: Check if this will help to free some CPU core utilization
 	//cudaSetDeviceFlags(cudaDeviceScheduleYield);
 
-//	try
-//	{
-//#ifdef WIN32
-//		LoadLibraryEx("nvml.dll", NULL, 0);
-//#endif
-//		nvmlInit();
-//		nvml_enabled = true;
-//	}
-//	catch (...)
-//	{
-//		nvml_enabled = false;
-//	}
+	try
+	{
+		nvmlInit();
+		nvml_enabled = true;
+	}
+	catch (...)
+	{
+		nvml_enabled = false;
+	}
 
 	//determine gridDim
 	cudaDeviceProp deviceProp;
@@ -151,6 +153,18 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 		auto totalGlobalMemory = deviceProp.totalGlobalMem / 1048576;
 		auto sharedMemorySm = deviceProp.sharedMemPerMultiprocessor;
 		auto sharedMemoryBlock = deviceProp.sharedMemPerBlock;
+
+		char drv_version_str[NVML_DEVICE_PART_NUMBER_BUFFER_SIZE + 1];
+		if (nvml_enabled) 
+		{
+			auto retval = nvmlSystemGetDriverVersion(drv_version_str,
+				NVML_DEVICE_PART_NUMBER_BUFFER_SIZE);
+			if (retval != NVML_SUCCESS) {
+				fprintf(stderr, "%s\n", nvmlErrorString(retval));
+				return 1;
+			}
+		}
+
 		/*auto peakClk = 1;
 		cudaDeviceGetAttribute(&peakClk, cudaDevAttrClockRate, cudadev);
 		auto devicePeakClock = peakClk / 1024;*/
@@ -158,6 +172,7 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 		fprintf(stderr, "CUDA version: %d\n", cudaVersion);
 		fprintf(stderr, "CUDA Device number: %d\n", cudadev);
 		fprintf(stderr, "CUDA Device: %s %lluMB \n", deviceProp.name, totalGlobalMemory);
+		fprintf(stderr, "CUDA Device driver: %s\n", drv_version_str);
 		fprintf(stderr, "Compute capability: %d.%d\n", deviceProp.major, deviceProp.minor);
 		//fprintf(stderr, "Device peak clock: %d MHz\n", devicePeakClock);
 		fprintf(stderr, "Shared memory per Block | per SM: %llu | %llu\n", sharedMemoryBlock, sharedMemorySm);
@@ -253,20 +268,20 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 	sum_dark_facet = 0.0;
 	ave_dark_facet = 0.0;
 
-//#ifdef _DEBUG
-//	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
-//	if (n_max < max_test_periods)
-//	{
-//		max_test_periods = n_max;
-//		fprintf(stderr, "n_max(%d) < max_test_periods (%d)\n", n_max, max_test_periods);
-//	}
-//	else
-//	{
-//		fprintf(stderr, "n_max(%d) > max_test_periods (%d)\n", n_max, max_test_periods);
-//	}
-//
-//	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
-//#endif
+	//#ifdef _DEBUG
+	//	int n_max = (int)((freq_start - freq_end) / freq_step) + 1;
+	//	if (n_max < max_test_periods)
+	//	{
+	//		max_test_periods = n_max;
+	//		fprintf(stderr, "n_max(%d) < max_test_periods (%d)\n", n_max, max_test_periods);
+	//	}
+	//	else
+	//	{
+	//		fprintf(stderr, "n_max(%d) > max_test_periods (%d)\n", n_max, max_test_periods);
+	//	}
+	//
+	//	fprintf(stderr, "freq_start (%.3f) - freq_end (%.3f) / freq_step (%.3f) = n_max (%d)\n", freq_start, freq_end, freq_step, n_max);
+	//#endif
 
 	for (i = 1; i <= n_ph_par; i++)
 	{
@@ -356,9 +371,9 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 	if (max_test_periods < CUDA_Grid_dim_precalc)
 	{
 		CUDA_Grid_dim_precalc = max_test_periods;
-//#ifdef _DEBUG
-//		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
-//#endif
+		//#ifdef _DEBUG
+		//		fprintf(stderr, "CUDA_Grid_dim_precalc = %d\n", CUDA_Grid_dim_precalc);
+		//#endif
 	}
 
 	err = cudaMalloc(&pcc, CUDA_Grid_dim_precalc * sizeof(freq_context));
@@ -397,7 +412,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 	for (n = 1; n <= max_test_periods; n += CUDA_Grid_dim_precalc)
 	{
-		CudaCalculatePrepare<<<CUDA_Grid_dim_precalc, 1>>>(n, max_test_periods, freq_start, freq_step);
+		CudaCalculatePrepare << <CUDA_Grid_dim_precalc, 1 >> > (n, max_test_periods, freq_start, freq_step);
 		//err = cudaThreadSynchronize();
 		err = cudaDeviceSynchronize();
 
@@ -408,7 +423,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 			cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd), 0, cudaMemcpyHostToDevice);
 			//cudaGetSymbolAddress((void**)&endPtr, CUDA_End);
 			//
-			CudaCalculatePreparePole<<<CUDA_Grid_dim_precalc, 1>>>(m);
+			CudaCalculatePreparePole << <CUDA_Grid_dim_precalc, 1 >> > (m);
 			//
 #ifdef _DEBUG
 			printf(".");
@@ -417,34 +432,34 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 			while (!theEnd)
 			{
 				count++;
-				CudaCalculateIter1Begin<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Begin << <CUDA_Grid_dim_precalc, 1 >> > ();
 				//mrqcof
-				CudaCalculateIter1Mrqcof1Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof1Start << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > ();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CudaCalculateIter1Mrqcof1Matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CudaCalculateIter1Mrqcof1Curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CudaCalculateIter1Mrqcof1Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Matrix << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve1 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof1Curve2 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[iC], l_points[iC]);
 				}
-				CudaCalculateIter1Mrqcof1Curve1Last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CudaCalculateIter1Mrqcof1Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CudaCalculateIter1Mrqcof1End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof1Curve1Last << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1Curve2 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof1End << <CUDA_Grid_dim_precalc, 1 >> > ();
 				//mrqcof
-				CudaCalculateIter1Mrqmin1End<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin1End << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > ();
 				//mrqcof
-				CudaCalculateIter1Mrqcof2Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqcof2Start << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > ();
 				for (iC = 1; iC < l_curves; iC++)
 				{
-					CudaCalculateIter1Mrqcof2Matrix<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(l_points[iC]);
-					CudaCalculateIter1Mrqcof2Curve1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
-					CudaCalculateIter1Mrqcof2Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Matrix << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve1 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[iC], l_points[iC]);
+					CudaCalculateIter1Mrqcof2Curve2 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[iC], l_points[iC]);
 				}
-				CudaCalculateIter1Mrqcof2Curve1Last<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CudaCalculateIter1Mrqcof2Curve2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>(in_rel[l_curves], l_points[l_curves]);
-				CudaCalculateIter1Mrqcof2End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof2Curve1Last << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2Curve2 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
+				CudaCalculateIter1Mrqcof2End << <CUDA_Grid_dim_precalc, 1 >> > ();
 				//mrqcof
-				CudaCalculateIter1Mrqmin2End<<<CUDA_Grid_dim_precalc, 1>>>();
-				CudaCalculateIter2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
+				CudaCalculateIter1Mrqmin2End << <CUDA_Grid_dim_precalc, 1 >> > ();
+				CudaCalculateIter2 << <CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM >> > ();
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
 				err = cudaDeviceSynchronize();
 				//cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
@@ -453,7 +468,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 				//break;//debug
 			}
-			CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, 1>>>();
+			CudaCalculateFinishPole << <CUDA_Grid_dim_precalc, 1 >> > ();
 			//err = cudaThreadSynchronize();
 			err = cudaDeviceSynchronize();
 			//			err=cudaMemcpyFromSymbol(&res,CUDA_FR,sizeof(freq_result)*CUDA_Grid_dim_precalc);
@@ -462,7 +477,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 		}
 		printf("\n");
 
-		CudaCalculateFinish<<<CUDA_Grid_dim_precalc, 1>>>();
+		CudaCalculateFinish << <CUDA_Grid_dim_precalc, 1 >> > ();
 		//err=cudaThreadSynchronize(); memcpy is synchro itself
 
 		//read results here
@@ -506,7 +521,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 }
 
 int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end, double freq_step, double stop_condition, int n_iter_min, double conw_r,
-			  int ndata, int* ia, int* ia_par, double* cg_first, MFILE& mf, double escl, double* sig, int Numfac, double* brightness)
+	int ndata, int* ia, int* ia_par, double* cg_first, MFILE& mf, double escl, double* sig, int Numfac, double* brightness)
 {
 	int retval, i, n, m, iC, n_max = (int)((freq_start - freq_end) / freq_step) + 1;
 	int n_iter_max, theEnd, LinesWritten;
