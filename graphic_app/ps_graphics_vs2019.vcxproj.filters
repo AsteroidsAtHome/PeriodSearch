@@ -82,6 +82,7 @@
     <Image Include="asteroid_240x152.jpg" />
     <Image Include="logo.jpg" />
     <Image Include="logo_100x100_graph_83y_icon.ico" />
+    <Image Include="asteroids_logo_1.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ps_graphics.rc" />
