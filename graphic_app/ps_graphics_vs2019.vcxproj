@@ -453,6 +453,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="asteroids_logo_1.png" />
     <Image Include="asteroid_240x152.jpg" />
     <Image Include="logo.jpg">
       <FileType>CppCode</FileType>
