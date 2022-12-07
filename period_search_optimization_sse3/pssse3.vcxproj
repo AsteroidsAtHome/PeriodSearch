@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}</ProjectGuid>
+    <ProjectGuid>{25353EF0-5E0E-406A-9A31-8CEE4FEF2A18}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pssse3</RootNamespace>
   </PropertyGroup>

@@ -262,6 +262,8 @@
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)_$(Configuration)</TargetName>
     <PublicIncludeDirectories>
     </PublicIncludeDirectories>
+    <OutDir>$(ProjectDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -295,8 +297,8 @@
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>D:\boincsdk\boinc\win_build\Build\x64\Release;$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
     <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_cuda_$(CudaToolkitVersion)</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)_$(CudaToolkitVersion)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_8_1|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -484,6 +486,7 @@
       <Optimization>InheritFromHost</Optimization>
       <GPUDebugInfo>false</GPUDebugInfo>
       <MaxRegCount>32</MaxRegCount>
+      <CompileOut>$(IntDir)%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
       <AdditionalLibraryDirectories>$(CUDA_PATH_V11_8)\lib\x64\crt;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -709,6 +712,7 @@
       <Runtime>MT</Runtime>
       <ExtensibleWholeProgramCompilation>false</ExtensibleWholeProgramCompilation>
       <InterleaveSourceInPTX>false</InterleaveSourceInPTX>
+      <CompileOut>$(IntDir)%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <Manifest>
       <OutputManifestFile>$(IntDir)$(TargetName)$(TargetExt).embed.manifest</OutputManifestFile>
