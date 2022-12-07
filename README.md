@@ -1,3 +1,5 @@
+![This is an image](/graphic_app/asteroids_logo_1.png)
+
 # Social
 [![Discord](https://img.shields.io/badge/discord-asteroidsathome-blue?logo=discord)](https://discord.gg/PDd5gkyJ4f)
 
