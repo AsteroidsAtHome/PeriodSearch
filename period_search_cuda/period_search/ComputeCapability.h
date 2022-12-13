@@ -5,6 +5,7 @@ class Cc
 	int deviceCcMajor;
 	int deviceCcMinor;
 
+	int GetSmxBlockCuda12() const;
 	int GetSmxBlockCuda11() const;
 	int GetSmxBlockCuda10() const;
 	int GetSmxBlockCc8() const;

@@ -67,14 +67,14 @@ __constant__ extern int CUDA_Lmax, CUDA_Mmax;
 __device__ extern double CUDA_Fc[MAX_N_FAC + 1][MAX_LM + 1];
 __device__ extern double CUDA_Fs[MAX_N_FAC + 1][MAX_LM + 1];
 __device__ extern double CUDA_Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
-__constant__ extern double CUDA_Darea[MAX_N_FAC + 1];
+__device__ extern double CUDA_Darea[MAX_N_FAC + 1]; //not constant access in curv (depends on threadidx --> slow)
 __device__ extern double CUDA_Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1];
 __device__ extern double* CUDA_ee/*[MAX_N_OBS+1][3]*/;
 __device__ extern double* CUDA_ee0/*[MAX_N_OBS+1][3]*/;
 __device__ extern double CUDA_tim[MAX_N_OBS + 1];
-//__device__ extern double CUDA_brightness[MAX_N_OBS+1];
-//__device__ extern double CUDA_sig[MAX_N_OBS+1];
-//__device__ extern double *CUDA_Weight/*[MAX_N_OBS+1]*/;
+__device__ extern double *CUDA_brightness/*[MAX_N_OBS+1]*/;
+__device__ extern double *CUDA_sig/*[MAX_N_OBS+1]*/;
+__device__ extern double *CUDA_Weight/*[MAX_N_OBS+1]*/;
 __constant__ extern double CUDA_Phi_0;
 __device__ extern int CUDA_End;
 __device__ extern int CUDA_Is_Precalc;
@@ -87,9 +87,9 @@ __device__ extern int CUDA_Is_Precalc;
 
 
 
-extern texture<int2, 1> texWeight;
-extern texture<int2, 1> texbrightness;
-extern texture<int2, 1> texsig;
+//extern texture<int2, 1> texWeight;
+//extern texture<int2, 1> texbrightness;
+//extern texture<int2, 1> texsig;
 
 //global to one thread
 struct freq_context
@@ -133,10 +133,12 @@ struct freq_context
 	//test
 };
 
-extern texture<int2, 1> texArea;
-extern texture<int2, 1> texDg;
+extern __device__ double *CUDA_Area;
+extern __device__ double *CUDA_Dg;
+//extern texture<int2, 1> texArea;
+//extern texture<int2, 1> texDg;
 
-__device__ extern freq_context* CUDA_CC;
+__device__ extern freq_context *CUDA_CC;
 
 struct freq_result
 {
@@ -144,4 +146,4 @@ struct freq_result
 	double dark_best, per_best, dev_best, la_best, be_best;
 };
 
-__device__ extern freq_result* CUDA_FR;
+__device__ extern freq_result *CUDA_FR;
