@@ -1,0 +1,82 @@
+# This should work on Linux.  Modify as needed for other platforms.
+#
+#	Prepare BOINC API as follows:	
+#		./_autosetup # Only first time
+#		./configure --disable-server --disable-client --disable-manager CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3 -g"
+#		make
+#
+
+BOINC_DIR = ../boinc_src
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+
+# Use `readelf -p .GCC.command.line period_search_rpi_armv7_arm32_debug` to see all used compiler commands
+CXXFLAGS = -march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3 -g -frecord-gcc-switches \
+    -D_DEBUG \
+    -DARM32 \
+	-DAPP_GRAPHICS \
+    -I$(BOINC_DIR) \
+    -I$(BOINC_LIB_DIR) \
+    -I$(BOINC_API_DIR) \
+	-I/usr/arm-linux-gnueabihf/include \
+    -L/usr/arm-linux-gnueabihf/lib \
+    -L /usr/X11R6/lib \
+    -L.
+
+CC=arm-linux-gnueabihf-g++ 
+CXX=arm-linux-gnueabihf-g++
+OPTFLAGS=-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3 -g -frecord-gcc-switches
+CFLAGS=$(OPTFLAGS) -Wall
+LDFLAGS=-lm
+MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
+        curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
+	    dot_product.o gauss_errc.o systeminfo.o
+
+# the following should be freeglut; use nm to check
+# you may have to change the paths for your system
+
+ifeq ($(wildcard /usr/local/lib/libglut.a),)
+	LIBGLUT = /usr/lib/libglut.a
+	LIBGLU = /usr/lib/libGLU.a
+	LIBJPEG = /usr/lib/libjpeg.a
+else
+	LIBGLUT = /usr/local/lib/libglut.a
+	LIBGLU = /usr/local/lib/libGLU.a
+	LIBJPEG = /usr/local/lib/libjpeg.a
+endif
+
+PROGS = period_search_rpi_armv7_arm32_debug
+# uc2_graphics
+# make this optional so compile doesn't break on systems without OpenGL
+
+all: $(PROGS)
+
+libstdc++.a:
+	ln -s `arm-linux-gnueabihf-g++ -print-file-name=libstdc++.a`
+
+clean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+distclean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+install: period_search_rpi_armv7_arm32_debug
+
+# specify library paths explicitly (rather than -l)
+# because otherwise you might get a version in /usr/lib etc.
+
+#uc2: uc2.o libstdc++.a $(BOINC_API_DIR)/libboinc_api.a #$(BOINC_LIB_DIR)/libboinc.a
+#	$(CXX) $(CXXFLAGS) -o uc2 uc2.o libstdc++.a -pthread \
+#	$(BOINC_API_DIR)/libboinc_api.a \
+#	$(BOINC_LIB_DIR)/libboinc.a
+
+# $(OBJS) = $(patsubst %.o,another_folder/%.o,file1.o file2.o file3.o)
+# $(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< $(ANOTHER_DIR)/file1.o libstdc++.a -pthread \
+
+period_search_rpi_armv7_arm32_debug: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
+	$(BOINC_API_DIR)/libboinc_api.a \
+	$(BOINC_LIB_DIR)/libboinc.a -lm 
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<

@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64v8">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64v8</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64v8">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64v8</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\blmatrix.c" />
+    <ClCompile Include="period_search\bright.c" />
+    <ClCompile Include="period_search\conv.c" />
+    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\systeminfo.cpp" />
+    <ClCompile Include="period_search\curv.c" />
+    <ClCompile Include="period_search\dot_product.c" />
+    <ClCompile Include="period_search\ellfit.c" />
+    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\lubksb.c" />
+    <ClCompile Include="period_search\ludcmp.c" />
+    <ClCompile Include="period_search\matrix.c" />
+    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\mrqcof.c" />
+    <ClCompile Include="period_search\mrqmin.c" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\trifac.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\constants.h" />
+    <ClInclude Include="period_search\systeminfo.h" />
+    <ClInclude Include="period_search\declarations.h" />
+    <ClInclude Include="period_search\globals.h" />
+    <ClInclude Include="period_search\uc2.h" />
+    <ClInclude Include="period_search\Version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\AsteroidsAtHome_Old\period_search_rpi_arm64\period_search\README.md" />
+    <None Include="period_search\Makefile_mac" />
+    <None Include="period_search\Makefile_mac2" />
+    <None Include="period_search\Makefile_RPi_armv7_arm32_debug" />
+    <None Include="period_search\Makefile_RPi_armv7_arm32_release" />
+    <None Include="period_search\Makefile_RPi_armv8_arm64_debug" />
+    <None Include="period_search\Makefile_RPi_armv8_arm64_release" />
+    <None Include="period_search\MakeMacExample.sh" />
+    <None Include="period_search_in" />
+    <None Include="ps_200220_input_17109_11" />
+    <None Include="ps_200229_input_66485_1" />
+    <None Include="ps_200320_input_8781_13026" />
+    <None Include="ps_200327_input_12348_23" />
+    <None Include="ps_200327_input_12979_23" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{81c35231-37f0-4537-bb01-1dbcd1ac19ba}</ProjectGuid>
+    <Keyword>Linux</Keyword>
+    <RootNamespace>period_search_rpi</RootNamespace>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <ApplicationType>Linux</ApplicationType>
+    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
+    <TargetLinuxPlatform>Raspberry</TargetLinuxPlatform>
+    <LinuxProjectType>{8748239F-558C-44D1-944B-07B09C35B330}</LinuxProjectType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfStl>libstdc++_static</UseOfStl>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64v8'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64v8'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfStl>libstdc++_static</UseOfStl>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64v8'">
+    <TargetName>$(ProjectName)_$(PlatformNativeArch)_$(Configuration)</TargetName>
+    <IncludePath>/period_search;$(IncludePath)</IncludePath>
+    <SourcePath>/period_search;$(SourcePath)</SourcePath>
+    <AdditionalSourcesToCopyMapping />
+    <ProjectPublicIncludePath>$(RemoteRootDir)/boinc;$(RemoteRootDir)/boinc/api;$(RemoteRootDir)/boinc/lib</ProjectPublicIncludePath>
+    <ValidateArchitecture>false</ValidateArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemoteCCompileToolExe>arm-linux-gnueabihf-g++</RemoteCCompileToolExe>
+    <RemoteCppCompileToolExe>arm-linux-gnueabihf-g++</RemoteCppCompileToolExe>
+    <TargetName>period_search_$(PlatformNativeArch)_arm32_$(Configuration)</TargetName>
+    <IncludePath>/period_search;$(IncludePath)</IncludePath>
+    <SourcePath>/period_search;$(SourcePath)</SourcePath>
+    <ProjectPublicIncludePath>$(RemoteRootDir)/boinc;$(RemoteRootDir)/boinc/api;$(RemoteRootDir)/boinc/lib</ProjectPublicIncludePath>
+    <RemoteLdToolExe>arm-linux-gnueabihf-g++</RemoteLdToolExe>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <Link>
+      <LibraryDependencies>
+      </LibraryDependencies>
+      <ShowProgress>true</ShowProgress>
+      <AdditionalLibraryDirectories>$(RemoteRootDir)/boinc/lib;$(RemoteRootDir)/boinc/api;/usr/lib;/usr/lib/aarch64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(RemoteRootDir)/boinc/lib/libboinc.a;$(RemoteRootDir)/boinc/api/libboinc_api.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>-pthread</AdditionalOptions>
+    </Link>
+    <RemotePostBuildEvent>
+      <Command>gpio export 17 out</Command>
+      <Message>export pin 17 using the gpio utility so that we can execute the blink program without sudo</Message>
+    </RemotePostBuildEvent>
+    <ClCompile>
+      <AdditionalOptions>-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -g -frecord-gcc-switches %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>_DEBUG;ARM32%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>_WIN32;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+      <CLanguageStandard>c11</CLanguageStandard>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <AdditionalIncludeDirectories>$(RemoteRootDir)/boinc;$(RemoteRootDir)/boinc/api;$(RemoteRootDir)/boinc/lib;%(AdditionalIncludeDirectories);%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <LinkTimeOptimization>true</LinkTimeOptimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <Link>
+      <LibraryDependencies>wiringPi</LibraryDependencies>
+    </Link>
+    <RemotePostBuildEvent>
+      <Command>gpio export 17 out</Command>
+      <Message>export pin 17 using the gpio utility so that we can execute the blink program without sudo</Message>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64v8'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RemoteRootDir)/boinc;$(RemoteRootDir)/boinc/api;$(RemoteRootDir)/boinc/lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <Verbose>false</Verbose>
+      <PreprocessorDefinitions>_DEBUG;ARM64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>_WIN32;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+      <ShowIncludes>true</ShowIncludes>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+      <AdditionalOptions>-march=armv8-a</AdditionalOptions>
+      <LinkTimeOptimization>true</LinkTimeOptimization>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+    <Link>
+      <ShowProgress>true</ShowProgress>
+      <VerboseOutput>false</VerboseOutput>
+      <AdditionalLibraryDirectories>$(RemoteRootDir)/boinc/lib;$(RemoteRootDir)/boinc/api;/usr/lib;/usr/lib/aarch64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(RemoteRootDir)/boinc/lib/libboinc.a;$(RemoteRootDir)/boinc/api/libboinc_api.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>-pthread</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
