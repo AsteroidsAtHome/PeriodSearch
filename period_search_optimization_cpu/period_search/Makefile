@@ -1,4 +1,5 @@
 # This should work on Linux.  Modify as needed for other platforms.
+# No SIMD nor RISK optimisations. Just pure CPU.
 
 BOINC_DIR = ../..
 BOINC_API_DIR = $(BOINC_DIR)/api

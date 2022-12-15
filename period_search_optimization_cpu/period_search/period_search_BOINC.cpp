@@ -11,42 +11,49 @@
    output: period [hr], rms deviation, chi^2, dark facet [%] lambda_best beta_best
 
    8.11.2006
-
    new version of lightcurve files (new input lcs format)
    testing the dark facet, finding the optimal value for convexity weight: 0.1, 0.2, 0.4, 0.8, ... <10.0
    first line of output: fourth column is the optimized conw (not dark facet), all other lines include dark facet
 
    16.4.2012
-
    version for BOINC
 
-*/
+   15.12.2022: Georgi VIdinski
+   System information about the host Raspberry Pi boards is included
+   ToDo: Extend System information for general CPUs (x86 & x64)
+
+
+   This file is part of BOINC.
+   http://boinc.berkeley.edu
+   Copyright (C) 2008 University of California
+   
+   BOINC is free software; you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License
+   as published by the Free Software Foundation,
+   either version 3 of the License, or (at your option) any later version.
+   
+   BOINC is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+   See the GNU Lesser General Public License for more details.
+   
+   You should have received a copy of the GNU Lesser General Public License
+   along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
+
+ */
 
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
+#include <thread>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 #include "declarations.h"
 #include "constants.h"
 #include "globals.h"
-
-// This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
-//
-// BOINC is free software; you can redistribute it and/or modify it
-// under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// BOINC is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifdef _WIN32
 #include "boinc_win.h"
@@ -58,7 +65,6 @@
 #include <cstdio>
 #include <cctype>
 #include <ctime>
-#include <cstring>
 #include <cstdlib>
 #include <csignal>
 #include <unistd.h>
@@ -70,12 +76,20 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
+#include "systeminfo.h"
+#include <iostream>
+#include <cstring>
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
 #include "uc2.h"
 UC_SHMEM* shmem;
 #endif
+
+//#if defined(ARM) || defined(ARM32) || defined(ARM64)
+//#include <wiringPi.h>
+//#define	LED	17
+//#endif
 
 using std::string;
 
@@ -144,7 +158,25 @@ Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1];
 
+APP_INIT_DATA aid;
+bool verboseMode = false;
+
+
 /*--------------------------------------------------------------*/
+
+//void blinkLed(int count) {
+//	for (int i = 0; i < count; i++) {
+//		digitalWrite(LED, HIGH);  // On
+//		delay(150); // ms
+//		digitalWrite(LED, LOW);	  // Off
+//		delay(150);
+//	}
+//}
+
+//bool cmdOptionExists(std::vector<char> vec, char &option)
+//{
+//	return std::find(vec.begin(), vec.end(), option) != vec.end();
+//}
 
 int main(int argc, char** argv) {
 	int retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
@@ -207,6 +239,28 @@ int main(int argc, char** argv) {
 	lambda_pole[10] = 300; beta_pole[10] = -60;
 
 	ia_lambda_pole = ia_beta_pole = 1;
+
+	//wiringPiSetupSys();
+	//pinMode(LED, OUTPUT);
+
+	std::cout << "args: " << argc << " | " << argv[0] << " | " << argv[1] << std::endl;
+	if (std::strcmp(argv[1], "-v") == 0)
+	{
+		// Do stuff
+		verboseMode = true;
+
+		std::cout << "verbose: " << std::boolalpha << verboseMode << std::endl;
+	}
+
+	if (std::strcmp(argv[1], "-h") == 0)
+	{
+		// Do stuff
+		std::cout << "Usage: " << argv[0] << " [OPTION]" << std::endl;
+		std::cout << "  -v\tverbose output" << std::endl;
+		std::cout << "  -h\tdisplay this help and exit" << std::endl;
+
+		exit(0);
+	}
 
 	retval = boinc_init();
 	if (retval) {
@@ -382,7 +436,7 @@ int main(int argc, char** argv) {
 			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
 			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
 
-		/* selects the minimum and maximum JD */
+			/* selects the minimum and maximum JD */
 			if (tim[ndata] < jd_min) jd_min = tim[ndata];
 			if (tim[ndata] > jd_max) jd_max = tim[ndata];
 
@@ -508,6 +562,7 @@ int main(int argc, char** argv) {
 
 
 	/* optimization of the convexity weight **************************************************************/
+
 	APP_INIT_DATA aid;
 	boinc_get_init_data(aid);
 	if (!checkpoint_exists)
@@ -525,7 +580,10 @@ int main(int argc, char** argv) {
 		GetVersionInfo(filename, major, minor, build, revision);
 		fprintf(stderr, "Application: %s\n", filename);
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#else
+		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
+		getSystemInfo();
 	}
 
 	while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
@@ -637,6 +695,10 @@ int main(int argc, char** argv) {
 			n = 1;
 		}
 
+		if (verboseMode) {
+			std::cout << "Gatering initial poles..." << std::endl;
+		}
+
 		for (; n <= max_test_periods; n++)
 		{
 			boinc_fraction_done(n / 10000.0 / max_test_periods); // signalize start
@@ -648,9 +710,11 @@ int main(int argc, char** argv) {
 			dev_best = 1e40;
 			for (m = 1; m <= N_POLES; m++)
 			{
-#ifdef _DEBUG
-				printf(".");
-#endif
+				if (verboseMode)
+				{
+					std::cout << ".";
+				}
+
 				prd = 1 / freq;
 
 				/* starts from the initial ellipsoid */
@@ -756,7 +820,9 @@ int main(int argc, char** argv) {
 				}
 			} /* pole loop */
 
-			printf("\n");
+			if (verboseMode) {
+				std::cout << std::endl;
+			}
 
 			if (la_best < 0)
 				la_best += 360;
@@ -902,14 +968,15 @@ int main(int argc, char** argv) {
 		auto fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
 		boinc_fraction_done(fraction_done);
 
-#ifdef _DEBUG
-		auto fraction = fraction_done * 100;
-		auto time = std::time(nullptr);   // get time now
-		auto now = std::localtime(&time);
+		if (verboseMode)
+		{
+			auto fraction = fraction_done * 100;
+			auto time = std::time(nullptr);   // get time now
+			auto now = std::localtime(&time);
 
-		printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
-		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
-#endif
+			printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+			fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
+		}
 
 		freq = freq_start - (n - 1) * freq_step;
 
@@ -1039,6 +1106,9 @@ int main(int argc, char** argv) {
 		else
 			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, round(la_best), round(be_best));
 
+#if defined(ARM) || defined(ARM32) || defined(ARM64)
+		//blinkLed(3);
+#endif
 
 		if (boinc_time_to_checkpoint() || boinc_is_standalone())
 		{
