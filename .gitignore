@@ -116,3 +116,9 @@ period_search_in*
 !*/input_period_search/period_search_in_*
 period_search_out*
 period_search_state*
+
+# Files build unde Linux
+*.o
+*.so
+*.a
+period_search_BOINC*
