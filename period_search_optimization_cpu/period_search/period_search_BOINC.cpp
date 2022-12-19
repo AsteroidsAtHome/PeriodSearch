@@ -243,23 +243,23 @@ int main(int argc, char** argv) {
 	//wiringPiSetupSys();
 	//pinMode(LED, OUTPUT);
 
-	std::cout << "args: " << argc << " | " << argv[0] << " | " << argv[1] << std::endl;
-	if (std::strcmp(argv[1], "-v") == 0)
+	if (argc > 1)
 	{
-		// Do stuff
-		verboseMode = true;
+		std::cout << "args: " << argc << " | " << argv[0] << " | " << argv[1] << std::endl;
+		if (std::strcmp(argv[1], "-v") == 0)
+		{
+			verboseMode = true;
+			std::cout << "verbose: " << std::boolalpha << verboseMode << std::endl;
+		}
 
-		std::cout << "verbose: " << std::boolalpha << verboseMode << std::endl;
-	}
+		if (std::strcmp(argv[1], "-h") == 0)
+		{
+			std::cout << "Usage: " << argv[0] << " [OPTION]" << std::endl;
+			std::cout << "  -v\tverbose output" << std::endl;
+			std::cout << "  -h\ttdisplay this help and exit" << std::endl;
 
-	if (std::strcmp(argv[1], "-h") == 0)
-	{
-		// Do stuff
-		std::cout << "Usage: " << argv[0] << " [OPTION]" << std::endl;
-		std::cout << "  -v\tverbose output" << std::endl;
-		std::cout << "  -h\tdisplay this help and exit" << std::endl;
-
-		exit(0);
+			exit(0);
+		}
 	}
 
 	retval = boinc_init();
