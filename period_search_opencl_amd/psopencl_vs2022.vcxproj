@@ -17,7 +17,6 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -53,27 +52,24 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared" >
+  <ImportGroup Label="Shared">
   </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -130,8 +126,66 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-
-  <ItemGroup></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="period_search\areanorm.cpp" />
+    <ClCompile Include="period_search\areanorm_old.c" />
+    <ClCompile Include="period_search\Array2D.cpp" />
+    <ClCompile Include="period_search\Array3D.cpp" />
+    <ClCompile Include="period_search\blmatrix_old.c" />
+    <ClCompile Include="period_search\bright_old.cpp" />
+    <ClCompile Include="period_search\conv_old.c" />
+    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\Curv1D_old.cpp" />
+    <ClCompile Include="period_search\curv_old.c" />
+    <ClCompile Include="period_search\ellfit.cpp" />
+    <ClCompile Include="period_search\ellfit_old.c" />
+    <ClCompile Include="period_search\FreqContext.cpp" />
+    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\host_dot_product.c" />
+    <ClCompile Include="period_search\lubksb.c" />
+    <ClCompile Include="period_search\ludcmp.c" />
+    <ClCompile Include="period_search\matrix_old.c" />
+    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\mrqcof_old.cpp" />
+    <ClCompile Include="period_search\mrqmin_old.c" />
+    <ClCompile Include="period_search\OpenClWorker.cpp" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\period_search_BOINC_old.cpp" />
+    <ClCompile Include="period_search\period_search_BOINC_org.cpp" />
+    <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\sphfunc.cpp" />
+    <ClCompile Include="period_search\sphfunc_old.c" />
+    <ClCompile Include="period_search\Start_OpenCl.cpp" />
+    <ClCompile Include="period_search\Start_OpenCl_old.cpp" />
+    <ClCompile Include="period_search\stdafx.cpp" />
+    <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\uc2_graphics.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\bright.cl" />
+    <None Include="period_search\clear_files.bat" />
+    <None Include="period_search\conv.cl" />
+    <None Include="period_search\cpp.hint" />
+    <None Include="period_search\curv.cl" />
+    <None Include="period_search\dave.cl" />
+    <None Include="period_search\mrqcof.cl" />
+    <None Include="period_search\mrqmin.cl" />
+    <None Include="period_search\sig2iwght.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\constants.h" />
+    <ClInclude Include="period_search\declarations.hpp" />
+    <ClInclude Include="period_search\globals.h" />
+    <ClInclude Include="period_search\Globals_OpenCl.h" />
+    <ClInclude Include="period_search\OpenClWorker.hpp" />
+    <ClInclude Include="period_search\Start_OpenCl.h" />
+    <ClInclude Include="period_search\stdafx.h" />
+    <ClInclude Include="period_search\targetver.h" />
+    <ClInclude Include="period_search\uc2.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="period_search\ReadMe.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
