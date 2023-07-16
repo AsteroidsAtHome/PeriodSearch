@@ -117,6 +117,7 @@ period_search_in*
 period_search_out*
 period_search_state*
 
+
 # Files build unde Linux
 *.o
 *.so

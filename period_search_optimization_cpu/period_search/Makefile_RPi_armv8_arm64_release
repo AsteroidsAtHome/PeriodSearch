@@ -1,11 +1,18 @@
 # This should work on Linux.  Modify as needed for other platforms.
+#
+#	Prepare BOINC API as follows:	
+#		./_autosetup # Only first time
+#		./configure --disable-server --disable-client --disable-manager
+#		make
+#
 
 BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-CXXFLAGS = -march=armv7 -mfloat-abi=hard -mfpu=vfp -O3 -g \
-    -DAPP_GRAPHICS \
+CXXFLAGS = -march=armv8-a -O3 -frecord-gcc-switches \
+    -DARM64 \
+	-DAPP_GRAPHICS \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
     -I$(BOINC_API_DIR) \
@@ -14,12 +21,12 @@ CXXFLAGS = -march=armv7 -mfloat-abi=hard -mfpu=vfp -O3 -g \
 
 CC=g++
 CXX=g++
-OPTFLAGS=-march=armv7 -mfloat-abi=hard -mfpu=vfp -O3
+OPTFLAGS=-march=armv8-a -O3 -frecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -Wall
 LDFLAGS=-lm
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
         curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
-	dot_product.o gauss_errc.o
+	dot_product.o gauss_errc.o systeminfo.o
 
 # the following should be freeglut; use nm to check
 # you may have to change the paths for your system
@@ -34,7 +41,7 @@ else
 	LIBJPEG = /usr/local/lib/libjpeg.a
 endif
 
-PROGS = period_search_BOINC 
+PROGS = period_search_rpi_armv8_arm64 
 # uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
 
@@ -49,7 +56,7 @@ clean:
 distclean:
 	/bin/rm -f $(PROGS) *.o libstdc++.a
 
-install: period_search_BOINC
+install: period_search_rpi_armv8_arm64
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
@@ -59,7 +66,7 @@ install: period_search_BOINC
 #	$(BOINC_API_DIR)/libboinc_api.a \
 #	$(BOINC_LIB_DIR)/libboinc.a
 
-period_search_BOINC: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+period_search_rpi_armv8_arm64: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a -lm 
