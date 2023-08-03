@@ -1,32 +1,6 @@
-#pragma once
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-//#define __CL_ENABLE_EXCEPTIONS
-#pragma pack(8)
-
-#include <CL/cl.h>
-#include <CL/cl.hpp>
-#include "constants.h"
-#include <vector>
-#include <iostream>
-#include <cstring>
-
-
-//#define kernel
-
-//#ifdef __GNUC__
-//#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-//#endif
-//
-#ifdef _MSC_VER
-//#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#define PACK( __Declaration__ ) __pragma( pack(push, 8) ) __Declaration__ __pragma( pack(pop))
-#endif
-
-
-// global to one thread
-
-//struct __declspec(align(8)) mfreq_context {
-struct alignas(8) mfreq_context 
+//struct __attribute__((packed)) freq_context
+//struct mfreq_context 
+struct __attribute__((aligned(8))) mfreq_context 
 {
 	double ave;
 	double freq;
@@ -45,7 +19,7 @@ struct alignas(8) mfreq_context
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
 	double da[MAX_N_PAR + 1];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)]; // moved to separate array
+	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)]; //moved to separate array
 	double ytemp[POINTS_MAX + 1];
 	double cg[MAX_N_PAR + 1];
 	double Blmat[4][4];
@@ -74,7 +48,7 @@ struct alignas(8) mfreq_context
 	int isInvalid, isAlamda, isNiter;
 	int icol;
 	//double conw_r;
-	
+
 	int ipiv[MAX_N_PAR + 1];
 	int indxc[MAX_N_PAR + 1];
 	int indxr[MAX_N_PAR + 1];
@@ -82,11 +56,9 @@ struct alignas(8) mfreq_context
 	int sh_irow[BLOCK_DIM];
 };
 
-//typedef struct __attribute__((packed)) freq_context
-//struct __declspec(align(8)) freq_context
-//#pragma pack(8)
-struct alignas(8) freq_context
-{
+//struct freq_context
+struct __attribute__((aligned(8))) freq_context
+{	
 	double Phi_0;
 	double logCl;
 	double cl;
@@ -94,7 +66,7 @@ struct alignas(8) freq_context
 	double lambda_pole[N_POLES + 1];
 	double beta_pole[N_POLES + 1];
 
-	
+
 	double par[4];
 	double Alamda_start;
 	double Alamda_incr;
@@ -113,9 +85,9 @@ struct alignas(8) freq_context
 	double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1];
 	double Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 	double conw_r;
-	
+
 	int ia[MAX_N_PAR + 1];
-	
+
 	int Dg_block;
 	int lastone;
 	int lastma;
@@ -131,13 +103,11 @@ struct alignas(8) freq_context
 	int Is_Precalc;
 };
 
-//extern __declspec(align(4)) freq_context* CUDA_CC2;
-
-// NOTE: Check here https://docs.microsoft.com/en-us/cpp/preprocessor/pack?redirectedfrom=MSDN&view=vs-2019
-//#pragma pack(4)
-//struct __declspec(align(16)) freq_result
-struct alignas(8) freq_result
+//struct freq_result
+struct __attribute__((aligned(8))) freq_result
 {
 	double dark_best, per_best, dev_best, la_best, be_best, freq;
 	int isReported, isInvalid, isNiter;
 };
+
+//const int BLOCK_DIM = 128;

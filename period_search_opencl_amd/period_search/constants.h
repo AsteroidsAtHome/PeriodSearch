@@ -16,3 +16,5 @@
 
 #define DEG2RAD      (PI / 180)
 #define RAD2DEG      (180 / PI)
+
+#define BLOCK_DIM 128

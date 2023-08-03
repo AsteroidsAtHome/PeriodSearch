@@ -4,11 +4,11 @@
 #include "constants.h"
 
 extern int l_max, m_max, n_iter, last_call,
-	n_coef, num_fac, l_curves, n_ph_par,
-	l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
-	deallocate, max_l_points;
+n_coef, num_fac, l_curves, n_ph_par,
+l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
+deallocate; // , max_l_points;
 
-extern double o_chi_square, chi_square, a_lambda, a_lamda_incr, a_lamda_start, phi_0, scale,
+extern double o_chi_square, chi_square, a_lambda, a_lamda_incr, a_lamda_start, scale, // phi_0,
 area[MAX_N_FAC + 1], d_area[MAX_N_FAC + 1], sclnw[MAX_LC + 1],
 y_out[MAX_N_OBS + 1],
 f_c[MAX_N_FAC + 1][MAX_LM + 1], f_s[MAX_N_FAC + 1][MAX_LM + 1],
@@ -16,14 +16,20 @@ t_c[MAX_N_FAC + 1][MAX_LM + 1], t_s[MAX_N_FAC + 1][MAX_LM + 1],
 d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
 normal[MAX_N_FAC + 1][3], bl_matrix[4][4],
 pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
-d_bl_matrix[3][4][4],
-weight[MAX_N_OBS + 1];
+d_bl_matrix[3][4][4];
+//weight[MAX_N_OBS + 1];
+
+extern int CUDA_grid_dim;
+extern cl::Program program;
 
 extern std::vector<cl_int2, int> texture;
 
 // OpenCL
+extern cl_int max_l_points;
+extern cl_double phi_0;
 extern cl_double Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1], Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1], Dg[MAX_N_FAC + 1][MAX_N_PAR + 1];
 extern cl_double Area[MAX_N_FAC + 1], Darea[MAX_N_FAC + 1];
+extern cl_double weight[MAX_N_OBS + 1];
 
 extern std::string kernelCurv, kernelDaveFile, kernelSig2wghtFile;
 extern std::vector<cl::Platform> platforms;
@@ -37,6 +43,7 @@ extern cl::Buffer bufCg, bufArea, bufDarea, bufDg, bufFc, bufFs, bufDsph, bufPle
 extern cl::Buffer bufSig, bufSig2iwght, bufDy, bufWeight, bufYmod;
 extern cl::Buffer bufDave, bufDyda;
 extern cl::Buffer bufD;
+
 
 // NOTE: global to one thread
 struct FreqContext
@@ -85,3 +92,5 @@ struct FreqResult
 	int isReported;
 	double dark_best, per_best, dev_best, la_best, be_best;
 };
+
+//const int BLOCK_DIM = 128;

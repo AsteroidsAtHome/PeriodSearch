@@ -37,6 +37,8 @@ void deallocate_vector(void *p_x);
 void deallocate_matrix_double(double **p_x, int rows);
 void deallocate_matrix_int(int **p_x, int rows);
 
+cl_double* vector_cl_double(int length);
+
 //void deallocate_matrix_3(void ***p_x, int n_1, int n_2);
 
 double host_dot_product(double a[], double b[]);

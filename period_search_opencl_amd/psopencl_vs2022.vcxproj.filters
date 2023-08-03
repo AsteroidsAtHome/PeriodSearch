@@ -13,12 +13,13 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files CL">
+      <UniqueIdentifier>{20f1ab8b-07c0-48a6-9227-9fd075f1bd36}</UniqueIdentifier>
+      <Extensions>cl;ocl</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\areanorm_old.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\Array2D.cpp">
@@ -27,31 +28,10 @@
     <ClCompile Include="period_search\Array3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\blmatrix_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\bright_old.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\conv_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\covsrt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\curv_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\Curv1D_old.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\ellfit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\ellfit_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\FreqContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\gauss_errc.c">
@@ -66,28 +46,10 @@
     <ClCompile Include="period_search\ludcmp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\matrix_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\mrqcof_old.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\mrqmin_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\OpenClWorker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\period_search_BOINC.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\period_search_BOINC_old.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\period_search_BOINC_org.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\phasec.c">
@@ -96,13 +58,7 @@
     <ClCompile Include="period_search\sphfunc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\sphfunc_old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\Start_OpenCl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\Start_OpenCl_old.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\stdafx.cpp">
@@ -111,42 +67,60 @@
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\uc2_graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="period_search\bright.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\conv.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\curv.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\dave.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\mrqcof.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\mrqmin.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="period_search\cpp.hint">
+    <None Include="period_search\cpp.hint" />
+    <None Include="period_search\GlobalsCL.h">
       <Filter>Header Files</Filter>
     </None>
-    <None Include="period_search\clear_files.bat" />
+    <None Include="period_search\blmatrix.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\bright.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\conv.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\curv.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\Curv2.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\dave.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\gauss_errc.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\Intrinsics.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\mrqcof.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\mrqmin.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\sig2iwght.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\Start.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\swap.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="period_search\declarations.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations_OpenCl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="period_search\globals.h">
@@ -167,11 +141,5 @@
     <ClInclude Include="period_search\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\uc2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="period_search\ReadMe.txt" />
   </ItemGroup>
 </Project>
