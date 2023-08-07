@@ -1,13 +1,13 @@
- //N.B. The foll. L-M routines are modified versions of Press et al.
- //  converted from Mikko's fortran code
+//N.B. The foll. L-M routines are modified versions of Press et al.
+//  converted from Mikko's fortran code
 
- //  8.11.2006
+//  8.11.2006
 
 
 int mrqmin_1_end(
 	__global struct mfreq_context* CUDA_LCC,
 	__global struct freq_context* CUDA_CC)
-//int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, int* sh_icol, int* sh_irow, double* sh_big, int icol, double pivinv)
+	//int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, int* sh_icol, int* sh_irow, double* sh_big, int icol, double pivinv)
 {
 	//const int* ia = (*CUDA_CC).ia;
 	//const int ma = (*CUDA_CC).ma;
@@ -45,8 +45,9 @@ int mrqmin_1_end(
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 
-		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	for (j = brtmpl; j <= brtmph; j++)
 	{

@@ -117,353 +117,371 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	Fa = static_cast<freq_context*>(malloc(sizeof(freq_context)));
 
 	//try {
-		cl::Platform::get(&platforms);
-		vector<cl::Platform>::iterator iter;
-		for (iter = platforms.begin(); iter != platforms.end(); ++iter)
-		{
-			auto name = (*iter).getInfo<CL_PLATFORM_NAME>();
-			auto vendor = (*iter).getInfo<CL_PLATFORM_VENDOR>();
-			std::cerr << "Platform vendor: " << vendor << endl;
+	cl::Platform::get(&platforms);
+	vector<cl::Platform>::iterator iter;
+	for (iter = platforms.begin(); iter != platforms.end(); ++iter)
+	{
+		auto name = (*iter).getInfo<CL_PLATFORM_NAME>();
+		auto vendor = (*iter).getInfo<CL_PLATFORM_VENDOR>();
+		std::cerr << "Platform vendor: " << vendor << endl;
 #ifdef AMD
-			if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc."))
-			{
-				break;
-			}
+		if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc."))
+		{
+			break;
+		}
 #elif defined(NVIDIA)
-			if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "NVIDIA Corporation"))
-			{
-				break;
-			}
-#endif
-			//if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Intel(R) Corporation"))
-			//{
-			//	break;
-			//}
+		if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "NVIDIA Corporation"))
+		{
+			break;
 		}
+#endif
+		//if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Intel(R) Corporation"))
+		//{
+		//	break;
+		//}
+	}
 
-		// Create an OpenCL context
-		cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
-		context = cl::Context(CL_DEVICE_TYPE_GPU, cps);
+	// Create an OpenCL context
+	cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
+	context = cl::Context(CL_DEVICE_TYPE_GPU, cps);
 
-		cl_context_properties cpsAll[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
-		auto contextAll = cl::Context(CL_DEVICE_TYPE_ALL, cpsAll);
+	cl_context_properties cpsAll[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
+	auto contextAll = cl::Context(CL_DEVICE_TYPE_ALL, cpsAll);
 
-		//cl_context_properties cpsCpu[3] = {CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0};
-		//contextCpu = cl::Context(CL_DEVICE_TYPE_CPU, cpsCpu);
-
-
-		// Detect OpenCL devices
-		devices = context.getInfo<CL_CONTEXT_DEVICES>();
-		auto devicesAll = contextAll.getInfo<CL_CONTEXT_DEVICES>();
-		//auto devicesCpu = contextCpu.getInfo<CL_CONTEXT_DEVICES>();
-		deviceId = 0;
-		const auto device = devices[deviceId];
-		const auto deviceName = device.getInfo<CL_DEVICE_NAME>();
-		//const auto devicePlatform = device.getInfo<CL_DEVICE_PLATFORM>();
-		const auto deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
-		const auto driverVersion = device.getInfo<CL_DRIVER_VERSION>();
-		const auto openClVersion = device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
-		const auto clDeviceVersion = device.getInfo<CL_DEVICE_VERSION>();
-		const auto clDeviceExtensionCapabilities = device.getInfo<CL_DEVICE_EXECUTION_CAPABILITIES>();
-		const auto deviceDoubleFpConfig = device.getInfo<CL_DEVICE_DOUBLE_FP_CONFIG>();
-		const auto clDeviceGlobalMemSize = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
-		const auto clDeviceLocalMemSize = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-		const auto clDeviceMaxConstantArgs = device.getInfo<CL_DEVICE_MAX_CONSTANT_ARGS>();
-		const auto clDeviceMaxConstantBufferSize = device.getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
-		const auto clDeviceMaxParameterSize = device.getInfo<CL_DEVICE_MAX_PARAMETER_SIZE>();
-		const auto clDeviceMaxMemAllocSize = device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
-		const auto deviceMaxWorkItemDims = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS>();
-		const auto clGlobalMemory = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
-		const auto globalMemory = clGlobalMemory / 1048576;
-		const auto msCount = device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-		const auto block = device.getInfo<CL_DEVICE_MAX_SAMPLERS>();
-		const auto deviceExtensions = device.getInfo<CL_DEVICE_EXTENSIONS>();
-		const auto devMaxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
-		const auto devMaxWorkItemSizes = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+	//cl_context_properties cpsCpu[3] = {CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0};
+	//contextCpu = cl::Context(CL_DEVICE_TYPE_CPU, cpsCpu);
 
 
-		std::cerr << "OpenCL version: " << openClVersion << " | " << clDeviceVersion << endl;
-		std::cerr << "OpenCL Device number : " << deviceId << endl;
-		std::cerr << "OpenCl Device name: " << deviceName << " " << globalMemory << "MB" << endl;
-		std::cerr << "Multiprocessors: " << msCount << endl;
-		std::cerr << "Max Samplers: " << block << endl;
-		std::cerr << "Max work item dimensions: " << deviceMaxWorkItemDims << endl;
+	// Detect OpenCL devices
+	devices = context.getInfo<CL_CONTEXT_DEVICES>();
+	auto devicesAll = contextAll.getInfo<CL_CONTEXT_DEVICES>();
+	//auto devicesCpu = contextCpu.getInfo<CL_CONTEXT_DEVICES>();
+	deviceId = 0;
+	const auto device = devices[deviceId];
+	const auto deviceName = device.getInfo<CL_DEVICE_NAME>();
+	//const auto devicePlatform = device.getInfo<CL_DEVICE_PLATFORM>();
+	const auto deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
+	const auto driverVersion = device.getInfo<CL_DRIVER_VERSION>();
+	const auto openClVersion = device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
+	const auto clDeviceVersion = device.getInfo<CL_DEVICE_VERSION>();
+	const auto clDeviceExtensionCapabilities = device.getInfo<CL_DEVICE_EXECUTION_CAPABILITIES>();
+	const auto deviceDoubleFpConfig = device.getInfo<CL_DEVICE_DOUBLE_FP_CONFIG>();
+	const auto clDeviceGlobalMemSize = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	const auto clDeviceLocalMemSize = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+	const auto clDeviceMaxConstantArgs = device.getInfo<CL_DEVICE_MAX_CONSTANT_ARGS>();
+	const auto clDeviceMaxConstantBufferSize = device.getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+	const auto clDeviceMaxParameterSize = device.getInfo<CL_DEVICE_MAX_PARAMETER_SIZE>();
+	const auto clDeviceMaxMemAllocSize = device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
+	const auto deviceMaxWorkItemDims = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS>();
+	const auto clGlobalMemory = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	const auto globalMemory = clGlobalMemory / 1048576;
+	const auto msCount = device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+	const auto block = device.getInfo<CL_DEVICE_MAX_SAMPLERS>();
+	const auto deviceExtensions = device.getInfo<CL_DEVICE_EXTENSIONS>();
+	const auto devMaxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+	const auto devMaxWorkItemSizes = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+
+
+	std::cerr << "OpenCL version: " << openClVersion << " | " << clDeviceVersion << endl;
+	std::cerr << "OpenCL Device number : " << deviceId << endl;
+	std::cerr << "OpenCl Device name: " << deviceName << " " << globalMemory << "MB" << endl;
+	std::cerr << "Multiprocessors: " << msCount << endl;
+	std::cerr << "Max Samplers: " << block << endl;
+	std::cerr << "Max work item dimensions: " << deviceMaxWorkItemDims << endl;
 #ifdef _DEBUG
-		std::cerr << "Debug info:" << endl;
-		std::cerr << "CL_DEVICE_EXTENSIONS: " << deviceExtensions << endl;
-		std::cerr << "CL_DEVICE_GLOBAL_MEM_SIZE: " << clDeviceGlobalMemSize << " B" << endl;
-		std::cerr << "CL_DEVICE_LOCAL_MEM_SIZE: " << clDeviceLocalMemSize << " B" << endl;
-		std::cerr << "CL_DEVICE_MAX_CONSTANT_ARGS: " << clDeviceMaxConstantArgs << endl;
-		std::cerr << "CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE: " << clDeviceMaxConstantBufferSize << " B" << endl;
-		std::cerr << "CL_DEVICE_MAX_PARAMETER_SIZE: " << clDeviceMaxParameterSize << " B" << endl;
-		std::cerr << "CL_DEVICE_MAX_MEM_ALLOC_SIZE: " << clDeviceMaxMemAllocSize << " B" << endl;
-		std::cerr << "CL_DEVICE_MAX_WORK_GROUP_SIZE: " << devMaxWorkGroupSize << endl;
-		std::cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: " << devMaxWorkItemSizes[0] << " | " << devMaxWorkItemSizes[1] << " | " << devMaxWorkItemSizes[2] << endl;
+	std::cerr << "Debug info:" << endl;
+	std::cerr << "CL_DEVICE_EXTENSIONS: " << deviceExtensions << endl;
+	std::cerr << "CL_DEVICE_GLOBAL_MEM_SIZE: " << clDeviceGlobalMemSize << " B" << endl;
+	std::cerr << "CL_DEVICE_LOCAL_MEM_SIZE: " << clDeviceLocalMemSize << " B" << endl;
+	std::cerr << "CL_DEVICE_MAX_CONSTANT_ARGS: " << clDeviceMaxConstantArgs << endl;
+	std::cerr << "CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE: " << clDeviceMaxConstantBufferSize << " B" << endl;
+	std::cerr << "CL_DEVICE_MAX_PARAMETER_SIZE: " << clDeviceMaxParameterSize << " B" << endl;
+	std::cerr << "CL_DEVICE_MAX_MEM_ALLOC_SIZE: " << clDeviceMaxMemAllocSize << " B" << endl;
+	std::cerr << "CL_DEVICE_MAX_WORK_GROUP_SIZE: " << devMaxWorkGroupSize << endl;
+	std::cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: " << devMaxWorkItemSizes[0] << " | " << devMaxWorkItemSizes[1] << " | " << devMaxWorkItemSizes[2] << endl;
 #endif
-		bool is64CUDA = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
-		bool is64AMD = deviceExtensions.find("cl_amd_fp64") != std::string::npos;
-		//auto doesNotSupportsFp64 = (deviceExtensions.find("cl_khr_fp64") == std::string::npos) || (deviceExtensions.find("cl_amd_fp64") == std::string::npos);
-		//if(doesNotSupportsFp64)
-		if (!is64CUDA || !is64AMD)
-		{
-			fprintf(stderr, "Double precision floating point not supported by OpenCL implementation. Exiting...\n");
-			exit(-1);
-		}
 
-		auto SMXBlock = block; // 32;
-		//CUDA_grid_dim = msCount * SMXBlock; //  24 * 32
-		//CUDA_grid_dim = 2 * 6 * 32; //  24 * 32
-		CUDA_grid_dim = 2 * msCount * SMXBlock; // 384 (1050Ti), 1536 (Nvidia GTX1660Ti)
-		std::cerr << "Resident blocks per multiprocessor: " << SMXBlock << endl;
-		std::cerr << "Grid dim (x2): " << CUDA_grid_dim << " = " << msCount * 2 << " * " << SMXBlock << endl;
-		std::cerr << "Block dim: " << BLOCK_DIM << endl;
+	auto doesNotSupportsFp64 = true;// (deviceExtensions.find("cl_khr_fp64") == std::string::npos) || (deviceExtensions.find("cl_amd_fp64") == std::string::npos);
+#ifdef NVIDIA
+	bool is64CUDA = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
+	doesNotSupportsFp64 = !is64CUDA;
+#elif defined(AMD) // NVIDIA
+	bool is64AMD = deviceExtensions.find("cl_amd_fp64") != std::string::npos;
+	doesNotSupportsFp64 = !is64AMD;
+#endif
+	//if (!is64CUDA || !is64AMD)
+	if (doesNotSupportsFp64)
+	{
+		fprintf(stderr, "Double precision floating point not supported by OpenCL implementation. Exiting...\n");
+		exit(-1);
+	}
 
-		int err;
+	auto SMXBlock = block; // 32;
+	//CUDA_grid_dim = msCount * SMXBlock; //  24 * 32
+	//CUDA_grid_dim = 2 * 6 * 32; //  24 * 32
+	CUDA_grid_dim = 2 * msCount * SMXBlock; // 384 (1050Ti), 1536 (Nvidia GTX1660Ti)
+	std::cerr << "Resident blocks per multiprocessor: " << SMXBlock << endl;
+	std::cerr << "Grid dim (x2): " << CUDA_grid_dim << " = " << msCount * 2 << " * " << SMXBlock << endl;
+	std::cerr << "Block dim: " << BLOCK_DIM << endl;
 
-		//Global parameters
-		err = memcpy_s((*Fa).beta_pole, sizeof((*Fa).beta_pole), beta_pole, sizeof(cl_double) * (N_POLES + 1));
-		err = memcpy_s((*Fa).lambda_pole, sizeof((*Fa).lambda_pole), lambda_pole, sizeof(cl_double) * (N_POLES + 1));
-		err = memcpy_s((*Fa).par, sizeof((*Fa).par), par, sizeof(cl_double) * 4);
-		err = memcpy_s((*Fa).ee, sizeof((*Fa).ee), ee, (ndata + 1) * 3 * sizeof(cl_double));
-		err = memcpy_s((*Fa).ee0, sizeof((*Fa).ee0), ee0, (ndata + 1) * 3 * sizeof(cl_double));
-		err = memcpy_s((*Fa).tim, sizeof((*Fa).tim), tim, sizeof(double) * (MAX_N_OBS + 1));
-		err = memcpy_s((*Fa).Weight, sizeof((*Fa).Weight), weight, (ndata + 3 + 1) * sizeof(double));
+	int err;
 
-		if (err)
-		{
-			printf("Error executing memcpy_s: r = %d\n", err);
-			return err;
-		}
+	//Global parameters
+	err = memcpy_s((*Fa).beta_pole, sizeof((*Fa).beta_pole), beta_pole, sizeof(cl_double) * (N_POLES + 1));
+	err = memcpy_s((*Fa).lambda_pole, sizeof((*Fa).lambda_pole), lambda_pole, sizeof(cl_double) * (N_POLES + 1));
+	err = memcpy_s((*Fa).par, sizeof((*Fa).par), par, sizeof(cl_double) * 4);
+	err = memcpy_s((*Fa).ee, sizeof((*Fa).ee), ee, (ndata + 1) * 3 * sizeof(cl_double));
+	err = memcpy_s((*Fa).ee0, sizeof((*Fa).ee0), ee0, (ndata + 1) * 3 * sizeof(cl_double));
+	err = memcpy_s((*Fa).tim, sizeof((*Fa).tim), tim, sizeof(double) * (MAX_N_OBS + 1));
+	err = memcpy_s((*Fa).Weight, sizeof((*Fa).Weight), weight, (ndata + 3 + 1) * sizeof(double));
 
-		(*Fa).cl = lcoef;
-		(*Fa).logCl = log(lcoef);
-		(*Fa).Alamda_incr = a_lamda_incr;
-		(*Fa).Alamda_start = a_lamda_start;
-		(*Fa).Mmax = m_max;
-		(*Fa).Lmax = l_max;
-		(*Fa).Phi_0 = Phi_0;
+	if (err)
+	{
+		printf("Error executing memcpy_s: r = %d\n", err);
+		return err;
+	}
+
+	(*Fa).cl = lcoef;
+	(*Fa).logCl = log(lcoef);
+	(*Fa).Alamda_incr = a_lamda_incr;
+	(*Fa).Alamda_start = a_lamda_start;
+	(*Fa).Mmax = m_max;
+	(*Fa).Lmax = l_max;
+	(*Fa).Phi_0 = Phi_0;
 
 
 
 #pragma region Load kernel files
-		// Load CL file, build CL program object, create CL kernel object
-		std::ifstream constantsFile("period_search/constants.h");
-		std::ifstream globalsFile("period_search/GlobalsCL.h");
-		std::ifstream intrinsicsFile("period_search/Intrinsics.cl");
-		std::ifstream swapFile("period_search/swap.cl");
-		std::ifstream blmatrixFile("period_search/blmatrix.cl");
-		std::ifstream curvFile("period_search/curv.cl");
-		std::ifstream curv2File("period_search/Curv2.cl");
-		std::ifstream mrqcofFile("period_search/mrqcof.cl");
-		std::ifstream startFile("period_search/Start.cl");
-		std::ifstream brightFile("period_search/bright.cl");
-		std::ifstream convFile("period_search/conv.cl");
-		std::ifstream mrqminFile("period_search/mrqmin.cl");
-		std::ifstream gauserrcFile("period_search/gauss_errc.cl");
+	// Load CL file, build CL program object, create CL kernel object
+	std::ifstream constantsFile("period_search/constants.h");
+	std::ifstream globalsFile("period_search/GlobalsCL.h");
+	std::ifstream intrinsicsFile("period_search/Intrinsics.cl");
+	std::ifstream swapFile("period_search/swap.cl");
+	std::ifstream blmatrixFile("period_search/blmatrix.cl");
+	std::ifstream curvFile("period_search/curv.cl");
+	std::ifstream curv2File("period_search/Curv2.cl");
+	std::ifstream mrqcofFile("period_search/mrqcof.cl");
+	std::ifstream startFile("period_search/Start.cl");
+	std::ifstream brightFile("period_search/bright.cl");
+	std::ifstream convFile("period_search/conv.cl");
+	std::ifstream mrqminFile("period_search/mrqmin.cl");
+	std::ifstream gauserrcFile("period_search/gauss_errc.cl");
 
-		// NOTE: The following order is crusial
-		std::stringstream st;
+	// NOTE: The following order is crusial
+	std::stringstream st;
 
-		// 1. First load all helper and function Cl files which will be used by the kernels;
-		st << constantsFile.rdbuf();
-		st << globalsFile.rdbuf();
-		st << intrinsicsFile.rdbuf();
-		st << swapFile.rdbuf();
-		st << blmatrixFile.rdbuf();
-		st << curvFile.rdbuf();
-		st << curv2File.rdbuf();
-		st << brightFile.rdbuf();
-		st << convFile.rdbuf();
-		st << mrqcofFile.rdbuf();
-		st << gauserrcFile.rdbuf();
-		st << mrqminFile.rdbuf();
+	// 1. First load all helper and function Cl files which will be used by the kernels;
+	st << constantsFile.rdbuf();
+	st << globalsFile.rdbuf();
+	st << intrinsicsFile.rdbuf();
+	st << swapFile.rdbuf();
+	st << blmatrixFile.rdbuf();
+	st << curvFile.rdbuf();
+	st << curv2File.rdbuf();
+	st << brightFile.rdbuf();
+	st << convFile.rdbuf();
+	st << mrqcofFile.rdbuf();
+	st << gauserrcFile.rdbuf();
+	st << mrqminFile.rdbuf();
 
-		//2. Load the files that contains all kernels;
-		st << startFile.rdbuf();
+	//2. Load the files that contains all kernels;
+	st << startFile.rdbuf();
 
-		auto kernel_code = st.str();
-		st.flush();
+	auto kernel_code = st.str();
+	st.flush();
 
-		constantsFile.close();
-		globalsFile.close();
-		intrinsicsFile.close();
-		startFile.close();
-		blmatrixFile.close();
-		curvFile.close();
-		mrqcofFile.close();
-		brightFile.close();
-		curv2File.close();
-		convFile.close();
-		mrqminFile.close();
-		gauserrcFile.close();
-		swapFile.close();
+	constantsFile.close();
+	globalsFile.close();
+	intrinsicsFile.close();
+	startFile.close();
+	blmatrixFile.close();
+	curvFile.close();
+	mrqcofFile.close();
+	brightFile.close();
+	curv2File.close();
+	convFile.close();
+	mrqminFile.close();
+	gauserrcFile.close();
+	swapFile.close();
 
 #pragma endregion
-		cl_int* perr = nullptr;
-		cl::Program::Sources sources(1, std::make_pair(kernel_code.c_str(), kernel_code.length() + 1));
-		cl::Program binProgram = cl::Program(context, sources, perr);
+	cl_int* perr = nullptr;
+	cl::Program::Sources sources(1, std::make_pair(kernel_code.c_str(), kernel_code.length() + 1));
+	cl::Program binProgram = cl::Program(context, sources, perr);
 
-		//cl::Program binProgram{context, sources};
-//#if _DEBUG
-//		if (binProgram.build(devices, "-cl-kernel-arg-info") != CL_SUCCESS)
-//#else
-//		if (binProgram.build(devices) != CL_SUCCESS)
-//#endif
-		if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
-		{
-			std::cout << " Error building: " << binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << "\n";
+	//#if _DEBUG
+	//		if (binProgram.build(devices, "-cl-kernel-arg-info") != CL_SUCCESS)
+	//#else
+	//		if (binProgram.build(devices) != CL_SUCCESS)
+	//#endif
+#ifdef AMD
+	binProgram.build(devices, "-w -x clc++");
+#elif defined(NVIDIA)
+	binProgram.build(devices); // "-w" "-Werror"
+#endif
+
+	//if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
+	//{
+	//	std::cout << " Error building: " << binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << "\n";
+	//	exit(1);
+	//}
+	for (cl::Device dev : devices)
+	{
+		std::string name = dev.getInfo<CL_DEVICE_NAME>();
+		std::string buildlog = binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+		cl_build_status buildStatus = binProgram.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+		std::cerr << "Binary build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+	}
+
+	vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
+	vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
+	std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
+	char* binChunk = &binData[0];
+	vector<char*> binaries;
+
+	for (unsigned int i = 0; i < binSizes.size(); ++i) {
+		binaries.push_back(binChunk);
+		binChunk += binSizes[i];
+	}
+
+	const char* kernelFileName = "kernel_code.bin";
+	binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+	binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+	std::ofstream binaryfile(kernelFileName, std::ios::binary);
+	for (unsigned int i = 0; i < binaries.size(); ++i)
+		binaryfile.write(binaries[i], binSizes[i]);
+
+	binaryfile.close();
+
+	try
+	{
+		std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
+
+		uint32_t size = file.tellg();
+		file.seekg(0, std::ios::beg);
+		char* buffer = new char[size];
+		file.read(buffer, size);
+		file.close();
+		cl::Program::Binaries bin{{buffer, size}};
+
+		std::vector<cl_int> binaryStatus;
+		cl_int err = 0;
+		//cl::Program
+		//program = cl::Program{ context, devices, bin, &binaryStatus, &err };
+		program = cl::Program(context, devices, bin, &binaryStatus, &err);
+		program.build(devices); // "-Werror" "-w"
+
+		queue = cl::CommandQueue(context, devices[0]);
+
+		if (err != CL_SUCCESS) {
+			std::cout << " Error loading" << err << "\n";
 			exit(1);
 		}
-
-		vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
-		vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
-		std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
-		char* binChunk = &binData[0];
-		vector<char*> binaries;
-
-		for (unsigned int i = 0; i < binSizes.size(); ++i) {
-			binaries.push_back(binChunk);
-			binChunk += binSizes[i];
+		for (std::vector<cl_int>::const_iterator bE = binaryStatus.begin(); bE != binaryStatus.end(); bE++) {
+			std::cout << *bE << std::endl;
 		}
 
-		const char* kernelFileName = "kernel_code.bin";
-		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-		std::ofstream binaryfile(kernelFileName, std::ios::binary);
-		for (unsigned int i = 0; i < binaries.size(); ++i)
-			binaryfile.write(binaries[i], binSizes[i]);
 
-		binaryfile.close();
-
-		try
+		//int bres = program.build(devices, " -Werror"); // " -w "
+		//int bres = program.build(devices);
+		for (cl::Device dev : devices)
 		{
-			std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
+			std::string name = dev.getInfo<CL_DEVICE_NAME>();
+			std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+			cl_build_status buildStatus = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+#if _DEBUG
+			auto kernels = program.getInfo<CL_PROGRAM_NUM_KERNELS>();
+			auto kernelNames = program.getInfo<CL_PROGRAM_KERNEL_NAMES>();
+			cerr << "Kernels: " << kernels << endl;
+			cerr << "Kernel names: " << endl << kernelNames << endl;
 
-			uint32_t size = file.tellg();
-			file.seekg(0, std::ios::beg);
-			char* buffer = new char[size];
-			file.read(buffer, size);
-			file.close();
-			cl::Program::Binaries bin{{buffer, size}};
-
-			std::vector<cl_int> binaryStatus;
-			cl_int err = 0;
-			//cl::Program
-			//program = cl::Program{ context, devices, bin, &binaryStatus, &err };
-			program = cl::Program(context, devices, bin, &binaryStatus, &err);
-			program.build(devices);
-
-			queue = cl::CommandQueue(context, devices[0]);
-
-			if (err != CL_SUCCESS) {
-				std::cout << " Error loading" << err << "\n";
-				exit(1);
-			}
-			for (std::vector<cl_int>::const_iterator bE = binaryStatus.begin(); bE != binaryStatus.end(); bE++) {
-				std::cout << *bE << std::endl;
+#endif
+			if (buildlog.length() == 1)
+			{
+				buildlog.clear();
+				buildlog.append("Ok\n");
 			}
 
+			std::cerr << "Build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+		}
+	}
+	catch (cl::Error& e)
+	{
+		if (e.err() == CL_BUILD_PROGRAM_FAILURE)
+		{
+			for (cl::Device dev : devices)
+			{
+				// Check the build status
+				cl_build_status status1 = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+				//cl_build_status status2 = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+				if (status1 != CL_BUILD_ERROR) // && status2 != CL_BUILD_ERROR)
+					continue;
 
-			//int bres = program.build(devices, " -Werror"); // " -w "
-			//int bres = program.build(devices);
+				// Get the build log
+				std::string name = dev.getInfo<CL_DEVICE_NAME>();
+				std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+				//fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
+
+				cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+				cout << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+				//buildlog = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+				//std::cerr << buildlog << std::endl;
+			}
+		}
+		else
+		{
 			for (cl::Device dev : devices)
 			{
 				std::string name = dev.getInfo<CL_DEVICE_NAME>();
 				std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-				cl_build_status buildStatus = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-#if _DEBUG
-				auto kernels = program.getInfo<CL_PROGRAM_NUM_KERNELS>();
-				auto kernelNames = program.getInfo<CL_PROGRAM_KERNEL_NAMES>();
-				cerr << "Kernels: " << kernels << endl;
-				cerr << "Kernel names: " << endl << kernelNames << endl;
-
-#endif
-				if (buildlog.length() == 1)
-				{
-					buildlog.clear();
-					buildlog.append("Ok\n");
-				}
-
-				std::cerr << "Build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+				std::cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+				fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
 			}
+			throw e;
 		}
-		catch (cl::Error& e)
-		{
-			if (e.err() == CL_BUILD_PROGRAM_FAILURE)
-			{
-				for (cl::Device dev : devices)
-				{
-					// Check the build status
-					cl_build_status status1 = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-					//cl_build_status status2 = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-					if (status1 != CL_BUILD_ERROR) // && status2 != CL_BUILD_ERROR)
-						continue;
 
-					// Get the build log
-					std::string name = dev.getInfo<CL_DEVICE_NAME>();
-					std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-					//fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
-
-					cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-					cout << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-					//buildlog = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-					//std::cerr << buildlog << std::endl;
-				}
-			}
-			else
-			{
-				for (cl::Device dev : devices)
-				{
-					std::string name = dev.getInfo<CL_DEVICE_NAME>();
-					std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-					std::cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-					fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
-				}
-				throw e;
-			}
-
-			return 2;
-		}
+		return 2;
+	}
 
 #pragma region Kernel creation
-		cl_int kerr;
+	cl_int kerr;
 
 
-		try
-		{
-			kernelClCheckEnd = cl::Kernel(program, "ClCheckEnd", &kerr);
-			kernelCalculatePrepare = cl::Kernel(program, string("ClCalculatePrepare").c_str(), &kerr);
-			kernelCalculatePreparePole = cl::Kernel(program, string("ClCalculatePreparePole").c_str(), &kerr);
-			kernelCalculateIter1Begin = cl::Kernel(program, string("ClCalculateIter1Begin").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Start").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Matrix").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve2").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1Last").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof1End = cl::Kernel(program, string("ClCalculateIter1Mrqcof1End").c_str(), &kerr);
-			kernelCalculateIter1Mrqmin1End = cl::Kernel(program, string("ClCalculateIter1Mrqmin1End").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Start").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Matrix").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve2").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1Last").c_str(), &kerr);
-			kernelCalculateIter1Mrqcof2End = cl::Kernel(program, "ClCalculateIter1Mrqcof2End", &kerr);
-			kernelCalculateIter1Mrqmin2End = cl::Kernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
-			kernelCalculateIter2 = cl::Kernel(program, "ClCalculateIter2", &kerr);
-			kernelCalculateFinishPole = cl::Kernel(program, "ClCalculateFinishPole", &kerr);
-			kernelCalculateFinish = cl::Kernel(program, "ClCalculateFinish", &kerr);
-		}
-		catch (cl::Error& e)
-		{
-			cerr << "Error " << e.err() << " - " << e.what() << std::endl;
-			cout << "Error while creating kernel. Check stderr.txt for details." << endl;
-			exit(1);
-		}
+	try
+	{
+		kernelClCheckEnd = cl::Kernel(program, "ClCheckEnd", &kerr);
+		kernelCalculatePrepare = cl::Kernel(program, string("ClCalculatePrepare").c_str(), &kerr);
+		kernelCalculatePreparePole = cl::Kernel(program, string("ClCalculatePreparePole").c_str(), &kerr);
+		kernelCalculateIter1Begin = cl::Kernel(program, string("ClCalculateIter1Begin").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Start").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Matrix").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve2").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1Last").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof1End = cl::Kernel(program, string("ClCalculateIter1Mrqcof1End").c_str(), &kerr);
+		kernelCalculateIter1Mrqmin1End = cl::Kernel(program, string("ClCalculateIter1Mrqmin1End").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Start").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Matrix").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve2").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1Last").c_str(), &kerr);
+		kernelCalculateIter1Mrqcof2End = cl::Kernel(program, "ClCalculateIter1Mrqcof2End", &kerr);
+		kernelCalculateIter1Mrqmin2End = cl::Kernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
+		kernelCalculateIter2 = cl::Kernel(program, "ClCalculateIter2", &kerr);
+		kernelCalculateFinishPole = cl::Kernel(program, "ClCalculateFinishPole", &kerr);
+		kernelCalculateFinish = cl::Kernel(program, "ClCalculateFinish", &kerr);
+	}
+	catch (cl::Error& e)
+	{
+		cerr << "Error " << e.err() << " - " << e.what() << std::endl;
+		cout << "Error while creating kernel. Check stderr.txt for details." << endl;
+		exit(1);
+	}
 #pragma endregion
 
 
 
-		return 0;
+	return 0;
 	//}
 	//catch (cl::Error& e)
 	//{
@@ -764,7 +782,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(int), &theEnd, err);
 	//auto clEnd = queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(cl_int));
 
-	auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR , sizeof(int), &theEnd, err);
+	auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(int), &theEnd, err);
 	queue.enqueueWriteBuffer(CUDA_End, CL_NON_BLOCKING, 0, sizeof(int), &theEnd);
 
 	int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
@@ -776,7 +794,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	for (m = 0; m < CUDA_grid_dim_precalc; m++)
 	{
 		pfr[m].isInvalid = 0;
-		pfr[m].isReported = 0;
+		pfr[m].isReported = 1;
 		pfr[m].be_best = 0.0;
 		pfr[m].dark_best = 0.0;
 		pfr[m].dev_best = 0.0;
@@ -916,8 +934,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #endif
 			int count = 0;
 			while (!theEnd)
-			//while (!(theEnd == CUDA_grid_dim_precalc))
-			//while (!((*end) == CUDA_grid_dim_precalc))
+				//while (!(theEnd == CUDA_grid_dim_precalc))
+				//while (!((*end) == CUDA_grid_dim_precalc))
 			{
 				count++;
 				kernelCalculateIter1Begin.setArg(2, CUDA_End);
@@ -1247,20 +1265,20 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	//alignas(8) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
 	//pfr = static_cast<freq_result*>(malloc(frSize));
 
-	for (m = 0; m < CUDA_grid_dim; m++)
-	{
-		pfr[m].isInvalid = 0;
-		pfr[m].isReported = 0;
-		pfr[m].be_best = 0.0;
-		pfr[m].dark_best = 0.0;
-		pfr[m].dev_best = 0.0;
-		pfr[m].freq = 0.0;
-		pfr[m].la_best = 0.0;
-		pfr[m].per_best = 0.0;
-	}
+	//for (m = 0; m < CUDA_grid_dim; m++)
+	//{
+	//	pfr[m].isInvalid = 0;
+	//	pfr[m].isReported = 0;
+	//	pfr[m].be_best = 0.0;
+	//	pfr[m].dark_best = 0.0;
+	//	pfr[m].dev_best = 0.0;
+	//	pfr[m].freq = 0.0;
+	//	pfr[m].la_best = 0.0;
+	//	pfr[m].per_best = 0.0;
+	//}
 
 	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
-	queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+	//queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
 
 #pragma region Kernels
 	cl_int kerr = 0;
@@ -1419,6 +1437,19 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
 		//#endif
 
+		for (int j = 0; j < CUDA_grid_dim; j++)
+		{
+			pfr[j].isInvalid = 1;
+			pfr[j].isReported = 0;
+			pfr[j].be_best = 0.0;
+			pfr[j].dark_best = 0.0;
+			pfr[j].dev_best = 0.0;
+			pfr[j].freq = 0.0;
+			pfr[j].la_best = 0.0;
+			pfr[j].per_best = 0.0;
+		}
+		queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+
 		kernelCalculatePrepare.setArg(6, sizeof(n), &n); // NOTE: CudaCalculatePrepare << <CUDA_grid_dim, 1 >> > (n, n_max, freq_start, freq_step);
 		queue.enqueueNDRangeKernel(kernelCalculatePrepare, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 
@@ -1567,7 +1598,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 			//	n, m, 24 * res[m].per_best, res[m].dev_best, res[m].dev_best * res[m].dev_best * (ndata - 3), conw_r * escl * escl,
 			//	round(res[m].la_best), round(res[m].be_best), res[m].isReported, res[m].isInvalid, res[m].isNiter);
 
-			if (res[1].isReported == 1)
+			if (res[m - 1].isReported == 1)
 			{
 				//LinesWritten++;
 				/* output file */

@@ -129,9 +129,6 @@
     <ClInclude Include="period_search\Globals_OpenCl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\OpenClWorker.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="period_search\Start_OpenCl.h">
       <Filter>Header Files</Filter>
     </ClInclude>

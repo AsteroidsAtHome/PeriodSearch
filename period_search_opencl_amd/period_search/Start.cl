@@ -30,7 +30,7 @@ __kernel void ClCalculatePrepare(
 	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
 	int n = n_start + blockIdx.x;
-	//printf("group_id: %d | n_start: %d | n_max: %d | n: %d \n", blockIdx.x, n_start, n_max, n);
+
 
 	//zero context
 	if (n > n_max)
@@ -46,6 +46,8 @@ __kernel void ClCalculatePrepare(
 		(*CUDA_LCC).isInvalid = 0;
 		(*CUDA_FR).isInvalid = 0;
 	}
+
+	//printf("[%d] n_start: %d | n_max: %d | n: %d \n", blockIdx.x, n_start, n_max, n);
 
 	//printf("Idx: %d | isInvalid: %d\n", x, CUDA_CC[x].isInvalid);
 	//printf("Idx: %d | isInvalid: %d\n", x, (*CUDA_LCC).isInvalid);
@@ -99,6 +101,8 @@ __kernel void ClCalculatePreparePole(
 		//printf("prepare pole %d ", (*CUDA_End));
 
 		(*CUDA_FR).isReported = 0; //signal not to read result
+
+		//printf("[%d] isReported: %d \n", blockIdx.x, (*CUDA_FR).isReported);
 
 		return;
 	}
@@ -210,6 +214,7 @@ __kernel void ClCalculateIter1Begin(
 		return;
 	}
 
+	//                                   ?    < 50                                 ?       > 0                                   ?      < 0
 	(*CUDA_LCC).isNiter = (((*CUDA_LCC).Niter < CUDA_n_iter_max) && ((*CUDA_LCC).iter_diff > CUDA_iter_diff_max)) || ((*CUDA_LCC).Niter < CUDA_n_iter_min);
 	(*CUDA_FR).isNiter = (*CUDA_LCC).isNiter;
 
@@ -744,6 +749,9 @@ __kernel void ClCalculateIter2(
 				//(*CUDA_LCC).rchisq = (*CUDA_LCC).Chisq - ((*CUDA_LCC).chck[1] * (*CUDA_LCC).chck[1] + (*CUDA_LCC).chck[2] * (*CUDA_LCC).chck[2] + (*CUDA_LCC).chck[3] * (*CUDA_LCC).chck[3]) * ((*CUDA_CC).conw_r * (*CUDA_CC).conw_r);
 			}
 		}
+
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
+
 		if (threadIdx.x == 0)
 		{
 			//if (blockIdx.x == 0)
@@ -759,6 +767,8 @@ __kernel void ClCalculateIter2(
 			}
 			//		(*CUDA_LFR).Niter=(*CUDA_LCC).Niter;
 		}
+
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
 	}
 }
 

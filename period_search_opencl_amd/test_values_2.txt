@@ -1,3 +1,14 @@
+state 87%:
+2688 1 0.82130601796987923
+
+stat: 
+0 1 0.82130601796987923
+
+stop_condition: 50.0
+n_iter_max = 50
+iter_diff_max = 0
+n_iter_min = 0;
+
 CUDA
 [  1] res[  0].dark_best: 3.0329738237167470, sum_dark_facet: 3.0329738237167470
 [  2] res[  1].dark_best: 3.7767664725901042, sum_dark_facet: 6.8097402963068507

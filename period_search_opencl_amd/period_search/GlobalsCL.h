@@ -1,10 +1,17 @@
 #pragma OPENCL FP_CONTRACT ON
 
-//#ifdef cl_khr_fp64
-//#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-//#elif defined(cl_amd_fp64)
-//#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-//#else
+//#include <CL/cl.hpp>
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_local_int32_extended_atomics : enable
+
+#ifdef NVIDIA
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#elif defined(AMD)
+#pragma OPENCL EXTENSION cl_amd_fp64 : enable
+#endif
+
 //#error "Double precision floating point not supported by OpenCL implementation."
 //#endif
 
@@ -13,7 +20,11 @@
 //struct __attribute__((packed)) freq_context
 //struct mfreq_context
 //struct __attribute__((aligned(8))) mfreq_context
+#ifdef NVIDIA
+struct mfreq_context
+#else
 typedef struct mfreq_context
+#endif
 {
 	//double* Area;
 	//double* Dg;
@@ -77,7 +88,11 @@ typedef struct mfreq_context
 
 //struct freq_context
 //typedef struct __attribute__((aligned(8))) freq_context
+#ifdef NVIDIA
+struct mfreq_context
+#else
 typedef struct freq_context
+#endif
 {
 	double Phi_0;
 	double logCl;
@@ -125,7 +140,11 @@ typedef struct freq_context
 
 //struct freq_result
 //struct __attribute__((aligned(8))) freq_result
+#ifdef NVIDIA
+struct mfreq_context
+#else
 typedef struct freq_result
+#endif
 {
 	double dark_best, per_best, dev_best, la_best, be_best, freq;
 	int isReported, isInvalid, isNiter;
