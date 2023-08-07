@@ -2,7 +2,9 @@
 //int gauss_errc(freq_context* CUDA_LCC, const int ma)
 //mrqmin_1_end(CUDA_LCC, CUDA_ma, CUDA_mfit, CUDA_mfit1, block);
 //int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, int* sh_icol, int* sh_irow, double* sh_big, int icol, double pivinv)
-int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
+int gauss_errc(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC)
 {
 	//__shared__ int icol;
 	//__shared__ double pivinv;
@@ -22,8 +24,8 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 
 	int brtmph, brtmpl;
 	brtmph = n / BLOCK_DIM;
-	if (n % BLOCK_DIM) brtmph++;		// 1 (thr 1) 
-	brtmpl = threadIdx.x * brtmph;		// 0 
+	if (n % BLOCK_DIM) brtmph++;		// 1 (thr 1)
+	brtmpl = threadIdx.x * brtmph;		// 0
 	brtmph = brtmpl + brtmph;			// 1
 	if (brtmph > n) brtmph = n;			// false | 1
 	brtmpl++;							// 1
@@ -33,7 +35,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 		for (j = 1; j <= n; j++) (*CUDA_LCC).ipiv[j] = 0;
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	//if (blockIdx.x == 0 && threadIdx.x == 0)
 	//	printf("brtmpl: %3d, brtmph: %3d\n", brtmpl, brtmph);
@@ -63,7 +65,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 						if (tmpcov >= big)
 						{
 							//if (blockIdx.x == 0)
-							//	printf("[%3d] i[%3d] ipiv[%3d]: %3d, ipiv[%3d]: %3d, big: %10.7f, tmpcov: %10.7f, covar[%3d]: %10.7f\n", 
+							//	printf("[%3d] i[%3d] ipiv[%3d]: %3d, ipiv[%3d]: %3d, big: %10.7f, tmpcov: %10.7f, covar[%3d]: %10.7f\n",
 							//		threadIdx.x, i, j, (*CUDA_LCC).ipiv[j], k, (*CUDA_LCC).ipiv[k], big, tmpcov, ixx, (*CUDA_LCC).covar[ixx]);
 
 							big = tmpcov;
@@ -74,7 +76,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 					else if ((*CUDA_LCC).ipiv[k] > 1)
 					{
 						//printf("-");
-						barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+						barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 						/*					        deallocate_vector((void *) ipiv);
 												deallocate_vector((void *) indxc);
 												deallocate_vector((void *) indxr);*/
@@ -87,7 +89,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 		(*CUDA_LCC).sh_irow[threadIdx.x] = irow;
 		(*CUDA_LCC).sh_icol[threadIdx.x] = licol;
 
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 		//int d = (*CUDA_LCC).sh_icol[0];
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
@@ -120,7 +122,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 			//	printf("i: %2d, icol: %3d, irow: %3d, ipiv[%3d]: %3d\n", i, (*CUDA_LCC).icol, irow, (*CUDA_LCC).icol, (*CUDA_LCC).ipiv[(*CUDA_LCC).icol]);
 
 
-			if (irow != (*CUDA_LCC).icol) // what is going on here ??? 
+			if (irow != (*CUDA_LCC).icol) // what is going on here ???
 			{
 				//if (blockIdx.x == 0)
 				//	printf("irow: %3d\n", irow);
@@ -180,7 +182,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
@@ -191,17 +193,17 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 			int qq = (*CUDA_LCC).icol * (*CUDA_CC).Mfit1 + l;
 			double covar1 = (*CUDA_LCC).covar[qq] * (*CUDA_LCC).pivinv;
 			//if (blockIdx.x == 0 && threadIdx.x == 0)
-			//	printf("[%d][%3d] i[%3d] l[%3d] icol: %3d, pivinv: %10.7f, covar[%4d]: %10.7f, covar: %10.7f\n", 
+			//	printf("[%d][%3d] i[%3d] l[%3d] icol: %3d, pivinv: %10.7f, covar[%4d]: %10.7f, covar: %10.7f\n",
 			//		blockIdx.x, threadIdx.x, i, l, (*CUDA_LCC).icol, (*CUDA_LCC).pivinv, qq, (*CUDA_LCC).covar[qq], covar1);
 
-			//barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);// | CLK_GLOBAL_MEM_FENCE);
+			//barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);// | CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
 			//covar[qq] = 1.0;
 			//(*CUDA_LCC).covar[qq] = (*CUDA_LCC).covar[qq] * pivinv;
 			(*CUDA_LCC).covar[qq] = covar1;
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 		for (ll = brtmpl; ll <= brtmph; ll++)
 		{
@@ -227,7 +229,7 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 			}
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	}
 
 	if (threadIdx.x == 0)
@@ -247,10 +249,10 @@ int gauss_errc(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 		}
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	return(0);
 }
 // #undef SWAP
- //from Numerical Recipes 
+ //from Numerical Recipes
 

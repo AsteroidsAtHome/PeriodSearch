@@ -1,7 +1,22 @@
+__kernel void ClCheckEnd(
+	__global int* CUDA_End,
+	int theEnd)
+{
+	int3 blockIdx;
+	blockIdx.x = get_group_id(0);
+
+	if (blockIdx.x == 0)
+		*CUDA_End = theEnd;
+
+	//if (blockIdx.x == 0)
+		//printf("CheckEnd CUDA_End: %2d\n", *CUDA_End);
+
+}
 
 __kernel void ClCalculatePrepare(
 	__global struct mfreq_context* CUDA_mCC,
 	__global struct freq_result* CUDA_FR,
+	__global int* CUDA_End,
 	double freq_start,
 	double freq_step,
 	int n_max,
@@ -11,8 +26,8 @@ __kernel void ClCalculatePrepare(
 	blockIdx.x = get_group_id(0);
 	int x = blockIdx.x;
 
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-	struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
 	int n = n_start + blockIdx.x;
 	//printf("group_id: %d | n_start: %d | n_max: %d | n: %d \n", blockIdx.x, n_start, n_max, n);
@@ -45,9 +60,11 @@ __kernel void ClCalculatePrepare(
 	(*CUDA_LFR).be_best = 0.0;
 	(*CUDA_LFR).dev_best = 1e40;
 
-	printf("n: %4d, CUDA_CC[%3d].freq: %10.7f, CUDA_FR[%3d].la_best: %10.7f, isInvalid: %4d \n", n, x, (*CUDA_LCC).freq, x, (*CUDA_LFR).la_best, (*CUDA_LCC).isInvalid);
+	//printf("n: %4d, CUDA_CC[%3d].freq: %10.7f, CUDA_FR[%3d].la_best: %10.7f, isInvalid: %4d \n", n, x, (*CUDA_LCC).freq, x, (*CUDA_LFR).la_best, (*CUDA_LCC).isInvalid);
 
-	barrier(CLK_GLOBAL_MEM_FENCE); // TEST
+	//barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
+	//if (blockIdx.x == 0)
+		//printf("Prepare CUDA_End: %2d\n", *CUDA_End);
 }
 
 __kernel void ClCalculatePreparePole(
@@ -67,15 +84,21 @@ __kernel void ClCalculatePreparePole(
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
 	//const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
 
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-	struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+
+	//int t = *CUDA_End;
+	//*CUDA_End = 13;
+	//printf("[%d] PreparePole t: %d, CUDA_End: %d\n", x, t, *CUDA_End);
+
 
 	if ((*CUDA_LCC).isInvalid)
 	{
 		//atomic_add(CUDA_End, 1);
 		atomic_inc(CUDA_End);
+		//printf("prepare pole %d ", (*CUDA_End));
+
 		(*CUDA_FR).isReported = 0; //signal not to read result
-		//printf("%d ", (*CUDA_End));
 
 		return;
 	}
@@ -98,7 +121,7 @@ __kernel void ClCalculatePreparePole(
 
 	(*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 1] = (*CUDA_CC).beta_pole[m];
 	(*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2] = (*CUDA_CC).lambda_pole[m];
-	//if (blockIdx.x == 0) 
+	//if (blockIdx.x == 0)
 	//{
 	//	printf("cg[%3d]: %10.7f\n", (*CUDA_CC).Ncoef + 1, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 1]);
 	//	printf("cg[%3d]: %10.7f\n", (*CUDA_CC).Ncoef + 2, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2]);
@@ -179,8 +202,8 @@ __kernel void ClCalculateIter1Begin(
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
 	//const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
 
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-	struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid)
 	{
@@ -208,29 +231,25 @@ __kernel void ClCalculateIter1Begin(
 	{
 		if (!(*CUDA_LFR).isReported)
 		{
+			//int oldEnd = *CUDA_End;
 			//atomic_add(CUDA_End, 1);
+			int t = *CUDA_End;
 			atomic_inc(CUDA_End);
-			//(*CUDA_End)++;
 
-			/*const int is_precalc = CUDA_Is_Precalc;
-			if(is_precalc)
-			{
-				printf("%d ", CUDA_End);
-			}*/
-			//printf("%d ", (*CUDA_End));
+			//printf("[%d] t: %2d, Begin %2d\n", blockIdx.x, t, *CUDA_End);
 
 			(*CUDA_LFR).isReported = 1;
 		}
 	}
 
-	//if (threadIdx.x == 0)
-	//	printf("[Prepare] Alamda: %10.7f\n", (*CUDA_LCC).Alamda);
+	//if (threadIdx.x == 1)
+	//	printf("[begin] Alamda: %10.7f\n", (*CUDA_LCC).Alamda);
+	//barrier(CLK_GLOBAL_MEM_FENCE); // TEST
 }
 
 __kernel void ClCalculateIter1Mrqcof1Start(
 	__global struct mfreq_context* CUDA_mCC,
-	__global struct freq_context* CUDA_CC,
-	__global struct freq_result* CUDA_FR)
+	__global struct freq_context* CUDA_CC)
 	//__global int* CUDA_End)
 {
 	int3 blockIdx, threadIdx;
@@ -239,13 +258,14 @@ __kernel void ClCalculateIter1Mrqcof1Start(
 	int x = blockIdx.x;
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 	//double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
 	//double* Area = &CUDA_mCC[0].Area;
 
 	//if (blockIdx.x == 0)
-	//	printf("isInvalid: %3d, isNiter: %3d, isAlamda: %3d\n", (*CUDA_LCC).isInvalid, (*CUDA_LCC).isNiter, (*CUDA_LCC).isAlamda);
+	//	printf("[%d][%3d] [Mrqcof1Start]\n", blockIdx.x, threadIdx.x);
+		//printf("isInvalid: %3d, isNiter: %3d, isAlamda: %3d\n", (*CUDA_LCC).isInvalid, (*CUDA_LCC).isNiter, (*CUDA_LCC).isAlamda);
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -299,7 +319,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve1(
 	int x = blockIdx.x;
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 	//double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
@@ -308,7 +328,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve1(
 
 	if (!(*CUDA_LCC).isAlamda) return;
 
-	__local int num;  // __shared__ 
+	__local int num;  // __shared__
 	__local double tmave[BLOCK_DIM];
 
 	if (threadIdx.x == 0)
@@ -336,7 +356,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve1Last(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 	//double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
@@ -371,7 +391,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve2(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	//if (blockIdx.x == 0)
 	//printf("[%3d] isInvalid: %3d, isNiter: %3d, isAlamda: %3d\n", threadIdx.x, (*CUDA_LCC).isInvalid, (*CUDA_LCC).isNiter, (*CUDA_LCC).isAlamda);
@@ -405,14 +425,14 @@ __kernel void ClCalculateIter1Mrqcof1End(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
 	if (!(*CUDA_LCC).isNiter) return;
 
 	if (!(*CUDA_LCC).isAlamda) return;
-	
+
 	//if (blockIdx.x == 0 && threadIdx.x == 0)
 	//	printf("Mrqcof1End\n");
 
@@ -438,7 +458,7 @@ __kernel void ClCalculateIter1Mrqmin1End(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -447,7 +467,7 @@ __kernel void ClCalculateIter1Mrqmin1End(
 	//if (threadIdx.x == 0)
 	//{
 	//	int i = 56;
-	//	//for (int i = 1; i <= 60; i++) 
+	//	//for (int i = 1; i <= 60; i++)
 	//	//{
 	//		printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
 	//	//}
@@ -455,14 +475,14 @@ __kernel void ClCalculateIter1Mrqmin1End(
 
 	//if (blockIdx.x == 0 && threadIdx.x == 0)
 	//	printf("Mrqmin1End\n");
-	
+
 	// gauss_err =
 	//mrqmin_1_end(CUDA_LCC, CUDA_CC, sh_icol, sh_irow, sh_big, icol, pivinv);
 
 
 	mrqmin_1_end(CUDA_LCC, CUDA_CC);
 
-	
+
 	//if (blockIdx.x == 0) {
 	//	printf("[%3d] sh_icol[%3d]: %3d\n", threadIdx.x, threadIdx.x, sh_icol[threadIdx.x]);
 	//}
@@ -477,7 +497,7 @@ __kernel void ClCalculateIter1Mrqcof2Start(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -503,7 +523,7 @@ __kernel void ClCalculateIter1Mrqcof2Matrix(
 	blockIdx.x = get_group_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -536,14 +556,14 @@ __kernel void ClCalculateIter1Mrqcof2Curve1(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 	//double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
 	if (!(*CUDA_LCC).isNiter) return;
 
-	__local int num;  // __shared__ 
+	__local int num;  // __shared__
 	__local double tmave[BLOCK_DIM];
 
 	if (threadIdx.x == 0)
@@ -570,7 +590,7 @@ __kernel void ClCalculateIter1Mrqcof2Curve2(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -585,7 +605,7 @@ __kernel void ClCalculateIter1Mrqcof2Curve2(
 __kernel void ClCalculateIter1Mrqcof2Curve1Last(
 	__global struct mfreq_context* CUDA_mCC,
 	__global struct freq_context* CUDA_CC,
-	const int inrel, 
+	const int inrel,
 	const int lpoints)
 {
 	int3 blockIdx, threadIdx;
@@ -593,7 +613,7 @@ __kernel void ClCalculateIter1Mrqcof2Curve1Last(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 	//double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
@@ -615,14 +635,14 @@ __kernel void ClCalculateIter1Mrqcof2End(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
 	if (!(*CUDA_LCC).isNiter) return;
 
 	(*CUDA_LCC).Chisq = mrqcof_end(CUDA_LCC, CUDA_CC, (*CUDA_LCC).covar);
-	
+
 	//if (blockIdx.x == 0)
 	//	printf("[%3d] Chisq: %10.7f\n", threadIdx.x, (*CUDA_LCC).Chisq);
 }
@@ -636,7 +656,7 @@ __kernel void ClCalculateIter1Mrqmin2End(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -665,7 +685,7 @@ __kernel void ClCalculateIter2(
 	threadIdx.x = get_local_id(0);
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid)
 	{
@@ -684,7 +704,7 @@ __kernel void ClCalculateIter2(
 				(*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
 			}
 
-			barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+			barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 			int brtmph = (*CUDA_CC).Numfac / BLOCK_DIM;
 			if ((*CUDA_CC).Numfac % BLOCK_DIM) brtmph++;
@@ -710,10 +730,10 @@ __kernel void ClCalculateIter2(
 						//if (blockIdx.x == 0)
 						//	printf("[%d] [%d][%3d] qq: %10.7f, chck[%d]: %10.7f, Area[%3d]: %10.7f, Nor[%3d][%d]: %10.7f\n",
 						//		blockIdx.x, i, j, qq, i, (*CUDA_LCC).chck[i], j, (*CUDA_LCC).Area[j], j, i - 1, (*CUDA_CC).Nor[j][i - 1]);
-						
+
 						(*CUDA_LCC).chck[i] = qq;
 					}
-					
+
 					//if (blockIdx.x == 0)
 					//	printf("[%d] chck[%d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).chck[i]);
 				}
@@ -730,8 +750,8 @@ __kernel void ClCalculateIter2(
 			//	printf("ndata - 3: %3d\n", (*CUDA_CC).ndata - 3);
 
 			(*CUDA_LCC).dev_new = sqrt((*CUDA_LCC).rchisq / ((*CUDA_CC).ndata - 3));
-			
-			// NOTE: only if this step is better than the previous, 1e-10 is for numeric errors 
+
+			// NOTE: only if this step is better than the previous, 1e-10 is for numeric errors
 			if ((*CUDA_LCC).dev_old - (*CUDA_LCC).dev_new > 1e-10)
 			{
 				(*CUDA_LCC).iter_diff = (*CUDA_LCC).dev_old - (*CUDA_LCC).dev_new;
@@ -753,8 +773,8 @@ __kernel void ClCalculateFinishPole(
 
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
 	//const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-	struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -770,17 +790,14 @@ __kernel void ClCalculateFinishPole(
 	//if (blockIdx.x == 2)
 	//	printf("rchisq: %10.7f, Chisq: %10.7f \n", (*CUDA_LCC).rchisq, (*CUDA_LCC).Chisq);
 
-	//if (blockIdx.x == 2)
-	//	printf("totarea: %10.16f \n", totarea);
-
-	const double sum = pow((*CUDA_LCC).chck[1], 2.0) + pow((*CUDA_LCC).chck[2], 2.0) + pow((*CUDA_LCC).chck[3], 2.0);
-	//const double sum = ((*CUDA_LCC).chck[1] * (*CUDA_LCC).chck[1]) + ((*CUDA_LCC).chck[2] * (*CUDA_LCC).chck[2]) + ((*CUDA_LCC).chck[3] * (*CUDA_LCC).chck[3]);
+	//const double sum = pow((*CUDA_LCC).chck[1], 2.0) + pow((*CUDA_LCC).chck[2], 2.0) + pow((*CUDA_LCC).chck[3], 2.0);
+	const double sum = ((*CUDA_LCC).chck[1] * (*CUDA_LCC).chck[1]) + ((*CUDA_LCC).chck[2] * (*CUDA_LCC).chck[2]) + ((*CUDA_LCC).chck[3] * (*CUDA_LCC).chck[3]);
 	//printf("[FinishPole] [%d] sum: %10.7f\n", blockIdx.x, sum);
 
 	const double dark = sqrt(sum);
 
 	//if (blockIdx.x == 2)
-	//	printf("sum: %10.16f, dark: %10.16f\n", sum, dark);
+		//printf("[%d] sum: %12.8f, dark: %12.8f, totarea: %12.8f\n", blockIdx.x, sum, dark, totarea);
 
 	/* period solution */
 	const double period = 2 * PI / (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3];
@@ -794,7 +811,7 @@ __kernel void ClCalculateFinishPole(
 	const double be_tmp = 90 - RAD2DEG * (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 1];
 
 	//if (blockIdx.x == 2)
-	//	printf("dev_new: %10.7f, dev_best: %10.7f, ", (*CUDA_LCC).dev_new, (*CUDA_LFR).dev_best);
+		//printf("[%d] dev_new: %10.7f, dev_best: %10.7f\n", blockIdx.x, (*CUDA_LCC).dev_new, (*CUDA_LFR).dev_best);
 
 	if ((*CUDA_LCC).dev_new < (*CUDA_LFR).dev_best)
 	{
@@ -826,8 +843,8 @@ __kernel void ClCalculateFinish(
 	//const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
 	//const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
 
-	struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-	struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+	__global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
+	__global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 

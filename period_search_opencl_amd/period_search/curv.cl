@@ -3,7 +3,12 @@
  //  8.11.2006
 
 
-void curv(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double* cg, int brtmpl, int brtmph)
+void curv(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC,
+	__global double* cg,
+	int brtmpl,
+	int brtmph)
 {
 	int n;
 	double fsum, g;
@@ -11,8 +16,8 @@ void curv(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double* 
 	blockIdx.x = get_group_id(0);
 	threadIdx.x = get_local_id(0);
 
-	//        brtmpl:  1, 4, 7... 382 
-	//		  brtmph:  3, 6, 9... 288      
+	//        brtmpl:  1, 4, 7... 382
+	//		  brtmph:  3, 6, 9... 288
 	int q = 0;
 	for (int i = brtmpl; i <= brtmph; i++, q++)
 	{
@@ -66,5 +71,5 @@ void curv(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double* 
 		}
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE); 	//__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 }

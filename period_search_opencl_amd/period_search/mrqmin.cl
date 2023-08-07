@@ -4,7 +4,9 @@
  //  8.11.2006
 
 
-int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
+int mrqmin_1_end(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC)
 //int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, int* sh_icol, int* sh_irow, double* sh_big, int icol, double pivinv)
 {
 	//const int* ia = (*CUDA_CC).ia;
@@ -43,7 +45,7 @@ int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	}
 
 	for (j = brtmpl; j <= brtmph; j++)
@@ -52,7 +54,7 @@ int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 		for (int k = 1; k <= (*CUDA_CC).Mfit; k++, ixx++)
 		{
 			(*CUDA_LCC).covar[ixx] = (*CUDA_LCC).alpha[ixx];
-			
+
 			//if(blockIdx.x == 0 && threadIdx.x == 0 && ixx == 56)
 			//	printf("[%d][%3d] alpha[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, ixx, (*CUDA_LCC).alpha[ixx]); // On second pass alpha[56] = 0.0000 instead of 80.8776359 ?!?
 				//printf("[%d][%3d] covar[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, ixx, (*CUDA_LCC).covar[ixx]);
@@ -62,7 +64,7 @@ int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 		(*CUDA_LCC).covar[qq] = (*CUDA_LCC).alpha[qq] * (1 + (*CUDA_LCC).Alamda);
 
 		//if (blockIdx.x == 0)
-		//	printf("[%3d] j[%3d] alpha[%3d]: %10.7f, 1 + Alamda: %10.7f, covar[%3d]: %10.7f\n", 
+		//	printf("[%3d] j[%3d] alpha[%3d]: %10.7f, 1 + Alamda: %10.7f, covar[%3d]: %10.7f\n",
 		//		threadIdx.x, j, qq, (*CUDA_LCC).alpha[qq], 1 + (*CUDA_LCC).Alamda, qq, (*CUDA_LCC).covar[qq]);
 
 		(*CUDA_LCC).da[j] = (*CUDA_LCC).beta[j];
@@ -79,7 +81,7 @@ int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 	//	printf("[%d] covar[56]: %10.7f\n", blockIdx.x,  (*CUDA_LCC).covar[56]);
 	//sh_icol[threadIdx.x] = threadIdx.x;
 
-	barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	// ---- GAUS ERROR CODE ----
 	int err_code = gauss_errc(CUDA_LCC, CUDA_CC);
@@ -114,12 +116,14 @@ int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC)
 			}
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	return err_code;
 }
 
-void mrqmin_2_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC) //, int* ia, int ma)
+void mrqmin_2_end(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC) //, int* ia, int ma)
 {
 	int j, k, l;
 	int3 blockIdx, threadIdx;
@@ -138,7 +142,7 @@ void mrqmin_2_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC) 
 				//if (blockIdx.x == 0)
 				//	printf("alpha[%3d]: %10.7f\n", (*CUDA_LCC).alpha[j * (*CUDA_CC).Mfit1 + k]);
 			}
-			
+
 			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
 		}
 		for (l = 1; l <= (*CUDA_CC).ma; l++)

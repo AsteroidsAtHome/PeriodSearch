@@ -19,6 +19,7 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug|x64.ActiveCfg = Debug|x64
 		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug|x64.Build.0 = Debug|x64
+		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug|x64.Deploy.0 = Debug|x64
 		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug|x86.ActiveCfg = Debug|Win32
 		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug|x86.Build.0 = Debug|Win32
 		{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}.Debug-Nvidia|x64.ActiveCfg = Debug-Nvidia|x64

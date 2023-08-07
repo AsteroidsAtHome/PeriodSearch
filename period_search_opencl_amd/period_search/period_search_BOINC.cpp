@@ -132,9 +132,8 @@ void update_shmem() {
 #endif
 
 // NOTE: global parameters
-int l_max, m_max, n_iter, last_call,
+cl_int l_max, m_max, n_iter, last_call,
 n_coef, num_fac, l_curves, n_ph_par,
-l_points[MAX_LC + 1], in_rel[MAX_LC + 1],
 deallocate; // , max_l_points; // n_iter,
 
 double o_chi_square, chi_square, a_lambda, scale, //phi_0
@@ -150,12 +149,12 @@ d_bl_matrix[3][4][4];
 
 // OpenCL
 string kernelCurv, kernelDaveFile, kernelSig2wghtFile;
-cl_int max_l_points;
 cl_double a_lamda_incr;
 cl_double a_lamda_start;
 cl_double phi_0;
-
 cl_double weight[MAX_N_OBS + 1];
+cl_int max_l_points;
+cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
 
 
 /*--------------------------------------------------------------*/
@@ -568,7 +567,7 @@ int main(int argc, char** argv)
 	   /* optimization of the convexity weight **************************************************************/
 	if (!checkpointExists)
 	{
-		conwR = conw / escl / escl;
+		conwR = conw / escl / escl; 
 		newConw = 0;
 		boinc_fraction_done(0.0001); //signal start
 #if _DEBUG
@@ -701,14 +700,14 @@ int main(int argc, char** argv)
 		sig[ndata] = 1 / conwR;
 	}
 
-	// the ordering of the coeffs. of the Laplace series 
+	// the ordering of the coeffs. of the Laplace series
 	n_coef = 0; // number of coeffs.
 	for (m = 0; m <= m_max; m++)
 	{
 		for (l = m; l <= l_max; l++)
 		{
 			n_coef++;
-			if (m != 0) 
+			if (m != 0)
 			{
 				n_coef++;
 			}

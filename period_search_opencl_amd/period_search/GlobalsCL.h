@@ -1,26 +1,37 @@
+#pragma OPENCL FP_CONTRACT ON
+
+//#ifdef cl_khr_fp64
+//#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+//#elif defined(cl_amd_fp64)
+//#pragma OPENCL EXTENSION cl_amd_fp64 : enable
+//#else
+//#error "Double precision floating point not supported by OpenCL implementation."
+//#endif
+
+//#include "constants.h"
+
 //struct __attribute__((packed)) freq_context
-//struct mfreq_context 
-struct __attribute__((aligned(8))) mfreq_context 
+//struct mfreq_context
+//struct __attribute__((aligned(8))) mfreq_context
+typedef struct mfreq_context
 {
-	double ave;
-	double freq;
-	double Alamda;
-	double Chisq;
-	double Ochisq;
-	double rchisq;
-	double trial_chisq;
-	double iter_diff, dev_old, dev_new;
+	//double* Area;
+	//double* Dg;
+	//double* alpha;
+	//double* covar;
+	//double* dytemp;
+	//double* ytemp;
 
 	double Area[MAX_N_FAC + 1];
 	double Dg[(MAX_N_FAC + 1) * (MAX_N_PAR + 1)];
-	//double alpha[MAX_N_PAR + 1]; 
 	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
 	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
+	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
+	double ytemp[POINTS_MAX + 1];
+
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
 	double da[MAX_N_PAR + 1];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)]; //moved to separate array
-	double ytemp[POINTS_MAX + 1];
 	double cg[MAX_N_PAR + 1];
 	double Blmat[4][4];
 	double Dblm[3][4][4];
@@ -42,6 +53,14 @@ struct __attribute__((aligned(8))) mfreq_context
 	double sh_big[BLOCK_DIM];
 	double chck[4];
 	double pivinv;
+	double ave;
+	double freq;
+	double Alamda;
+	double Chisq;
+	double Ochisq;
+	double rchisq;
+	double trial_chisq;
+	double iter_diff, dev_old, dev_new;
 
 	int Niter;
 	int np, np1, np2;
@@ -57,8 +76,9 @@ struct __attribute__((aligned(8))) mfreq_context
 };
 
 //struct freq_context
-struct __attribute__((aligned(8))) freq_context
-{	
+//typedef struct __attribute__((aligned(8))) freq_context
+typedef struct freq_context
+{
 	double Phi_0;
 	double logCl;
 	double cl;
@@ -73,8 +93,8 @@ struct __attribute__((aligned(8))) freq_context
 
 	//double cgFirst[MAX_N_PAR + 1];
 	double tim[MAX_N_OBS + 1];
-	double ee[MAX_N_OBS + 1][3];	// double* ee;	
-	double ee0[MAX_N_OBS + 1][3];	// double* ee0;	
+	double ee[MAX_N_OBS + 1][3];	// double* ee;
+	double ee0[MAX_N_OBS + 1][3];	// double* ee0;
 	double Sig[MAX_N_OBS + 1];
 	double Weight[MAX_N_OBS + 1];
 	double Brightness[MAX_N_OBS + 1];
@@ -104,7 +124,8 @@ struct __attribute__((aligned(8))) freq_context
 };
 
 //struct freq_result
-struct __attribute__((aligned(8))) freq_result
+//struct __attribute__((aligned(8))) freq_result
+typedef struct freq_result
 {
 	double dark_best, per_best, dev_best, la_best, be_best, freq;
 	int isReported, isInvalid, isNiter;

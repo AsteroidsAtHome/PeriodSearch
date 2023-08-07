@@ -26,27 +26,25 @@
 // global to one thread
 
 //struct __declspec(align(8)) mfreq_context {
-struct alignas(8) mfreq_context 
+struct alignas(8) mfreq_context
 {
-	double ave;
-	double freq;
-	double Alamda;
-	double Chisq;
-	double Ochisq;
-	double rchisq;
-	double trial_chisq;
-	double iter_diff, dev_old, dev_new;
+	//double* Area;
+	//double* Dg;
+	//double* alpha;
+	//double* covar;
+	//double* dytemp;
+	//double* ytemp;
 
-	double Area[MAX_N_FAC + 1];
-	double Dg[(MAX_N_FAC + 1) * (MAX_N_PAR + 1)];
-	//double alpha[MAX_N_PAR + 1]; 
-	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
+	 double Area[MAX_N_FAC + 1];
+	 double Dg[(MAX_N_FAC + 1) * (MAX_N_PAR + 1)];
+	 double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
+	 double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
+	 double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
+	 double ytemp[POINTS_MAX + 1];
+
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
 	double da[MAX_N_PAR + 1];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)]; // moved to separate array
-	double ytemp[POINTS_MAX + 1];
 	double cg[MAX_N_PAR + 1];
 	double Blmat[4][4];
 	double Dblm[3][4][4];
@@ -68,18 +66,26 @@ struct alignas(8) mfreq_context
 	double sh_big[BLOCK_DIM];
 	double chck[4];
 	double pivinv;
+	double ave;
+	double freq;
+	double Alamda;
+	double Chisq;
+	double Ochisq;
+	double rchisq;
+	double trial_chisq;
+	double iter_diff, dev_old, dev_new;
 
-	int Niter;
-	int np, np1, np2;
-	int isInvalid, isAlamda, isNiter;
-	int icol;
+	cl_int Niter;
+	cl_int np, np1, np2;
+	cl_int isInvalid, isAlamda, isNiter;
+	cl_int icol;
 	//double conw_r;
-	
-	int ipiv[MAX_N_PAR + 1];
-	int indxc[MAX_N_PAR + 1];
-	int indxr[MAX_N_PAR + 1];
-	int sh_icol[BLOCK_DIM];
-	int sh_irow[BLOCK_DIM];
+
+	cl_int ipiv[MAX_N_PAR + 1];
+	cl_int indxc[MAX_N_PAR + 1];
+	cl_int indxr[MAX_N_PAR + 1];
+	cl_int sh_icol[BLOCK_DIM];
+	cl_int sh_irow[BLOCK_DIM];
 };
 
 //typedef struct __attribute__((packed)) freq_context
@@ -94,15 +100,15 @@ struct alignas(8) freq_context
 	double lambda_pole[N_POLES + 1];
 	double beta_pole[N_POLES + 1];
 
-	
+
 	double par[4];
 	double Alamda_start;
 	double Alamda_incr;
 
 	//double cgFirst[MAX_N_PAR + 1];
 	double tim[MAX_N_OBS + 1];
-	double ee[MAX_N_OBS + 1][3];	// double* ee;	
-	double ee0[MAX_N_OBS + 1][3];	// double* ee0;	
+	double ee[MAX_N_OBS + 1][3];	// double* ee;
+	double ee0[MAX_N_OBS + 1][3];	// double* ee0;
 	double Sig[MAX_N_OBS + 1];
 	double Weight[MAX_N_OBS + 1];
 	double Brightness[MAX_N_OBS + 1];
@@ -113,22 +119,22 @@ struct alignas(8) freq_context
 	double Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1];
 	double Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 	double conw_r;
-	
-	int ia[MAX_N_PAR + 1];
-	
-	int Dg_block;
-	int lastone;
-	int lastma;
-	int ma;
-	int Mfit, Mfit1;
-	int Mmax, Lmax;
-	int n;
-	int Ncoef, Ncoef0;
-	int Numfac;
-	int Numfac1;
-	int Nphpar;
-	int ndata;
-	int Is_Precalc;
+
+	cl_int ia[MAX_N_PAR + 1];
+
+	cl_int Dg_block;
+	cl_int lastone;
+	cl_int lastma;
+	cl_int ma;
+	cl_int Mfit, Mfit1;
+	cl_int Mmax, Lmax;
+	cl_int n;
+	cl_int Ncoef, Ncoef0;
+	cl_int Numfac;
+	cl_int Numfac1;
+	cl_int Nphpar;
+	cl_int ndata;
+	cl_int Is_Precalc;
 };
 
 //extern __declspec(align(4)) freq_context* CUDA_CC2;
@@ -139,5 +145,5 @@ struct alignas(8) freq_context
 struct alignas(8) freq_result
 {
 	double dark_best, per_best, dev_best, la_best, be_best, freq;
-	int isReported, isInvalid, isNiter;
+	cl_int isReported, isInvalid, isNiter;
 };

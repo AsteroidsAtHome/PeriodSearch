@@ -4,7 +4,13 @@
 //  8.11.2006
 
 
-void matrix_neo(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double* cg, int lnp1, int Lpoints, int num)
+void matrix_neo(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC,
+	__global double* cg,
+	int lnp1,
+	int Lpoints,
+	int num)
 {
 	__private double f, cf, sf, pom, pom0, alpha;
 	__private double ee_1, ee_2, ee_3, ee0_1, ee0_2, ee0_3, t, tmat;
@@ -65,7 +71,7 @@ void matrix_neo(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, do
 		double f = exp(-alpha / cg[(*CUDA_CC).Ncoef0 + 2]);	//f is temp here
 
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
-		//	printf("[neo] [%2d][%3d] jp[%3d] f: %10.7f, cg[%3d] %10.7f, alpha %10.7f\n", 
+		//	printf("[neo] [%2d][%3d] jp[%3d] f: %10.7f, cg[%3d] %10.7f, alpha %10.7f\n",
 		//		blockIdx.x, threadIdx.x, jp, f, (*CUDA_CC).Ncoef0 + 2, cg[(*CUDA_CC).Ncoef0 + 2], alpha);
 
 		(*CUDA_LCC).jp_Scale[jp] = 1 + cg[(*CUDA_CC).Ncoef0 + 1] * f + (cg[(*CUDA_CC).Ncoef0 + 3] * alpha);
@@ -217,10 +223,16 @@ void matrix_neo(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, do
 		(*CUDA_LCC).de0[jp][3][3] = pom0 + tmat * ee0_3;
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE);  //__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);  //__syncthreads();
 }
 
-void bright(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double* cg, int jp, int Lpoints1, int Inrel)
+void bright(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC,
+	__global double* cg,
+	int jp,
+	int Lpoints1,
+	int Inrel)
 {
 	double cl, cls, dnom, s, Scale;
 	double e_1, e_2, e_3, e0_1, e0_2, e0_3, de[4][4], de0[4][4];
@@ -309,70 +321,71 @@ void bright(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double
 		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
 		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
 
-		//if (blockIdx.x == 0 && threadIdx.x == 0 && i == 1) //blockIdx.x == 0 && 
-		//	printf("[%d] jp[%3d] i[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f\n", 
+		//if (blockIdx.x == 0 && threadIdx.x == 0 && i == 1) //blockIdx.x == 0 &&
+		//	printf("[%d] jp[%3d] i[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f\n",
 		//		blockIdx.x, jp, i, (*CUDA_CC).Nor[i][0], i,  (*CUDA_CC).Nor[i][1], i, (*CUDA_CC).Nor[i][2]);
 			//printf("[%d] jp[%3d] i[%3d] lmu: %10.7f, lmu0: %10.7f\n", blockIdx.x, jp, i, lmu, lmu0);
 
-			if ((lmu > TINY) && (lmu0 > TINY))
-			{
-				dnom = lmu + lmu0;
-				s = lmu * lmu0 * (cl + cls / dnom);
-				//bfr=tex1Dfetch(texArea,j);
-				//ar=__hiloint2double(bfr.y,bfr.x);
+		if ((lmu > TINY) && (lmu0 > TINY))
+		{
+			dnom = lmu + lmu0;
+			s = lmu * lmu0 * (cl + cls / dnom);
+			//bfr=tex1Dfetch(texArea,j);
+			//ar=__hiloint2double(bfr.y,bfr.x);
 
-				ar = (*CUDA_LCC).Area[j];
-				//if (blockIdx.x == 0 && threadIdx.x == 1) //blockIdx.x == 0 && 
-				//	printf("[%d] s: %10.7f, Area[%3d]: %.7f (j: %5d)\n", blockIdx.x, s, i, ar, j);
+			ar = (*CUDA_LCC).Area[j];
+			//if (blockIdx.x == 0 && threadIdx.x == 1) //blockIdx.x == 0 &&
+			//	printf("[%d] s: %10.7f, Area[%3d]: %.7f (j: %5d)\n", blockIdx.x, s, i, ar, j);
 
-				br += ar * s;
-				//
-				incl[incl_count] = i;
-				dbr[incl_count] = (*CUDA_CC).Darea[i] * s;
-				incl_count++;
-				//
-				//double dnom_lmu0 = (lmu0 / dnom); // *(lmu0 / dnom);
-				//double dnom_lmu = (lmu / dnom); // *(lmu / dnom);
-				//dsmu = cls * pow(dnom_lmu0, 2.0) + cl * lmu0;
-				//dsmu0 = cls * pow(dnom_lmu, 2.0) + cl * lmu;
+			br += ar * s;
+			//
+			incl[incl_count] = i;
+			dbr[incl_count] = (*CUDA_CC).Darea[i] * s;
+			incl_count++;
+			//
+			//double dnom_lmu0 = (lmu0 / dnom); // *(lmu0 / dnom);
+			//double dnom_lmu = (lmu / dnom); // *(lmu / dnom);
+			//dsmu = cls * pow(dnom_lmu0, 2.0) + cl * lmu0;
+			//dsmu0 = cls * pow(dnom_lmu, 2.0) + cl * lmu;
 
-				//dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
-				//dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
+			//dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
+			//dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
 
-				double lmu0_dnom = lmu0 / dnom;
-				dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-				double lmu_dnom = lmu / dnom;
-				dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
+			double lmu0_dnom = lmu0 / dnom;
+			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
+			double lmu_dnom = lmu / dnom;
+			dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
 
 
-				sum1 = (*CUDA_CC).Nor[i][0] * de[1][1] + (*CUDA_CC).Nor[i][1] * de[2][1] + (*CUDA_CC).Nor[i][2] * de[3][1];
-				//if (threadIdx.x == 0 && i == 1)
-				//	printf("[%d][%3d]jp[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f, sum1: %10.7f\n",
-				//		blockIdx.x, threadIdx.x, jp, i, CUDA_Nor[i][0], i, CUDA_Nor[i][1], i, CUDA_Nor[i][2], sum1);
+			sum1 = (*CUDA_CC).Nor[i][0] * de[1][1] + (*CUDA_CC).Nor[i][1] * de[2][1] + (*CUDA_CC).Nor[i][2] * de[3][1];
+			//if (threadIdx.x == 0 && i == 1)
+			//	printf("[%d][%3d]jp[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f, sum1: %10.7f\n",
+			//		blockIdx.x, threadIdx.x, jp, i, CUDA_Nor[i][0], i, CUDA_Nor[i][1], i, CUDA_Nor[i][2], sum1);
 
-				sum10 = (*CUDA_CC).Nor[i][0] * de0[1][1] + (*CUDA_CC).Nor[i][1] * de0[2][1] + (*CUDA_CC).Nor[i][2] * de0[3][1];
-				tmp1 += ar * (dsmu * sum1 + dsmu0 * sum10);
-				sum2 = (*CUDA_CC).Nor[i][0] * de[1][2] + (*CUDA_CC).Nor[i][1] * de[2][2] + (*CUDA_CC).Nor[i][2] * de[3][2];
-				sum20 = (*CUDA_CC).Nor[i][0] * de0[1][2] + (*CUDA_CC).Nor[i][1] * de0[2][2] + (*CUDA_CC).Nor[i][2] * de0[3][2];
-				tmp2 += ar * (dsmu * sum2 + dsmu0 * sum20);
-				sum3 = (*CUDA_CC).Nor[i][0] * de[1][3] + (*CUDA_CC).Nor[i][1] * de[2][3] + (*CUDA_CC).Nor[i][2] * de[3][3];
-				sum30 = (*CUDA_CC).Nor[i][0] * de0[1][3] + (*CUDA_CC).Nor[i][1] * de0[2][3] + (*CUDA_CC).Nor[i][2] * de0[3][3];
-				tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
+			sum10 = (*CUDA_CC).Nor[i][0] * de0[1][1] + (*CUDA_CC).Nor[i][1] * de0[2][1] + (*CUDA_CC).Nor[i][2] * de0[3][1];
+			tmp1 += ar * (dsmu * sum1 + dsmu0 * sum10);
+			sum2 = (*CUDA_CC).Nor[i][0] * de[1][2] + (*CUDA_CC).Nor[i][1] * de[2][2] + (*CUDA_CC).Nor[i][2] * de[3][2];
+			sum20 = (*CUDA_CC).Nor[i][0] * de0[1][2] + (*CUDA_CC).Nor[i][1] * de0[2][2] + (*CUDA_CC).Nor[i][2] * de0[3][2];
+			tmp2 += ar * (dsmu * sum2 + dsmu0 * sum20);
+			sum3 = (*CUDA_CC).Nor[i][0] * de[1][3] + (*CUDA_CC).Nor[i][1] * de[2][3] + (*CUDA_CC).Nor[i][2] * de[3][3];
+			sum30 = (*CUDA_CC).Nor[i][0] * de0[1][3] + (*CUDA_CC).Nor[i][1] * de0[2][3] + (*CUDA_CC).Nor[i][2] * de0[3][3];
+			tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
 
-				//if (blockIdx.x == 9 && threadIdx.x == 10 && i <= 10)
-				//	printf("[%d][%3d]jp[%3d] i[%4d] tmp1: %10.7f, tmp2: %10.7f, tmp3: %10.7f\n", blockIdx.x, threadIdx.x, jp, i, tmp1, tmp2, tmp3);
-					//printf("[%d][%3d]jp[%3d] sum1: %10.7f, sum2: %10.7f, sum3: %10.7f\n", blockIdx.x, threadIdx.x, jp, sum1, sum2, sum3);
+			//if (blockIdx.x == 9 && threadIdx.x == 10 && i <= 10)
+			//	printf("[%d][%3d]jp[%3d] i[%4d] tmp1: %10.7f, tmp2: %10.7f, tmp3: %10.7f\n", blockIdx.x, threadIdx.x, jp, i, tmp1, tmp2, tmp3);
+				//printf("[%d][%3d]jp[%3d] sum1: %10.7f, sum2: %10.7f, sum3: %10.7f\n", blockIdx.x, threadIdx.x, jp, sum1, sum2, sum3);
 
-				tmp4 += lmu * lmu0 * ar;
-				tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
-			}
+			tmp4 += lmu * lmu0 * ar;
+			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
+		}
 	}
+
 	Scale = (*CUDA_LCC).jp_Scale[jp];
 	i = jp + (ncoef0 - 3 + 1) * Lpoints1;
 	/* Ders. of brightness w.r.t. rotation parameters */
 	(*CUDA_LCC).dytemp[i] = Scale * tmp1;
 
-	//if (threadIdx.x == 0) //blockIdx.x == 0 && 
+	//if (threadIdx.x == 0) //blockIdx.x == 0 &&
 	//	printf("[%3d] jp[%3d] Scale: %10.7f, tmp1: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, Scale, tmp1, i, (*CUDA_LCC).dytemp[i]);
 	//	printf("[%3d] dytemp[%5d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).dytemp[i]);
 
@@ -473,7 +486,7 @@ void bright(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double
 
 			(*CUDA_LCC).dytemp[d] = Scale * tmp;
 
-			//>>>>>>>>>  
+			//>>>>>>>>>
 			// Check for these values at this point on first pass if any anomalies were suspected within results:
 			//
 			//[  4] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3356285, dytemp[  315]:  1.1364109
@@ -490,10 +503,10 @@ void bright(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, double
 			//
 			//if (threadIdx.x == 0 && jp == 1 && i == 2)
 			//	printf("[%3d] jp[%3d] i[%3d] Scale: %10.7f, tmp: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, i, Scale, tmp, d, (*CUDA_LCC).dytemp[d]);
-			
+
 			//if (threadIdx.x == 0 && i == 2)
 			//	printf("[%3d] jp[%3d] i[%3d] Scale: %10.7f, tmp: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, i, Scale, tmp, d, (*CUDA_LCC).dytemp[d]);
-			
+
 			//>>>>>>>>> dytemp [315]
 
 			if ((i + 1) <= ncoef0)

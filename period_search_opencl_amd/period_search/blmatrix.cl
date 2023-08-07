@@ -6,7 +6,7 @@
 //#include <math.h>
 //#include "globals_CUDA.h"
 
-void blmatrix(struct mfreq_context* CUDA_LCC, double bet, double lam)
+void blmatrix(__global struct mfreq_context* CUDA_LCC, double bet, double lam)
 {
 	double cb, sb, cl, sl;
 	int3 threadIdx, blockIdx;

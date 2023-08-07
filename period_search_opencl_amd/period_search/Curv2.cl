@@ -1,9 +1,9 @@
 
 void mrqcof_curve2(
-	struct mfreq_context* CUDA_LCC,
-	struct freq_context* CUDA_CC,
-	double* alpha, 
-	double*	beta,
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC,
+	__global double* alpha,
+	__global double* beta,
 	int inrel,
 	int lpoints)
 {
@@ -81,12 +81,13 @@ void mrqcof_curve2(
 				(*CUDA_LCC).dytemp[ixx] = coef * ((*CUDA_LCC).dytemp[ixx] - coef1 * (*CUDA_LCC).dave[l]);
 
 				//if (blockIdx.x == 0 && threadIdx.x == 0)
-				//	printf("[Device | mrqcof_curve2_1] [%3d]  coef1: %10.7f, dave[%3d]: %10.7f, dytemp[%3d]: %10.7f\n", 
+				//	printf("[Device | mrqcof_curve2_1] [%3d]  coef1: %10.7f, dave[%3d]: %10.7f, dytemp[%3d]: %10.7f\n",
 				//		threadIdx.x, coef1, l, (*CUDA_LCC).dave[l], ixx, (*CUDA_LCC).dytemp[ixx]);
 			}
 		}
 	}
-	__syncthreads();
+
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 
 	if (threadIdx.x == 0)
 	{
@@ -105,7 +106,7 @@ void mrqcof_curve2(
 			int ixx = jp + matmpl * Lpoints1;
 			for (l = matmpl; l <= matmph; l++, ixx += Lpoints1)
 				(*CUDA_LCC).dyda[l] = (*CUDA_LCC).dytemp[ixx];
-			barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+			barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 			lnp2++;
 
@@ -142,12 +143,12 @@ void mrqcof_curve2(
 					//				  k++;
 					alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + wt * (*CUDA_LCC).dyda[m];
 				} /* m */
-				barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+				barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 				if (threadIdx.x == 0)
 				{
 					beta[j] = beta[j] + dy * wt;
 				}
-				barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+				barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 			} /* l */
 			for (; l <= (*CUDA_CC).lastma; l++)
 			{
@@ -162,7 +163,7 @@ void mrqcof_curve2(
 						//					  k++;
 						alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + wt * (*CUDA_LCC).dyda[m];
 					} /* m */
-					barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+					barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 					if (threadIdx.x == 0)
 					{
 						k = (*CUDA_CC).lastone;
@@ -177,7 +178,7 @@ void mrqcof_curve2(
 						} /* m */
 						beta[j] = beta[j] + dy * wt;
 					}
-					barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+					barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 				}
 			} /* l */
 			ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
@@ -200,11 +201,11 @@ void mrqcof_curve2(
 			for (l = matmpl; l <= matmph; l++, ixx += Lpoints1)
 			{
 				(*CUDA_LCC).dyda[l] = (*CUDA_LCC).dytemp[ixx];  // jp[1] dytemp[315] 0.0 - ?!?  must be -1051420.6747227
-			
+
 				//if (blockIdx.x == 0 && threadIdx.x == 1 && jp == 1)
 				//	printf("[%2d][%3d] dytemp[%d]: %10.7f\n", blockIdx.x, jp, ixx, (*CUDA_LCC).dytemp[ixx]);
 			}
-			barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+			barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 			lnp2++;
 
@@ -236,7 +237,7 @@ void mrqcof_curve2(
 													  // jp 2, dyda[9] == 0 - ?!? must be 7.9447669
 
 				//if (blockIdx.x == 0 && threadIdx.x == 1 && jp == 1 && j == 1)
-				//	printf("[%2d][%2d] jp[%3d] j[%3d] wt: %10.7f, dyda[%d]: %10.7f, sig2iwght: %10.7f\n", 
+				//	printf("[%2d][%2d] jp[%3d] j[%3d] wt: %10.7f, dyda[%d]: %10.7f, sig2iwght: %10.7f\n",
 				//		blockIdx.x, threadIdx.x, jp, j, wt, l, (*CUDA_LCC).dyda[l], sig2iwght);
 
 				//				   k = 0;
@@ -259,17 +260,17 @@ void mrqcof_curve2(
 					//					  k++;
 					alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + wt * (*CUDA_LCC).dyda[m];
 
-					//int qq = j * (*CUDA_CC).Mfit1 + m - 1;											// After the "_" in  Mrqcof1Curve2 "wt" & "dyda[2]" has ZEROES - ?!? 
+					//int qq = j * (*CUDA_CC).Mfit1 + m - 1;											// After the "_" in  Mrqcof1Curve2 "wt" & "dyda[2]" has ZEROES - ?!?
 					//if (blockIdx.x == 0 && threadIdx.x == 1 && l == 2) // j == 1 like l = 2
 					//	printf("curv2_2b>>>> [%2d][%3d] l[%3d] jp[%3d] alpha[%4d]: %10.7f, wt: %10.7f, dyda[%3d]: %10.7f\n",
 					//		blockIdx.x, threadIdx.x, l, jp, qq, (*CUDA_LCC).alpha[qq], wt, m, (*CUDA_LCC).dyda[m]);
 				} /* m */
-				barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+				barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 				if (threadIdx.x == 0)
 				{
 					beta[j] = beta[j] + dy * wt;
 				}
-				barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+				barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 			} /* l */
 			for (; l <= (*CUDA_CC).lastma; l++)
 			{
@@ -289,7 +290,7 @@ void mrqcof_curve2(
 						//k++;
 						alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + wt * (*CUDA_LCC).dyda[m];
 					} /* m */
-					barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+					barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 					if (threadIdx.x == 0)
 					{
 						k = (*CUDA_CC).lastone - 1;
@@ -304,13 +305,13 @@ void mrqcof_curve2(
 						} /* m */
 						beta[j] = beta[j] + dy * wt;
 					}
-					barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+					barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 				}
 			} /* l */
 			ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
 		} /* jp */
 	}
-	//     } always ==0 // Lastcall != 1 
+	//     } always ==0 // Lastcall != 1
 
 	 // if (((*CUDA_LCC).Lastcall == 1) && (CUDA_Inrel[i] == 1)) always ==0
 		//(*CUDA_LCC).Sclnw[i] = (*CUDA_LCC).Scale * CUDA_Lpoints[i] * CUDA_sig[np]/ave;

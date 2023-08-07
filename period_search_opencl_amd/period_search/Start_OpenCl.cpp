@@ -1,21 +1,15 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_HPP_TARGET_OPENCL_VERSION 120
-#pragma OPENCL FP_CONTRACT ON
+
 //#define __CL_ENABLE_EXCEPTIONS  //- redefinition warning - Declared at Preprocessor directives command line
-#define FP_64
+//#define FP_64
 
 // _CRT_SECURE_NO_WARNINGS
 
 //#include <CL/cl.h>
 #include <CL/cl.hpp>
 
-#ifdef FP_64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif defined(cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-////#else
-////#error "Double precision floating point not supported by OpenCL implementation."
-#endif
+
 
 // https://stackoverflow.com/questions/18056677/opencl-double-precision-different-from-cpu-double-precision
 
@@ -49,6 +43,7 @@
 #include "Start_OpenCL.h"
 #include "Globals_OpenCl.h"
 #include <cstddef>
+#include <numeric>
 
 
 using std::cout;
@@ -71,6 +66,28 @@ cl::Buffer bufCg, bufArea, bufDarea, bufDg, bufFc, bufFs, bufDsph, bufPleg, bufM
 cl::Buffer bufSig, bufSig2iwght, bufDy, bufWeight, bufYmod;
 cl::Buffer bufDave, bufDyda;
 cl::Buffer bufD;
+
+cl::Kernel kernelClCheckEnd;
+cl::Kernel kernelCalculatePrepare;
+cl::Kernel kernelCalculatePreparePole;
+cl::Kernel kernelCalculateIter1Begin;
+cl::Kernel kernelCalculateIter1Mrqcof1Start;
+cl::Kernel kernelCalculateIter1Mrqcof1Matrix;
+cl::Kernel kernelCalculateIter1Mrqcof1Curve1;
+cl::Kernel kernelCalculateIter1Mrqcof1Curve2;
+cl::Kernel kernelCalculateIter1Mrqcof1Curve1Last;
+cl::Kernel kernelCalculateIter1Mrqcof1End;
+cl::Kernel kernelCalculateIter1Mrqmin1End;
+cl::Kernel kernelCalculateIter1Mrqcof2Start;
+cl::Kernel kernelCalculateIter1Mrqcof2Matrix;
+cl::Kernel kernelCalculateIter1Mrqcof2Curve1;
+cl::Kernel kernelCalculateIter1Mrqcof2Curve2;
+cl::Kernel kernelCalculateIter1Mrqcof2Curve1Last;
+cl::Kernel kernelCalculateIter1Mrqcof2End;
+cl::Kernel kernelCalculateIter1Mrqmin2End;
+cl::Kernel kernelCalculateIter2;
+cl::Kernel kernelCalculateFinishPole;
+cl::Kernel kernelCalculateFinish;
 
 int CUDA_grid_dim;
 //int CUDA_grid_dim_precalc;
@@ -99,7 +116,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 {
 	Fa = static_cast<freq_context*>(malloc(sizeof(freq_context)));
 
-	try {
+	//try {
 		cl::Platform::get(&platforms);
 		vector<cl::Platform>::iterator iter;
 		for (iter = platforms.begin(); iter != platforms.end(); ++iter)
@@ -107,14 +124,17 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 			auto name = (*iter).getInfo<CL_PLATFORM_NAME>();
 			auto vendor = (*iter).getInfo<CL_PLATFORM_VENDOR>();
 			std::cerr << "Platform vendor: " << vendor << endl;
+#ifdef AMD
 			if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc."))
 			{
 				break;
 			}
+#elif defined(NVIDIA)
 			if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "NVIDIA Corporation"))
 			{
 				break;
 			}
+#endif
 			//if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Intel(R) Corporation"))
 			//{
 			//	break;
@@ -124,6 +144,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		// Create an OpenCL context
 		cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
 		context = cl::Context(CL_DEVICE_TYPE_GPU, cps);
+
 		cl_context_properties cpsAll[3] = { CL_CONTEXT_PLATFORM, cl_context_properties((*iter)()), 0 };
 		auto contextAll = cl::Context(CL_DEVICE_TYPE_ALL, cpsAll);
 
@@ -137,16 +158,20 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		//auto devicesCpu = contextCpu.getInfo<CL_CONTEXT_DEVICES>();
 		deviceId = 0;
 		const auto device = devices[deviceId];
+		const auto deviceName = device.getInfo<CL_DEVICE_NAME>();
+		//const auto devicePlatform = device.getInfo<CL_DEVICE_PLATFORM>();
+		const auto deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
+		const auto driverVersion = device.getInfo<CL_DRIVER_VERSION>();
 		const auto openClVersion = device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
 		const auto clDeviceVersion = device.getInfo<CL_DEVICE_VERSION>();
 		const auto clDeviceExtensionCapabilities = device.getInfo<CL_DEVICE_EXECUTION_CAPABILITIES>();
+		const auto deviceDoubleFpConfig = device.getInfo<CL_DEVICE_DOUBLE_FP_CONFIG>();
 		const auto clDeviceGlobalMemSize = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
 		const auto clDeviceLocalMemSize = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 		const auto clDeviceMaxConstantArgs = device.getInfo<CL_DEVICE_MAX_CONSTANT_ARGS>();
 		const auto clDeviceMaxConstantBufferSize = device.getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
 		const auto clDeviceMaxParameterSize = device.getInfo<CL_DEVICE_MAX_PARAMETER_SIZE>();
 		const auto clDeviceMaxMemAllocSize = device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
-		const auto deviceName = device.getInfo<CL_DEVICE_NAME>();
 		const auto deviceMaxWorkItemDims = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS>();
 		const auto clGlobalMemory = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
 		const auto globalMemory = clGlobalMemory / 1048576;
@@ -155,15 +180,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		const auto deviceExtensions = device.getInfo<CL_DEVICE_EXTENSIONS>();
 		const auto devMaxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 		const auto devMaxWorkItemSizes = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
-		bool is64CUDA = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
-		bool is64AMD = deviceExtensions.find("cl_amd_fp64") == std::string::npos;
-		//auto doesNotSupportsFp64 = (deviceExtensions.find("cl_khr_fp64") == std::string::npos) || (deviceExtensions.find("cl_amd_fp64") == std::string::npos);
-		//if(doesNotSupportsFp64)
-		if (!is64CUDA || !is64AMD)
-		{
-			fprintf(stderr, "Double precision floating point not supported by OpenCL implementation. Exiting...\n");
-			exit(-1);
-		}
+
 
 		std::cerr << "OpenCL version: " << openClVersion << " | " << clDeviceVersion << endl;
 		std::cerr << "OpenCL Device number : " << deviceId << endl;
@@ -183,6 +200,15 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		std::cerr << "CL_DEVICE_MAX_WORK_GROUP_SIZE: " << devMaxWorkGroupSize << endl;
 		std::cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: " << devMaxWorkItemSizes[0] << " | " << devMaxWorkItemSizes[1] << " | " << devMaxWorkItemSizes[2] << endl;
 #endif
+		bool is64CUDA = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
+		bool is64AMD = deviceExtensions.find("cl_amd_fp64") != std::string::npos;
+		//auto doesNotSupportsFp64 = (deviceExtensions.find("cl_khr_fp64") == std::string::npos) || (deviceExtensions.find("cl_amd_fp64") == std::string::npos);
+		//if(doesNotSupportsFp64)
+		if (!is64CUDA || !is64AMD)
+		{
+			fprintf(stderr, "Double precision floating point not supported by OpenCL implementation. Exiting...\n");
+			exit(-1);
+		}
 
 		auto SMXBlock = block; // 32;
 		//CUDA_grid_dim = msCount * SMXBlock; //  24 * 32
@@ -217,29 +243,247 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		(*Fa).Lmax = l_max;
 		(*Fa).Phi_0 = Phi_0;
 
-		queue = cl::CommandQueue(context, devices[0]);
+
+
+#pragma region Load kernel files
+		// Load CL file, build CL program object, create CL kernel object
+		std::ifstream constantsFile("period_search/constants.h");
+		std::ifstream globalsFile("period_search/GlobalsCL.h");
+		std::ifstream intrinsicsFile("period_search/Intrinsics.cl");
+		std::ifstream swapFile("period_search/swap.cl");
+		std::ifstream blmatrixFile("period_search/blmatrix.cl");
+		std::ifstream curvFile("period_search/curv.cl");
+		std::ifstream curv2File("period_search/Curv2.cl");
+		std::ifstream mrqcofFile("period_search/mrqcof.cl");
+		std::ifstream startFile("period_search/Start.cl");
+		std::ifstream brightFile("period_search/bright.cl");
+		std::ifstream convFile("period_search/conv.cl");
+		std::ifstream mrqminFile("period_search/mrqmin.cl");
+		std::ifstream gauserrcFile("period_search/gauss_errc.cl");
+
+		// NOTE: The following order is crusial
+		std::stringstream st;
+
+		// 1. First load all helper and function Cl files which will be used by the kernels;
+		st << constantsFile.rdbuf();
+		st << globalsFile.rdbuf();
+		st << intrinsicsFile.rdbuf();
+		st << swapFile.rdbuf();
+		st << blmatrixFile.rdbuf();
+		st << curvFile.rdbuf();
+		st << curv2File.rdbuf();
+		st << brightFile.rdbuf();
+		st << convFile.rdbuf();
+		st << mrqcofFile.rdbuf();
+		st << gauserrcFile.rdbuf();
+		st << mrqminFile.rdbuf();
+
+		//2. Load the files that contains all kernels;
+		st << startFile.rdbuf();
+
+		auto kernel_code = st.str();
+		st.flush();
+
+		constantsFile.close();
+		globalsFile.close();
+		intrinsicsFile.close();
+		startFile.close();
+		blmatrixFile.close();
+		curvFile.close();
+		mrqcofFile.close();
+		brightFile.close();
+		curv2File.close();
+		convFile.close();
+		mrqminFile.close();
+		gauserrcFile.close();
+		swapFile.close();
+
+#pragma endregion
+		cl_int* perr = nullptr;
+		cl::Program::Sources sources(1, std::make_pair(kernel_code.c_str(), kernel_code.length() + 1));
+		cl::Program binProgram = cl::Program(context, sources, perr);
+
+		//cl::Program binProgram{context, sources};
+//#if _DEBUG
+//		if (binProgram.build(devices, "-cl-kernel-arg-info") != CL_SUCCESS)
+//#else
+//		if (binProgram.build(devices) != CL_SUCCESS)
+//#endif
+		if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
+		{
+			std::cout << " Error building: " << binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << "\n";
+			exit(1);
+		}
+
+		vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
+		vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
+		std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
+		char* binChunk = &binData[0];
+		vector<char*> binaries;
+
+		for (unsigned int i = 0; i < binSizes.size(); ++i) {
+			binaries.push_back(binChunk);
+			binChunk += binSizes[i];
+		}
+
+		const char* kernelFileName = "kernel_code.bin";
+		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+		std::ofstream binaryfile(kernelFileName, std::ios::binary);
+		for (unsigned int i = 0; i < binaries.size(); ++i)
+			binaryfile.write(binaries[i], binSizes[i]);
+
+		binaryfile.close();
+
+		try
+		{
+			std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
+
+			uint32_t size = file.tellg();
+			file.seekg(0, std::ios::beg);
+			char* buffer = new char[size];
+			file.read(buffer, size);
+			file.close();
+			cl::Program::Binaries bin{{buffer, size}};
+
+			std::vector<cl_int> binaryStatus;
+			cl_int err = 0;
+			//cl::Program
+			//program = cl::Program{ context, devices, bin, &binaryStatus, &err };
+			program = cl::Program(context, devices, bin, &binaryStatus, &err);
+			program.build(devices);
+
+			queue = cl::CommandQueue(context, devices[0]);
+
+			if (err != CL_SUCCESS) {
+				std::cout << " Error loading" << err << "\n";
+				exit(1);
+			}
+			for (std::vector<cl_int>::const_iterator bE = binaryStatus.begin(); bE != binaryStatus.end(); bE++) {
+				std::cout << *bE << std::endl;
+			}
+
+
+			//int bres = program.build(devices, " -Werror"); // " -w "
+			//int bres = program.build(devices);
+			for (cl::Device dev : devices)
+			{
+				std::string name = dev.getInfo<CL_DEVICE_NAME>();
+				std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+				cl_build_status buildStatus = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+#if _DEBUG
+				auto kernels = program.getInfo<CL_PROGRAM_NUM_KERNELS>();
+				auto kernelNames = program.getInfo<CL_PROGRAM_KERNEL_NAMES>();
+				cerr << "Kernels: " << kernels << endl;
+				cerr << "Kernel names: " << endl << kernelNames << endl;
+
+#endif
+				if (buildlog.length() == 1)
+				{
+					buildlog.clear();
+					buildlog.append("Ok\n");
+				}
+
+				std::cerr << "Build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+			}
+		}
+		catch (cl::Error& e)
+		{
+			if (e.err() == CL_BUILD_PROGRAM_FAILURE)
+			{
+				for (cl::Device dev : devices)
+				{
+					// Check the build status
+					cl_build_status status1 = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+					//cl_build_status status2 = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+					if (status1 != CL_BUILD_ERROR) // && status2 != CL_BUILD_ERROR)
+						continue;
+
+					// Get the build log
+					std::string name = dev.getInfo<CL_DEVICE_NAME>();
+					std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+					//fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
+
+					cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+					cout << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+					//buildlog = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+					//std::cerr << buildlog << std::endl;
+				}
+			}
+			else
+			{
+				for (cl::Device dev : devices)
+				{
+					std::string name = dev.getInfo<CL_DEVICE_NAME>();
+					std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+					std::cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
+					fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
+				}
+				throw e;
+			}
+
+			return 2;
+		}
+
+#pragma region Kernel creation
+		cl_int kerr;
+
+
+		try
+		{
+			kernelClCheckEnd = cl::Kernel(program, "ClCheckEnd", &kerr);
+			kernelCalculatePrepare = cl::Kernel(program, string("ClCalculatePrepare").c_str(), &kerr);
+			kernelCalculatePreparePole = cl::Kernel(program, string("ClCalculatePreparePole").c_str(), &kerr);
+			kernelCalculateIter1Begin = cl::Kernel(program, string("ClCalculateIter1Begin").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Start").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Matrix").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve2").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1Last").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof1End = cl::Kernel(program, string("ClCalculateIter1Mrqcof1End").c_str(), &kerr);
+			kernelCalculateIter1Mrqmin1End = cl::Kernel(program, string("ClCalculateIter1Mrqmin1End").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Start").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Matrix").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve2").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1Last").c_str(), &kerr);
+			kernelCalculateIter1Mrqcof2End = cl::Kernel(program, "ClCalculateIter1Mrqcof2End", &kerr);
+			kernelCalculateIter1Mrqmin2End = cl::Kernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
+			kernelCalculateIter2 = cl::Kernel(program, "ClCalculateIter2", &kerr);
+			kernelCalculateFinishPole = cl::Kernel(program, "ClCalculateFinishPole", &kerr);
+			kernelCalculateFinish = cl::Kernel(program, "ClCalculateFinish", &kerr);
+		}
+		catch (cl::Error& e)
+		{
+			cerr << "Error " << e.err() << " - " << e.what() << std::endl;
+			cout << "Error while creating kernel. Check stderr.txt for details." << endl;
+			exit(1);
+		}
+#pragma endregion
+
+
 
 		return 0;
-	}
-	catch (cl::Error& err)
-	{
-		// Catch OpenCL errors and print log if it is a build error
-		cerr << "ERROR: " << err.what() << "(" << err.err() << ")" << endl;
-		cout << "ERROR: " << err.what() << "(" << err.err() << ")" << endl;
-		if (err.err() == CL_BUILD_PROGRAM_FAILURE)
-		{
-			const auto str = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-			cout << "Program Info: " << str << endl;
-		}
-		//cleanupHost();
-		return 1;
-	}
-	catch (string& msg)
-	{
-		cerr << "Exception caught in main(): " << msg << endl;
-		//cleanupHost();
-		return 1;
-	}
+	//}
+	//catch (cl::Error& e)
+	//{
+	//	// Catch OpenCL errors and print log if it is a build error
+	//	cerr << "ERROR: " << e.what() << "(" << e.err() << ")" << endl;
+	//	cout << "ERROR: " << e.what() << "(" << e.err() << ")" << endl;
+	//	if (e.err() == CL_BUILD_PROGRAM_FAILURE)
+	//	{
+	//		const auto str = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
+	//		cout << "Program Info: " << str << endl;
+	//	}
+	//	//cleanupHost();
+	//	return 1;
+	//}
+	//catch (string& msg)
+	//{
+	//	cerr << "Exception caught in main(): " << msg << endl;
+	//	//cleanupHost();
+	//	return 1;
+	//}
 }
 
 void PrintFreqResult(const int maxItterator, void* pcc, void* pfr)
@@ -260,20 +504,22 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 {
 	freq_result* res;
 	//auto blockDim = BLOCK_DIM;
-	int max_test_periods, iC;
-	int theEnd = 0;
+	cl_int max_test_periods, iC;
+	cl_int theEnd = -100;
 	double sum_dark_facet, ave_dark_facet;
-	int i, n, m;
-	int n_iter_max;
+	cl_int i, n, m;
+	cl_int n_iter_max;
 	double iter_diff_max;
 	auto n_max = static_cast<int>((freq_start - freq_end) / freq_step) + 1;
 
+	//void* pcc;
+
 	auto r = 0;
-	int merr;
+	//int merr;
 
-	int isPrecalc = 1;
+	cl_int isPrecalc = 1;
 
-	void* pbrightness, * psig;
+	//void* pbrightness, * psig;
 
 	max_test_periods = 10;
 	sum_dark_facet = 0.0;
@@ -316,10 +562,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
 	queue.enqueueWriteBuffer(cgFirst, CL_TRUE, 0, sizeof(double) * (MAX_N_PAR + 1), cg_first);
 
-	auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(int), &theEnd, err);
-	queue.enqueueWriteBuffer(CUDA_End, CL_TRUE, 0, sizeof(int), &theEnd);
-
-	r = memcpy_s((*Fa).ia, sizeof((*Fa).ia), ia, sizeof(int) * (MAX_N_PAR + 1));
+	r = memcpy_s((*Fa).ia, sizeof((*Fa).ia), ia, sizeof(cl_int) * (MAX_N_PAR + 1));
 	//r = memcpy_s((*Fa).Weight, sizeof((*Fa).Weight), weight, (ndata + 1) * sizeof(double));				// sizeof(double)* (MAX_N_OBS + 1));
 	r = memcpy_s((*Fa).Nor, sizeof((*Fa).Nor), normal, sizeof(double) * (MAX_N_FAC + 1) * 3);
 	r = memcpy_s((*Fa).Fc, sizeof((*Fa).Fc), f_c, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1));
@@ -337,10 +580,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	}
 
 	/* number of fitted parameters */
-	int lmfit = 0;
-	int llastma = 0;
-	int llastone = 1;
-	int ma = n_coef + 5 + n_ph_par;
+	cl_int lmfit = 0;
+	cl_int llastma = 0;
+	cl_int llastone = 1;
+	cl_int ma = n_coef + 5 + n_ph_par;
 	for (m = 1; m <= ma; m++)
 	{
 		if (ia[m])
@@ -370,13 +613,13 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	m = ma - 2 - n_ph_par;
 	(*Fa).Ncoef0 = m;
 
-	int CUDA_grid_dim_precalc = CUDA_grid_dim;
+	cl_int CUDA_grid_dim_precalc = CUDA_grid_dim;
 	if (max_test_periods < CUDA_grid_dim_precalc)
 	{
 		CUDA_grid_dim_precalc = max_test_periods;
 	}
 
-	auto totalWorkItems = CUDA_grid_dim_precalc * BLOCK_DIM;
+	cl_int totalWorkItems = CUDA_grid_dim_precalc * BLOCK_DIM;
 
 	m = (Numfac + 1) * (n_coef + 1);
 	(*Fa).Dg_block = m;
@@ -386,19 +629,24 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	//printf("%zu\n", offsetof(freq_context, lastone));
 
 	int pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
-	//__declspec(align(8)) auto pcc = reinterpret_cast<mfreq_context*>(malloc(pccSize));
+	//__declspec(align(8)) void* pcc = reinterpret_cast<mfreq_context*>(malloc(pccSize));
 	auto alignas(8) pcc = new mfreq_context[CUDA_grid_dim_precalc];
-	//pcc = new mfreq_context[CUDA_grid_dim_precalc];
 
 	/*cout << "[Host]: alignof(mfreq_context) = " << alignof(mfreq_context) << endl;
 	cout << "[Host]: sizeof(pcc) = " << sizeof(pcc) << endl;
 	cout << "[Host]: sizeof(mfreq_context) = " << sizeof(mfreq_context) << endl;*/
 
+	auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, err);
+	//auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, pccSize, pcc, err);
+	//auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, pcc, err);
+	//auto clPcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize, NULL, NULL, &r);
+	//r = memcpy_s(clPcc, pccSize, pcc, pccSize);
 
 	//void* pcc = aligned_alloc(CUDA_grid_dim_precalc, sizeof(mfreq_context)); //[CUDA_grid_dim_precalc] ;
 	//pcc = malloc(sizeof(pccSize));
 
 	// NOTE: NOTA BENE - In contrast to Cuda, where global memory is zeroed by itself, here we need to initialize the values in each dimension. GV-26.09.2020
+	// <<<<<<<<<<<
 	for (m = 0; m < CUDA_grid_dim_precalc; m++)
 	{
 		std::fill_n(pcc[m].Area, MAX_N_FAC + 1, 0.0);
@@ -419,33 +667,105 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 		pcc[m].pivinv = 0;
 	}
 
-	//int dytempSize = CUDA_grid_dim_precalc * (POINTS_MAX + 1) * (MAX_N_PAR + 1) * sizeof(double);
-	//int pdytempSize = CUDA_grid_dim_precalc * (max_l_points + 1) * (ma + 1) * sizeof(double);
+	// >>>>>>>>>>>>>>>>
 
-	//__declspec(align(8)) double** pdytemp = matrix_double(CUDA_grid_dim_precalc, (max_l_points + 1) * (ma + 1));
-	auto alignas(8) pdytemp = new double[CUDA_grid_dim_precalc][(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	int dySize = (POINTS_MAX + 1) * (MAX_N_PAR + 1);
-	for (m = 0; m < CUDA_grid_dim_precalc; m++)
-	{
-		for (int j = 0; j < dySize; j++)
-		{
-			pdytemp[m][j] = 0.0;
-		}
+	//double* pa, * pg, * pal, * pco, * pdytemp, * pytemp;
+
+	//pa = (double*)malloc(CUDA_grid_dim_precalc * (Numfac + 1) * sizeof(double));
+	//pg = (double*)malloc(CUDA_grid_dim_precalc * (Numfac + 1) * (n_coef + 1) * sizeof(double));
+	//pal = (double*)malloc(CUDA_grid_dim_precalc * (lmfit + 1) * (lmfit + 1) * sizeof(double));
+	//pco = (double*)malloc(CUDA_grid_dim_precalc * (lmfit + 1) * (lmfit + 1) * sizeof(double));
+	//pdytemp = (double*)malloc(CUDA_grid_dim_precalc * (max_l_points + 1) * (ma + 1) * sizeof(double));
+	//pytemp = (double*)malloc(CUDA_grid_dim_precalc * (max_l_points + 1) * sizeof(double));
+
+	//for (m = 0; m < CUDA_grid_dim_precalc; m++)
+	//{
+	//	mfreq_context ps;
+	//	ps.Area = &pa[m * (Numfac + 1)];
+	//	ps.Dg = &pg[m * (Numfac + 1) * (n_coef + 1)];
+	//	ps.alpha = &pal[m * (lmfit + 1) * (lmfit + 1)];
+	//	ps.covar = &pco[m * (lmfit + 1) * (lmfit + 1)];
+	//	ps.dytemp = &pdytemp[m * (max_l_points + 1) * (ma + 1)];
+	//	ps.ytemp = &pytemp[m * (max_l_points + 1)];
+
+	//	std::fill_n(ps.Area, Numfac + 1, 0.0);
+	//	std::fill_n(ps.Dg, (Numfac + 1)* (n_coef + 1), 0.0);
+	//	std::fill_n(ps.alpha, (lmfit + 1)* (lmfit + 1), 0.0);
+	//	std::fill_n(ps.covar, (lmfit + 1)* (lmfit + 1), 0.0);
+	//	std::fill_n(ps.dytemp, (max_l_points + 1)* (ma + 1), 0.0);
+	//	std::fill_n(ps.ytemp, (max_l_points + 1), 0.0);
+
+	//	mfreq_context* pt = &((mfreq_context*)pcc)[m];
+	//	r = memcpy_s(pt, sizeof(void*) * 6, & ps, sizeof(void*) * 6);
+	//	//err = cudaMemcpy(pt, &ps, sizeof(void*) * 6, cudaMemcpyHostToDevice);
+	//}
+
+	//// <<<<<<<<<<<<<<<<<
+
+	//for (m = 0; m < CUDA_grid_dim_precalc; m++)
+	//{
+	//	std::fill_n(((mfreq_context*)pcc)[m].Area, Numfac + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].Dg, (Numfac + 1) * (n_coef + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].alpha, (lmfit + 1) * (lmfit + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].covar, (lmfit + 1) * (lmfit + 1), 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].Area, MAX_N_FAC + 1, 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].Dg, (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].alpha, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].covar, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].beta, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].da, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].atry, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].dave, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].dytemp, (max_l_points + 1) * (ma + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].ytemp, (max_l_points + 1), 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].dytemp, (POINTS_MAX + 1) * (MAX_N_PAR + 1), 0.0);
+	//	//std::fill_n(((mfreq_context*)pcc)[m].ytemp, POINTS_MAX + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].sh_big, BLOCK_DIM, 0.0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].sh_icol, BLOCK_DIM, 0);
+	//	std::fill_n(((mfreq_context*)pcc)[m].sh_irow, BLOCK_DIM, 0);
+	//	((mfreq_context*)pcc)[m].icol = 0;
+	//	((mfreq_context*)pcc)[m].pivinv = 0;
+	//}
+
+	auto t = sizeof(struct mfreq_context); // 351160 B / 384 * 351160 = 134,845,440 (128.6MB)   // 4232760 B / 384 * 4232760 = 1,625,379,840 ( 1.6 GB)
+	auto tt = t * CUDA_grid_dim_precalc;
+
+	//void* test;
+	//int testSize = 10 * sizeof(double);
+	//test = malloc(testSize);
+
+	//auto CUDA_TEST = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, 10 * sizeof(double), test, err);
+	//auto clTest = queue.enqueueMapBuffer(CUDA_TEST, CL_NON_BLOCKING, CL_MAP_WRITE, 0, 10 * sizeof(double), NULL, NULL, err);
+
+	queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
+	//auto clPcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize, NULL, NULL, &r);
+	//queue.enqueueUnmapMemObject(CUDA_MCC2, clPcc);
+
+	if (r != CL_SUCCESS) {
+		cout << " Error creating mapping" << *(int*)err << "\n";
+		exit(1);
 	}
 
-	//auto CUDA_Dytemp = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, CUDA_grid_dim_precalc * dySize * sizeof(double), pdytemp);
-	//queue.enqueueWriteBuffer(CUDA_Dytemp, CL_BLOCKING, 0, CUDA_grid_dim_precalc * dySize * sizeof(double), pdytemp);
-
-	auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, err);
-	queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
-
 	int faSize = sizeof(freq_context);
-	//__declspec(align(16)) void* pmc = reinterpret_cast<freq_context*>(malloc(pmcSize));
 	auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, Fa, err);
 	queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
 
-	// Allocate result space
-	//res = (freq_result*)malloc(CUDA_grid_dim_precalc * sizeof(freq_result));
+	cl_int* end = (int*)malloc(sizeof(int));
+	*end = -90;
+
+	//int end;
+
+	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(int), &theEnd, err);
+	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, sizeof(int), end, err);
+	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, sizeof(int), &theEnd, err);
+	//auto clEnd = queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(int));
+
+	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_int), end, err);
+	//auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(int), &theEnd, err);
+	//auto clEnd = queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(cl_int));
+
+	auto CUDA_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR , sizeof(int), &theEnd, err);
+	queue.enqueueWriteBuffer(CUDA_End, CL_NON_BLOCKING, 0, sizeof(int), &theEnd);
 
 	int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
 	//__declspec(align(8)) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
@@ -468,190 +788,30 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
 	queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
 
-#pragma region Load kernel files
-	// Load CL file, build CL program object, create CL kernel object
-	std::ifstream constantsFile("period_search/constants.h");
-	std::ifstream globalsFile("period_search/GlobalsCL.h");
-	std::ifstream intrinsicsFile("period_search/Intrinsics.cl");
-	std::ifstream swapFile("period_search/swap.cl");
-	std::ifstream blmatrixFile("period_search/blmatrix.cl");
-	std::ifstream curvFile("period_search/curv.cl");
-	std::ifstream curv2File("period_search/Curv2.cl");
-	std::ifstream mrqcofFile("period_search/mrqcof.cl");
-	std::ifstream startFile("period_search/Start.cl");
-	std::ifstream brightFile("period_search/bright.cl");
-	std::ifstream convFile("period_search/conv.cl");
-	std::ifstream mrqminFile("period_search/mrqmin.cl");
-	std::ifstream gauserrcFile("period_search/gauss_errc.cl");
 
-	// NOTE: The following order is crusial
-	std::stringstream st;
-
-	// 1. First load all helper and function Cl files which will be used by the kernels;
-	st << constantsFile.rdbuf();
-	st << globalsFile.rdbuf();
-	st << intrinsicsFile.rdbuf();
-	st << swapFile.rdbuf();
-	st << blmatrixFile.rdbuf();
-	st << curvFile.rdbuf();
-	st << curv2File.rdbuf();
-	st << brightFile.rdbuf();
-	st << convFile.rdbuf();
-	st << mrqcofFile.rdbuf();
-	st << gauserrcFile.rdbuf();
-	st << mrqminFile.rdbuf();
-
-	//2. Load the files that contains all kernels;
-	st << startFile.rdbuf();
-
-	auto KernelStart = st.str();
-	st.flush();
-
-	constantsFile.close();
-	globalsFile.close();
-	intrinsicsFile.close();
-	startFile.close();
-	blmatrixFile.close();
-	curvFile.close();
-	mrqcofFile.close();
-	brightFile.close();
-	curv2File.close();
-	convFile.close();
-	mrqminFile.close();
-	gauserrcFile.close();
-	swapFile.close();
-
-#pragma endregion
-
-	cl::Program::Sources sources(1, std::make_pair(KernelStart.c_str(), KernelStart.length() + 1));
-	program = cl::Program(context, sources, err);
-
-	try
-	{
-		//int bres = program.build(devices, " -Werror"); // " -w " 
-		int bres = program.build(devices);
-		for (cl::Device dev : devices)
-		{
-			std::string name = dev.getInfo<CL_DEVICE_NAME>();
-			std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-			cl_build_status buildStatus = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-			if (buildlog.length() == 1)
-			{
-				buildlog.clear();
-				buildlog.append("Ok\n");
-			}
-
-			std::cerr << "Build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
-		}
-	}
-	catch (cl::Error& e)
-	{
-		if (e.err() == CL_BUILD_PROGRAM_FAILURE)
-		{
-			for (cl::Device dev : devices)
-			{
-				// Check the build status
-				cl_build_status status1 = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-				//cl_build_status status2 = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-				if (status1 != CL_BUILD_ERROR) // && status2 != CL_BUILD_ERROR)
-					continue;
-
-				// Get the build log
-				std::string name = dev.getInfo<CL_DEVICE_NAME>();
-				std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-				//fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
-
-				cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-				cout << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-				//buildlog = curv2Program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-				//std::cerr << buildlog << std::endl;
-			}
-		}
-		else
-		{
-			for (cl::Device dev : devices)
-			{
-				std::string name = dev.getInfo<CL_DEVICE_NAME>();
-				std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-				std::cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-				fprintf(stderr, "Build log for %s: %s\n", name.c_str(), buildlog.c_str());
-			}
-			throw e;
-		}
-
-		return 2;
-	}
-
-#pragma region Kernel creation
-	cl_int kerr;
-	cl::Kernel kernelCalculatePrepare;
-	cl::Kernel kernelCalculatePreparePole;
-	cl::Kernel kernelCalculateIter1Begin;
-	cl::Kernel kernelCalculateIter1Mrqcof1Start;
-	cl::Kernel kernelCalculateIter1Mrqcof1Matrix;
-	cl::Kernel kernelCalculateIter1Mrqcof1Curve1;
-	cl::Kernel kernelCalculateIter1Mrqcof1Curve2;
-	cl::Kernel kernelCalculateIter1Mrqcof1Curve1Last;
-	cl::Kernel kernelCalculateIter1Mrqcof1End;
-	cl::Kernel kernelCalculateIter1Mrqmin1End;
-	cl::Kernel kernelCalculateIter1Mrqcof2Start;
-	cl::Kernel kernelCalculateIter1Mrqcof2Matrix;
-	cl::Kernel kernelCalculateIter1Mrqcof2Curve1;
-	cl::Kernel kernelCalculateIter1Mrqcof2Curve2;
-	cl::Kernel kernelCalculateIter1Mrqcof2Curve1Last;
-	cl::Kernel kernelCalculateIter1Mrqcof2End;
-	cl::Kernel kernelCalculateIter1Mrqmin2End;
-	cl::Kernel kernelCalculateIter2;
-	cl::Kernel kernelCalculateFinishPole;
-	cl::Kernel kernelCalculateFinish;
-
-	try
-	{
-		kernelCalculatePrepare = cl::Kernel(program, string("ClCalculatePrepare").c_str(), &kerr);
-		kernelCalculatePreparePole = cl::Kernel(program, string("ClCalculatePreparePole").c_str(), &kerr);
-		kernelCalculateIter1Begin = cl::Kernel(program, string("ClCalculateIter1Begin").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Start").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Matrix").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve2").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof1Curve1Last").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof1End = cl::Kernel(program, string("ClCalculateIter1Mrqcof1End").c_str(), &kerr);
-		kernelCalculateIter1Mrqmin1End = cl::Kernel(program, string("ClCalculateIter1Mrqmin1End").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2Start = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Start").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2Matrix = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Matrix").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2Curve1 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2Curve2 = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve2").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2Curve1Last = cl::Kernel(program, string("ClCalculateIter1Mrqcof2Curve1Last").c_str(), &kerr);
-		kernelCalculateIter1Mrqcof2End = cl::Kernel(program, "ClCalculateIter1Mrqcof2End", &kerr);
-		kernelCalculateIter1Mrqmin2End = cl::Kernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
-		kernelCalculateIter2 = cl::Kernel(program, "ClCalculateIter2", &kerr);
-		kernelCalculateFinishPole = cl::Kernel(program, "ClCalculateFinishPole", &kerr);
-		kernelCalculateFinish = cl::Kernel(program, "ClCalculateFinish", &kerr);
-	}
-	catch (cl::Error& e)
-	{
-		cerr << "Error " << e.err() << " - " << e.what() << std::endl;
-	}
-#pragma endregion
 
 #pragma region SetKernelArgs
+	kernelClCheckEnd.setArg(0, CUDA_End);
+	//kernelClCheckEnd.SetArg(1, sizeof(theEnd), &theEnd);
+
 	kernelCalculatePrepare.setArg(0, CUDA_MCC2);
 	kernelCalculatePrepare.setArg(1, CUDA_FR);
-	kernelCalculatePrepare.setArg(2, sizeof(freq_start), &freq_start);
-	kernelCalculatePrepare.setArg(3, sizeof(freq_step), &freq_step);
-	kernelCalculatePrepare.setArg(4, sizeof(max_test_periods), &max_test_periods);
+	kernelCalculatePrepare.setArg(2, CUDA_End);
+	kernelCalculatePrepare.setArg(3, sizeof(freq_start), &freq_start);
+	kernelCalculatePrepare.setArg(4, sizeof(freq_step), &freq_step);
+	kernelCalculatePrepare.setArg(5, sizeof(max_test_periods), &max_test_periods);
 
 	kernelCalculatePreparePole.setArg(0, CUDA_MCC2);
 	kernelCalculatePreparePole.setArg(1, CUDA_CC);
 	kernelCalculatePreparePole.setArg(2, CUDA_FR);
 	kernelCalculatePreparePole.setArg(3, cgFirst);
-	kernelCalculatePreparePole.setArg(4, CUDA_End);
+
 	//kernelCalculatePreparePole.setArg(5, sizeof(double), &lcoef);
 	// NOTE: 7th arg 'm' is set a little further as 'm' is an iterator counter
 
 	kernelCalculateIter1Begin.setArg(0, CUDA_MCC2);
 	kernelCalculateIter1Begin.setArg(1, CUDA_FR);
-	kernelCalculateIter1Begin.setArg(2, CUDA_End);
+
 	kernelCalculateIter1Begin.setArg(3, sizeof(int), &n_iter_min);
 	kernelCalculateIter1Begin.setArg(4, sizeof(int), &n_iter_max);
 	kernelCalculateIter1Begin.setArg(5, sizeof(double), &iter_diff_max);
@@ -660,7 +820,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
 	kernelCalculateIter1Mrqcof1Start.setArg(0, CUDA_MCC2);
 	kernelCalculateIter1Mrqcof1Start.setArg(1, CUDA_CC);
-	kernelCalculateIter1Mrqcof1Start.setArg(2, CUDA_FR);
+	//kernelCalculateIter1Mrqcof1Start.setArg(2, CUDA_FR);
 	//kernelCalculateIter1Mrqcof1Start.setArg(3, CUDA_Dytemp);
 	//kernelCalculateIter1Mrqcof1Start.setArg(4, CUDA_End);
 
@@ -720,11 +880,12 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	kernelCalculateFinish.setArg(1, CUDA_FR);
 #pragma endregion
 
+	// Allocate result space
 	res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
 
 	for (n = 1; n <= max_test_periods; n += CUDA_grid_dim_precalc)
 	{
-		kernelCalculatePrepare.setArg(5, sizeof(n), &n);
+		kernelCalculatePrepare.setArg(6, sizeof(n), &n);
 		// NOTE: CudaCalculatePrepare(n, max_test_periods, freq_start, freq_step); // << <CUDA_grid_dim_precalc, 1 >> >
 		queue.enqueueNDRangeKernel(kernelCalculatePrepare, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
 		queue.enqueueBarrierWithWaitList(); // cuda sync err = cudaThreadSynchronize();
@@ -732,7 +893,20 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 		for (m = 1; m <= N_POLES; m++)
 		{
 			theEnd = 0; //zero global End signal
-			queue.enqueueWriteBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);
+			*end = 0;
+			//kernelClCheckEnd.setArg(1, sizeof(theEnd), &theEnd);
+			//queue.enqueueNDRangeKernel(kernelClCheckEnd, cl::NDRange(), cl::NDRange(1), cl::NDRange(1));
+			//queue.enqueueTask(kernelClCheckEnd);
+			//*(int*)clEnd = 0;
+			//*(int*)clEnd = -5;
+			queue.enqueueWriteBuffer(CUDA_End, CL_NON_BLOCKING, 0, sizeof(int), &theEnd);   //   <<<<<<<<<<<<<
+			//*(int*)clEnd = theEnd;
+			//queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(int));
+			//clEnd = theEnd;  //   <<<<<<<<<<<<<
+			//memcpy(clEnd, &theEnd, sizeof(int));
+			//*(int*)clEnd = -5;
+
+			kernelCalculatePreparePole.setArg(4, CUDA_End);
 			kernelCalculatePreparePole.setArg(5, sizeof(m), &m);
 			// NOTE: CudaCalculatePreparePole(m);										<< <CUDA_grid_dim_precalc, 1 >> >
 			queue.enqueueNDRangeKernel(kernelCalculatePreparePole, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
@@ -742,15 +916,21 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #endif
 			int count = 0;
 			while (!theEnd)
+			//while (!(theEnd == CUDA_grid_dim_precalc))
+			//while (!((*end) == CUDA_grid_dim_precalc))
 			{
 				count++;
+				kernelCalculateIter1Begin.setArg(2, CUDA_End);
 				// NOTE: CudaCalculateIter1Begin(); // << <CUDA_grid_dim_precalc, 1 >> >
 				queue.enqueueNDRangeKernel(kernelCalculateIter1Begin, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
+				//queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(cl_int), NULL, NULL, &r);
+				//queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ, 0, sizeof(cl_int), NULL, NULL, &r);
+				//queue.enqueueBarrierWithWaitList(); // TEST
 
 				// NOTE: CudaCalculateIter1Mrqcof1Start(); // << <CUDA_grid_dim_precalc, CUDA_BLOCK_DIM >> >
 				// NOTE: Global size is the total number of work items we want to run, and the local size is the size of each workgroup.
 				queue.enqueueNDRangeKernel(kernelCalculateIter1Mrqcof1Start, cl::NDRange(), cl::NDRange(totalWorkItems), cl::NDRange(BLOCK_DIM));
-
+				//queue.enqueueBarrierWithWaitList(); // TEST
 				for (iC = 1; iC < l_curves; iC++)
 				{
 					kernelCalculateIter1Mrqcof1Matrix.setArg(2, sizeof(l_points[iC]), &(l_points[iC]));
@@ -769,8 +949,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 				}
 
 				//printf("_\n");
-				kernelCalculateIter1Mrqcof1Curve1Last.setArg(2, sizeof in_rel[l_curves], &(in_rel[l_curves]));
-				kernelCalculateIter1Mrqcof1Curve1Last.setArg(3, sizeof l_points[l_curves], &(l_points[l_curves]));
+				kernelCalculateIter1Mrqcof1Curve1Last.setArg(2, sizeof(in_rel[l_curves]), &(in_rel[l_curves]));
+				kernelCalculateIter1Mrqcof1Curve1Last.setArg(3, sizeof(l_points[l_curves]), &(l_points[l_curves]));
 				// NOTE: CudaCalculateIter1Mrqcof1Curve1Last(in_rel[l_curves], l_points[l_curves]);	//  << <CUDA_grid_dim_precalc, CUDA_BLOCK_DIM >> >
 				queue.enqueueNDRangeKernel(kernelCalculateIter1Mrqcof1Curve1Last, cl::NDRange(), cl::NDRange(totalWorkItems), cl::NDRange(BLOCK_DIM));
 
@@ -824,8 +1004,16 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 				queue.enqueueBarrierWithWaitList();  //err=cudaThreadSynchronize(); memcpy is synchro itself
 
 				//cudaMemcpyFromSymbol(&theEnd, CUDA_End, sizeof(theEnd));
-				queue.enqueueReadBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);
+				queue.enqueueReadBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);   //<<<<<<<<<<<<<<<<<<<<
+				//queue.enqueueReadBuffer(CUDA_End, CL_NON_BLOCKING, 0, sizeof(int), end);   //<<<<<<<<<<<<<<<<<<<<
+				//theEnd = static_cast<int>(reinterpret_cast<intptr_t>(clEnd));
+				//theEnd = *(int*)clEnd;
+				//theEnd = theEnd == CUDA_grid_dim_precalc;
+				//memcpy(&theEnd, end, sizeof(int));
+
+				//queue.enqueueMapBuffer(CUDA_End, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(int));
 				theEnd = theEnd == CUDA_grid_dim_precalc;
+				//theEnd = *end == CUDA_grid_dim_precalc;
 			}
 
 			// NOTE: CudaCalculateFinishPole();	<<<CUDA_grid_dim_precalc, 1 >> >
@@ -844,9 +1032,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 		//read results here
 		//err = cudaMemcpy(res, pfr, sizeof(freq_result) * CUDA_grid_dim_precalc, cudaMemcpyDeviceToHost);
 
-		for (m = 0; m < CUDA_grid_dim_precalc; m++)
+		for (m = 1; m <= CUDA_grid_dim_precalc; m++)
 		{
-			if (res[m].isReported == 1)
+			if (res[m - 1].isReported == 1)
 			{
 				sum_dark_facet = sum_dark_facet + res[m - 1].dark_best;
 				//printf("[%3d] res[%3d].dark_best: %10.16f, sum_dark_facet: %10.16f\n", m, m-1, res[m-1].dark_best, sum_dark_facet);
@@ -862,6 +1050,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	(*Fa).Is_Precalc = isPrecalc;
 	queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
 
+	//queue.enqueueUnmapMemObject(CUDA_End, clEnd);
 	free((void*)res);
 	delete[] pfr;
 	delete[] pcc;
@@ -872,7 +1061,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 		*new_conw = 1; /* new correct conwexity weight */
 	if (ave_dark_facet >= 1.0)
 		*conw_r = *conw_r * 2; /* still not good */
-	
+
+	//printf("ave_dark_facet: %10.17f\n", ave_dark_facet);
+	//printf("conw_r:         %10.17f\n", *conw_r);
+
 	return 1;
 }
 
@@ -880,7 +1072,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	int ndata, int* ia, int* ia_par, double* cg_first, MFILE& mf, double escl, double* sig, int Numfac, double* brightness)
 {
 	freq_result* res;
-	void* pbrightness, * psig;
+	//void* pbrightness, * psig;
 	double iter_diff_max;
 	int retval, i, n, m, iC;
 	int n_iter_max, theEnd, LinesWritten;
@@ -982,8 +1174,14 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	(*Fa).Dg_block = m;
 
 	int pccSize = CUDA_grid_dim * sizeof(mfreq_context);
-	//__declspec(align(8)) auto pcc = reinterpret_cast<mfreq_context*>(malloc(pccSize));
+	//__declspec(align(8)) void* pcc = reinterpret_cast<mfreq_context*>(malloc(pccSize));
 	auto alignas(8) pcc = new mfreq_context[CUDA_grid_dim];
+
+	//auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, pccSize, pcc, err);
+	//auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, pcc, err);
+	auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, err);
+	//auto clPcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize);
+	//r = memcpy_s(clPcc, pccSize, pcc, pccSize);
 
 	for (m = 0; m < CUDA_grid_dim; m++)
 	{
@@ -1000,20 +1198,29 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		std::fill_n(pcc[m].sh_big, BLOCK_DIM, 0.0);
 		std::fill_n(pcc[m].sh_icol, BLOCK_DIM, 0);
 		std::fill_n(pcc[m].sh_irow, BLOCK_DIM, 0);
+		//pcc[m].conw_r = 0.0;
 		pcc[m].icol = 0;
 		pcc[m].pivinv = 0;
 	}
 
-	auto alignas(8) pdytemp = new double[CUDA_grid_dim][(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	int dySize = (POINTS_MAX + 1) * (MAX_N_PAR + 1);
-
-	for (m = 0; m < CUDA_grid_dim; m++)
-	{
-		for (int j = 0; j < dySize; j++)
-		{
-			pdytemp[m][j] = 0.0;
-		}
-	}
+	//for (m = 0; m < CUDA_grid_dim; m++)
+	//{
+	//	std::fill_n(((mfreq_context*)clPcc)[m].Area, MAX_N_FAC + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].Dg, (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].alpha, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].covar, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].beta, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].da, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].atry, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].dave, MAX_N_PAR + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].dytemp, (POINTS_MAX + 1) * (MAX_N_PAR + 1), 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].ytemp, POINTS_MAX + 1, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].sh_big, BLOCK_DIM, 0.0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].sh_icol, BLOCK_DIM, 0);
+	//	std::fill_n(((mfreq_context*)clPcc)[m].sh_irow, BLOCK_DIM, 0);
+	//	((mfreq_context*)clPcc)[m].icol = 0;
+	//	((mfreq_context*)clPcc)[m].pivinv = 0;
+	//}
 
 	//auto alignas(8) pdytemp = new double[CUDA_grid_dim_precalc][(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
 	//int dySize = (POINTS_MAX + 1) * (MAX_N_PAR + 1);
@@ -1021,8 +1228,10 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	//auto CUDA_Dytemp = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, CUDA_grid_dim * dySize * sizeof(double), pdytemp);
 	//queue.enqueueWriteBuffer(CUDA_Dytemp, CL_BLOCKING, 0, CUDA_grid_dim * dySize * sizeof(double), pdytemp);
 
-	auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, err);
+	//auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, err);
 	queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
+
+	//queue.enqueueUnmapMemObject(CUDA_MCC2, clPcc);
 
 	int faSize = sizeof(freq_context);
 	//__declspec(align(16)) void* pmc = reinterpret_cast<freq_context*>(malloc(pmcSize));
@@ -1105,9 +1314,10 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 #pragma region SetKernelArguments
 		kernelCalculatePrepare.setArg(0, CUDA_MCC2);
 		kernelCalculatePrepare.setArg(1, CUDA_FR);
-		kernelCalculatePrepare.setArg(2, sizeof(freq_start), &freq_start);
-		kernelCalculatePrepare.setArg(3, sizeof(freq_step), &freq_step);
-		kernelCalculatePrepare.setArg(4, sizeof(n_max), &n_max);
+		kernelCalculatePrepare.setArg(2, CUDA_End);
+		kernelCalculatePrepare.setArg(3, sizeof(freq_start), &freq_start);
+		kernelCalculatePrepare.setArg(4, sizeof(freq_step), &freq_step);
+		kernelCalculatePrepare.setArg(5, sizeof(n_max), &n_max);
 
 		kernelCalculatePreparePole.setArg(0, CUDA_MCC2);
 		kernelCalculatePreparePole.setArg(1, CUDA_CC);
@@ -1127,7 +1337,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 		kernelCalculateIter1Mrqcof1Start.setArg(0, CUDA_MCC2);
 		kernelCalculateIter1Mrqcof1Start.setArg(1, CUDA_CC);
-		kernelCalculateIter1Mrqcof1Start.setArg(2, CUDA_FR);
+		//kernelCalculateIter1Mrqcof1Start.setArg(2, CUDA_FR);
 		//kernelCalculateIter1Mrqcof1Start.setArg(3, CUDA_Dytemp);
 		//kernelCalculateIter1Mrqcof1Start.setArg(4, CUDA_End);
 
@@ -1209,7 +1419,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
 		//#endif
 
-		kernelCalculatePrepare.setArg(5, sizeof(n), &n); // NOTE: CudaCalculatePrepare << <CUDA_grid_dim, 1 >> > (n, n_max, freq_start, freq_step);
+		kernelCalculatePrepare.setArg(6, sizeof(n), &n); // NOTE: CudaCalculatePrepare << <CUDA_grid_dim, 1 >> > (n, n_max, freq_start, freq_step);
 		queue.enqueueNDRangeKernel(kernelCalculatePrepare, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 
 		for (m = 1; m <= N_POLES; m++)
@@ -1233,7 +1443,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 			theEnd = 0;  //zero global End signal
 			//cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd));
 			kernelCalculatePreparePole.setArg(5, sizeof(m), &m);
-			queue.enqueueWriteBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);		// CudaCalculatePreparePole << <CUDA_grid_dim, 1 >> > (m);
+			queue.enqueueWriteBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(cl_int), &theEnd);	 /// <<<<<<<<<<<<<<<	// CudaCalculatePreparePole << <CUDA_grid_dim, 1 >> > (m);
 			queue.enqueueNDRangeKernel(kernelCalculatePreparePole, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 
 			while (!theEnd)
@@ -1259,8 +1469,8 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 					queue.enqueueNDRangeKernel(kernelCalculateIter1Mrqcof1Curve2, cl::NDRange(), cl::NDRange(totalWorkItems), cl::NDRange(BLOCK_DIM));
 				}
 
-				kernelCalculateIter1Mrqcof1Curve1Last.setArg(2, sizeof in_rel[l_curves], &(in_rel[l_curves]));
-				kernelCalculateIter1Mrqcof1Curve1Last.setArg(3, sizeof l_points[l_curves], &(l_points[l_curves]));	//CudaCalculateIter1Mrqcof1Curve1Last << <CUDA_grid_dim, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
+				kernelCalculateIter1Mrqcof1Curve1Last.setArg(2, sizeof(in_rel[l_curves]), &(in_rel[l_curves]));
+				kernelCalculateIter1Mrqcof1Curve1Last.setArg(3, sizeof(l_points[l_curves]), &(l_points[l_curves]));	//CudaCalculateIter1Mrqcof1Curve1Last << <CUDA_grid_dim, CUDA_BLOCK_DIM >> > (in_rel[l_curves], l_points[l_curves]);
 				queue.enqueueNDRangeKernel(kernelCalculateIter1Mrqcof1Curve1Last, cl::NDRange(), cl::NDRange(totalWorkItems), cl::NDRange(BLOCK_DIM));
 
 				kernelCalculateIter1Mrqcof1Curve2.setArg(2, sizeof(in_rel[l_curves]), &(in_rel[l_curves]));
@@ -1317,7 +1527,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 				//CudaCalculateIter2 << <CUDA_grid_dim, CUDA_BLOCK_DIM >> > ();
 				queue.enqueueNDRangeKernel(kernelCalculateIter2, cl::NDRange(), cl::NDRange(totalWorkItems), cl::NDRange(BLOCK_DIM));
-				queue.enqueueReadBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);
+				queue.enqueueReadBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(int), &theEnd);    // <<<<<<<<<<<<<<<<<<
 				queue.enqueueBarrierWithWaitList(); // err = cudaDeviceSynchronize();
 
 				//err=cudaThreadSynchronize(); memcpy is synchro itself
@@ -1344,34 +1554,34 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//CudaCalculateFinish << <CUDA_grid_dim, 1 >> > ();
 		queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 		////err=cudaThreadSynchronize(); memcpy is synchro itself
-		// 
+		//
 		//read results here synchronously
 		//err = cudaMemcpy(res, pfr, sizeof(freq_result) * CUDA_grid_dim, cudaMemcpyDeviceToHost);
 		queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
 
 		oldFractionDone = fractionDone;
 		LinesWritten = 0;
-		for (m = 0; m < CUDA_grid_dim; m++)
+		for (m = 1; m <= CUDA_grid_dim; m++)
 		{
-			mf.printf("%4d %3d  %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d %d\n", 
-				n, m, 24 * res[m].per_best, res[m].dev_best, res[m].dev_best * res[m].dev_best * (ndata - 3), conw_r * escl * escl, 
-				round(res[m].la_best), round(res[m].be_best), res[m].isReported, res[m].isInvalid, res[m].isNiter);
+			//mf.printf("%4d %3d  %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d %d\n",
+			//	n, m, 24 * res[m].per_best, res[m].dev_best, res[m].dev_best * res[m].dev_best * (ndata - 3), conw_r * escl * escl,
+			//	round(res[m].la_best), round(res[m].be_best), res[m].isReported, res[m].isInvalid, res[m].isNiter);
 
-			//if (res[m - 1].isReported == 1)
-			//{
-			//	//LinesWritten++;
-			//	/* output file */
-			//	if (n == 1 && m == 1)
-			//	{
-			//		//mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best));
-			//		//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
-			//	}
-			//	else
-			//	{
-			//		//mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best));
-			//		//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, res[m - 1].isInvalid, res[m - 1].isReported, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
-			//	}
-			//}
+			if (res[1].isReported == 1)
+			{
+				//LinesWritten++;
+				/* output file */
+				if (n == 1 && m == 1)
+				{
+					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best));
+					//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
+				}
+				else
+				{
+					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best));
+					//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, res[m - 1].isInvalid, res[m - 1].isReported, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
+				}
+			}
 			LinesWritten++;
 		}
 
