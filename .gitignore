@@ -87,6 +87,7 @@ bld/
 *.pidb
 *.svclog
 *.scc
+*.bin
 
 # Visual C++ cache files
 ipch/
@@ -116,6 +117,7 @@ period_search_in*
 !*/input_period_search/period_search_in_*
 period_search_out*
 period_search_state*
+test_*.txt
 
 
 # Files build unde Linux
@@ -123,3 +125,4 @@ period_search_state*
 *.so
 *.a
 period_search_BOINC*
+/period_search_opencl_amd/test_values_2.txt
