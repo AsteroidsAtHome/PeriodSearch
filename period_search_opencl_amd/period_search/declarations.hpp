@@ -42,6 +42,21 @@ cl_double* vector_cl_double(int length);
 //void deallocate_matrix_3(void ***p_x, int n_1, int n_2);
 
 double host_dot_product(double a[], double b[]);
+
+#ifdef _DEBUG
+struct DATA {
+	int nlines;
+	double* per;
+	double* rms;
+	double* chisq;
+};
+void CompareResult(const char* output_filename);
+int getData(const char* filename, DATA*& data);
+int compare_results(DATA* _data1, DATA* _data2, bool& match);
+int cleanup_result(DATA* data);
+
+#endif
+
 /*
 double hapke(double mi0, double mi, double alfa, double sc_param[]);
 

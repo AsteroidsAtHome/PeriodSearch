@@ -146,7 +146,7 @@ struct mfreq_context
 typedef struct freq_result
 #endif
 {
-	double dark_best, per_best, dev_best, la_best, be_best, freq;
+	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;
 	int isReported, isInvalid, isNiter;
 };
 

@@ -144,6 +144,6 @@ struct alignas(8) freq_context
 //struct __declspec(align(16)) freq_result
 struct alignas(8) freq_result
 {
-	double dark_best, per_best, dev_best, la_best, be_best, freq;
+	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;
 	cl_int isReported, isInvalid, isNiter;
 };

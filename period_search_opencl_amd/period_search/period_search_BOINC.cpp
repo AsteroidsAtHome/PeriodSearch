@@ -1,4 +1,4 @@
-/* This program take the input lightcurves, scans over the
+﻿/* This program take the input lightcurves, scans over the
    given period range and finds the best period+pole+shape+scattering
    solution. Shape is forgotten. The period, rms residual
    of the fit, and pole solution (lamdda, beta) are given to the output.
@@ -155,7 +155,6 @@ cl_double phi_0;
 cl_double weight[MAX_N_OBS + 1];
 cl_int max_l_points;
 cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
-
 
 /*--------------------------------------------------------------*/
 
@@ -567,7 +566,7 @@ int main(int argc, char** argv)
 	   /* optimization of the convexity weight **************************************************************/
 	if (!checkpointExists)
 	{
-		conwR = conw / escl / escl; 
+		conwR = conw / escl / escl;
 		newConw = 0;
 		boinc_fraction_done(0.0001); //signal start
 #if _DEBUG
@@ -816,9 +815,15 @@ int main(int argc, char** argv)
 	free(stringTemp);
 
 	boinc_fraction_done(1);
+
 #ifdef APP_GRAPHICS
 	update_shmem();
 #endif
+
+#ifdef _DEBUG
+	CompareResult(output_filename);
+#endif
+
 	boinc_finish(0);
 }
 

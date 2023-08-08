@@ -67,6 +67,9 @@
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\compareResult.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\cpp.hint" />

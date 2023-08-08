@@ -759,6 +759,13 @@ __kernel void ClCalculateIter2(
 
 			(*CUDA_LCC).dev_new = sqrt((*CUDA_LCC).rchisq / ((*CUDA_CC).ndata - 3));
 
+			//if (blockIdx.x == 233)
+			//{
+			//	double dev_best = (*CUDA_LCC).dev_new * (*CUDA_LCC).dev_new * ((*CUDA_CC).ndata - 3);
+			//	printf("[%3d] rchisq: %12.8f, ndata-3: %3d, dev_new: %12.8f, dev_best: %12.8f\n",
+			//		blockIdx.x, (*CUDA_LCC).rchisq, (*CUDA_CC).ndata - 3, (*CUDA_LCC).dev_new, dev_best);
+			//}
+
 			// NOTE: only if this step is better than the previous, 1e-10 is for numeric errors
 			if ((*CUDA_LCC).dev_old - (*CUDA_LCC).dev_new > 1e-10)
 			{
@@ -806,8 +813,8 @@ __kernel void ClCalculateFinishPole(
 
 	const double dark = sqrt(sum);
 
-	//if (blockIdx.x == 2)
-		//printf("[%d] sum: %12.8f, dark: %12.8f, totarea: %12.8f\n", blockIdx.x, sum, dark, totarea);
+	//if (blockIdx.x == 232 || blockIdx.x == 233)
+	//	printf("[%d] sum: %12.8f, dark: %12.8f, totarea: %12.8f, dark_best: %12.8f\n", blockIdx.x, sum, dark, totarea, dark / totarea * 100);
 
 	/* period solution */
 	const double period = 2 * PI / (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3];
@@ -826,10 +833,21 @@ __kernel void ClCalculateFinishPole(
 	if ((*CUDA_LCC).dev_new < (*CUDA_LFR).dev_best)
 	{
 		(*CUDA_LFR).dev_best = (*CUDA_LCC).dev_new;
+		(*CUDA_LFR).dev_best_x2 = (*CUDA_LCC).rchisq;
 		(*CUDA_LFR).per_best = period;
 		(*CUDA_LFR).dark_best = dark / totarea * 100;
 		(*CUDA_LFR).la_best = la_tmp;
 		(*CUDA_LFR).be_best = be_tmp;
+
+		//if(blockIdx.x == 233)
+		//	printf("[%d] dev_best: %12.8f\n", blockIdx.x, (*CUDA_LFR).dev_best);
+
+		//if (blockIdx.x == 232)
+		//{
+		//	double dev_best = (*CUDA_LFR).dev_best * (*CUDA_LFR).dev_best * ((*CUDA_CC).ndata - 3);
+		//	printf("[%3d] rchisq: %12.8f, ndata-3: %3d, dev_new: %12.8f, dev_best: %12.8f\n",
+		//		blockIdx.x, (*CUDA_LCC).rchisq, (*CUDA_CC).ndata - 3, (*CUDA_LFR).dev_best, dev_best);
+		//}
 	}
 
 	//if (blockIdx.x == 2)

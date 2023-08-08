@@ -118,6 +118,7 @@ period_search_in*
 period_search_out*
 period_search_state*
 test_*.txt
+test_values*.txt
 
 
 # Files build unde Linux
@@ -125,4 +126,3 @@ test_*.txt
 *.so
 *.a
 period_search_BOINC*
-/period_search_opencl_amd/test_values_2.txt
