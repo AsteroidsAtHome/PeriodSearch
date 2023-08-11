@@ -91,7 +91,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -127,7 +127,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_OpenCL_$(Configuration)</TargetName>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_AMD_OpenCL_$(Configuration)</TargetName>
     <IncludePath>$(AMDAPPSDKROOT)\include;$(IncludePath)</IncludePath>
     <ReferencePath>$(AMDAPPSDKROOT)\include;$(ReferencePath)</ReferencePath>
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(AMDAPPSDKROOT)\lib\x86_64;$(LibraryPath)</LibraryPath>
@@ -149,6 +149,15 @@
     <IncludePath>$(CUDA_PATH_V12_0)\include;$(IncludePath)</IncludePath>
     <ReferencePath>$(CUDA_PATH_V12_0\include;$(ReferencePath)</ReferencePath>
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(CUDA_PATH_V12_0\lib\x86_64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_AMD_OpenCL_$(Configuration)</TargetName>
+    <IncludePath>$(AMDAPPSDKROOT)\include;$(IncludePath)</IncludePath>
+    <ReferencePath>$(AMDAPPSDKROOT)\include;$(ReferencePath)</ReferencePath>
+    <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Release;$(AMDAPPSDKROOT)\lib\x86_64;$(LibraryPath)</LibraryPath>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug-Nvidia|x64'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
@@ -209,7 +218,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_DEBUG;_CONSOLE;__CL_ENABLE_EXCEPTIONS;AMD%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_DEBUG;_CONSOLE;__CL_ENABLE_EXCEPTIONS;AMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;$(AMDAPPSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
@@ -251,7 +260,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(CUDA_PATH_V12_0)\lib\x64;C:\boincsdk\boinc\win_build\Build\x64\Debug;$(WindowsSDK_LibraryPath_x64);$(VC_ReferencesPath_VC_x64);$(UniversalCRT_LibraryPath_x64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;libboinc.lib;libboincapi.lib;libboincopencl.lib;Version.lib;winspool.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;libboinc.lib;libboincapi.lib;libboincopencl.lib;Version.lib;winspool.lib;libgraphics2.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>10000000</StackReserveSize>
       <OptimizeReferences>false</OptimizeReferences>
@@ -288,15 +297,23 @@
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_USE_MATH_DEFINES;__CL_ENABLE_EXCEPTIONS;AMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>Default</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;$(AMDAPPSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <Optimization>Disabled</Optimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(AMDAPPSDKROOT)lib\x86_64;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <StackReserveSize>10000000</StackReserveSize>
+      <AdditionalDependencies>OpenCL.lib;libcmt.lib;libcpmt.lib;libboinc.lib;libboincapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -372,9 +389,16 @@
     <ClInclude Include="period_search\declarations_OpenCl.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\Globals_OpenCl.h" />
+    <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\Start_OpenCl.h" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="period_search\psamdopencl12.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -74,11 +74,14 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-//#include "graphics2.h"
+#include "boinc_opencl.h"
 
 #ifdef APP_GRAPHICS
+#include "shmem.h"
+#include "graphics2.h"
 #include "uc2.h"
 UC_SHMEM* shmem;
+
 #endif
 
 using std::string;

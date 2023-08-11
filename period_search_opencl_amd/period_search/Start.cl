@@ -839,8 +839,7 @@ __kernel void ClCalculateFinishPole(
 		(*CUDA_LFR).la_best = la_tmp;
 		(*CUDA_LFR).be_best = be_tmp;
 
-		//if(blockIdx.x == 233)
-		//	printf("[%d] dev_best: %12.8f\n", blockIdx.x, (*CUDA_LFR).dev_best);
+		//printf("[%d] dev_best: %12.8f\n", blockIdx.x, (*CUDA_LFR).dev_best);
 
 		//if (blockIdx.x == 232)
 		//{
@@ -851,7 +850,7 @@ __kernel void ClCalculateFinishPole(
 	}
 
 	//if (blockIdx.x == 2)
-	//	printf("dark_best: %10.7f \n", (*CUDA_LFR).dark_best);
+		printf("dark_best: %10.7f \n", (*CUDA_LFR).dark_best);
 
 	//debug
 	/*	(*CUDA_LFR).dark=dark;

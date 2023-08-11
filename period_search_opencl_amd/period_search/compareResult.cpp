@@ -1,6 +1,7 @@
 ﻿#include "declarations.hpp"
 #include "boinc_api.h"
 
+#if defined (_DEBUG)
 int getData(const char* filename, DATA*& data)
 {
 	//#include "boinc_db.h"
@@ -137,3 +138,5 @@ void CompareResult(const char* output_filename)
 	cleanup_result(result);
 	cleanup_result(comparrer);
 }
+
+#endif

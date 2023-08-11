@@ -201,18 +201,11 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	std::cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: " << devMaxWorkItemSizes[0] << " | " << devMaxWorkItemSizes[1] << " | " << devMaxWorkItemSizes[2] << endl;
 #endif
 
-	auto doesNotSupportsFp64 = true;// (deviceExtensions.find("cl_khr_fp64") == std::string::npos) || (deviceExtensions.find("cl_amd_fp64") == std::string::npos);
-#ifdef NVIDIA
-	bool is64CUDA = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
-	doesNotSupportsFp64 = !is64CUDA;
-#elif defined(AMD) // NVIDIA
-	bool is64AMD = deviceExtensions.find("cl_amd_fp64") != std::string::npos;
-	doesNotSupportsFp64 = !is64AMD;
-#endif
-	//if (!is64CUDA || !is64AMD)
+	bool isFp64 = deviceExtensions.find("cl_khr_fp64") != std::string::npos;
+	bool doesNotSupportsFp64 = !isFp64;
 	if (doesNotSupportsFp64)
 	{
-		fprintf(stderr, "Double precision floating point not supported by OpenCL implementation. Exiting...\n");
+		fprintf(stderr, "Double precision floating point not supported by OpenCL implementation on current device34. Exiting...\n");
 		exit(-1);
 	}
 
@@ -249,9 +242,10 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	(*Fa).Lmax = l_max;
 	(*Fa).Phi_0 = Phi_0;
 
-
-
 #pragma region Load kernel files
+	string kernelSourceFile = "kernelSource.bin";
+	const char* kernelFileName = "kernels.bin";
+#if defined (_DEBUG)
 	// Load CL file, build CL program object, create CL kernel object
 	std::ifstream constantsFile("period_search/constants.h");
 	std::ifstream globalsFile("period_search/GlobalsCL.h");
@@ -304,54 +298,91 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	gauserrcFile.close();
 	swapFile.close();
 
-#pragma endregion
-	cl_int* perr = nullptr;
-	cl::Program::Sources sources(1, std::make_pair(kernel_code.c_str(), kernel_code.length() + 1));
-	cl::Program binProgram = cl::Program(context, sources, perr);
-
-	//#if _DEBUG
-	//		if (binProgram.build(devices, "-cl-kernel-arg-info") != CL_SUCCESS)
-	//#else
-	//		if (binProgram.build(devices) != CL_SUCCESS)
-	//#endif
-#ifdef AMD
-	binProgram.build(devices, "-w -x clc++");
-#elif defined(NVIDIA)
-	binProgram.build(devices); // "-w" "-Werror"
+	std::ofstream out(kernelSourceFile);
+	out << kernel_code;
+	out.close();
 #endif
 
-	//if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
-	//{
-	//	std::cout << " Error building: " << binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << "\n";
-	//	exit(1);
-	//}
-	for (cl::Device dev : devices)
+	std::ifstream f(kernelFileName);
+	bool kernelExist = f.good();
+
+	bool readsource = false;
+#if defined (_DEBUG)
+	readsource = true;
+#endif
+
+	if (!kernelExist || !readsource)
 	{
-		std::string name = dev.getInfo<CL_DEVICE_NAME>();
-		std::string buildlog = binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
-		cl_build_status buildStatus = binProgram.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
-		std::cerr << "Binary build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+//#if defined (NDEBUG)
+//		cerr << "Kernel binary is missing. Exiting..." << endl;
+//		return(3);
+//#endif
+
+		std::ifstream sourcefile(kernelSourceFile);
+		string source;
+		string str;
+		while (std::getline(sourcefile, str))
+		{
+			source += str;
+			source.push_back('\n');
+		}
+		sourcefile.close();
+
+#pragma endregion
+		cl_int* perr = nullptr;
+		//cl::Program::Sources sources(1, std::make_pair(kernel_code.c_str(), kernel_code.length() + 1));
+		cl::Program::Sources sources(1, std::make_pair(source.c_str(), source.length() + 1));
+		cl::Program binProgram = cl::Program(context, sources, perr);
+
+		//#if _DEBUG
+		//		if (binProgram.build(devices, "-cl-kernel-arg-info") != CL_SUCCESS)
+		//#else
+		//		if (binProgram.build(devices) != CL_SUCCESS)
+		//#endif
+#ifdef AMD
+		binProgram.build(devices, "-D AMD -w -cl-std=CL1.2");
+#elif defined(NVIDIA)
+		binProgram.build(devices, "-D NVIDIA -w -cl-std=CL1.2"); // "-w" "-Werror"
+#endif
+
+		//if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
+		//{
+		//	std::cout << " Error building: " << binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << "\n";
+		//	exit(1);
+		//}
+
+#if defined (NDEBUG)
+		std::remove(kernelSourceFile.c_str());
+#endif
+
+		for (cl::Device dev : devices)
+		{
+			std::string name = dev.getInfo<CL_DEVICE_NAME>();
+			std::string buildlog = binProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+			cl_build_status buildStatus = binProgram.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+			std::cerr << "Binary build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+		}
+
+		vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
+		vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
+		std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
+		char* binChunk = &binData[0];
+		vector<char*> binaries;
+
+		for (unsigned int i = 0; i < binSizes.size(); ++i) {
+			binaries.push_back(binChunk);
+			binChunk += binSizes[i];
+		}
+
+
+		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+		binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
+		std::ofstream binaryfile(kernelFileName, std::ios::binary);
+		for (unsigned int i = 0; i < binaries.size(); ++i)
+			binaryfile.write(binaries[i], binSizes[i]);
+
+		binaryfile.close();
 	}
-
-	vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
-	vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
-	std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
-	char* binChunk = &binData[0];
-	vector<char*> binaries;
-
-	for (unsigned int i = 0; i < binSizes.size(); ++i) {
-		binaries.push_back(binChunk);
-		binChunk += binSizes[i];
-	}
-
-	const char* kernelFileName = "kernel_code.bin";
-	binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-	binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-	std::ofstream binaryfile(kernelFileName, std::ios::binary);
-	for (unsigned int i = 0; i < binaries.size(); ++i)
-		binaryfile.write(binaries[i], binSizes[i]);
-
-	binaryfile.close();
 
 	try
 	{
@@ -367,18 +398,22 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		std::vector<cl_int> binaryStatus;
 		cl_int err = 0;
 		//cl::Program
-		//program = cl::Program{ context, devices, bin, &binaryStatus, &err };
 		program = cl::Program(context, devices, bin, &binaryStatus, &err);
-		program.build(devices); // "-Werror" "-w"
+		//program = cl::Program(context, sources, &err);
+
+#if defined (AMD)
+		program.build(devices, "-D AMD -w -cl-std=CL1.2"); // "-Werror" "-w"
+#elif defined (NVIDIA)
+		program.build(devices, "-D NVIDIA -w -cl-std=CL1.2"); // "-Werror" "-w"
+#endif
 
 		queue = cl::CommandQueue(context, devices[0]);
-
 		if (err != CL_SUCCESS) {
-			std::cout << " Error loading" << err << "\n";
+			std::cerr << " Error loading" << err << "\n";
 			exit(1);
 		}
 		for (std::vector<cl_int>::const_iterator bE = binaryStatus.begin(); bE != binaryStatus.end(); bE++) {
-			std::cout << *bE << std::endl;
+			std::cerr << "Bynary status: " << * bE << std::endl;
 		}
 
 
@@ -445,8 +480,6 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 
 #pragma region Kernel creation
 	cl_int kerr;
-
-
 	try
 	{
 		kernelClCheckEnd = cl::Kernel(program, "ClCheckEnd", &kerr);
@@ -787,26 +820,16 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
 	int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
 	//__declspec(align(8)) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
-	auto alignas(8) pfr = new freq_result[CUDA_grid_dim_precalc];
+	//auto alignas(8) pfr = new freq_result[CUDA_grid_dim_precalc];
 	//alignas(8) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
 	//pfr = static_cast<freq_result*>(malloc(frSize));
 
-	for (m = 0; m < CUDA_grid_dim_precalc; m++)
-	{
-		pfr[m].isInvalid = 0;
-		pfr[m].isReported = 1;
-		pfr[m].be_best = 0.0;
-		pfr[m].dark_best = 0.0;
-		pfr[m].dev_best = 0.0;
-		pfr[m].freq = 0.0;
-		pfr[m].la_best = 0.0;
-		pfr[m].per_best = 0.0;
-	}
-
-	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
-	queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
-
-
+	//auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
+	void* memIn = (void*)_aligned_malloc(frSize, 256);
+	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
+	void* pfr;
+	//pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+	//queue.flush();
 
 #pragma region SetKernelArgs
 	kernelClCheckEnd.setArg(0, CUDA_End);
@@ -899,10 +922,29 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #pragma endregion
 
 	// Allocate result space
-	res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
+	//res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
 
 	for (n = 1; n <= max_test_periods; n += CUDA_grid_dim_precalc)
 	{
+		pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+		queue.flush();
+
+		for (m = 0; m < CUDA_grid_dim_precalc; m++)
+		{
+			((freq_result*)pfr)[m].isInvalid = 1;
+			((freq_result*)pfr)[m].isReported = 0;
+			((freq_result*)pfr)[m].be_best = 0.0;
+			((freq_result*)pfr)[m].dark_best = 0.0;
+			((freq_result*)pfr)[m].dev_best = 0.0;
+			((freq_result*)pfr)[m].freq = 0.0;
+			((freq_result*)pfr)[m].la_best = 0.0;
+			((freq_result*)pfr)[m].per_best = 0.0;
+		}
+
+		//queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+		queue.enqueueUnmapMemObject(CUDA_FR, pfr);
+		queue.flush();
+
 		kernelCalculatePrepare.setArg(6, sizeof(n), &n);
 		// NOTE: CudaCalculatePrepare(n, max_test_periods, freq_start, freq_step); // << <CUDA_grid_dim_precalc, 1 >> >
 		queue.enqueueNDRangeKernel(kernelCalculatePrepare, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
@@ -1044,12 +1086,16 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
 		// NOTE: CudaCalculateFinish();	<<<CUDA_grid_dim_precalc, 1 >> >
 		queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
-		queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
+		//queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
+		pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+		queue.flush();
+
+
 		//err=cudaThreadSynchronize(); memcpy is synchro itself
 
 		//read results here
 		//err = cudaMemcpy(res, pfr, sizeof(freq_result) * CUDA_grid_dim_precalc, cudaMemcpyDeviceToHost);
-
+		auto res = (freq_result*)pfr;
 		for (m = 1; m <= CUDA_grid_dim_precalc; m++)
 		{
 			if (res[m - 1].isReported == 1)
@@ -1059,18 +1105,21 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 			}
 		}
 
+		queue.enqueueUnmapMemObject(CUDA_FR, pfr);
+		queue.flush();
 
 	} /* period loop */
 
-	isPrecalc = 0;
-	//queue.enqueueReadBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
-	queue.enqueueReadBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
-	(*Fa).Is_Precalc = isPrecalc;
-	queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
+	//isPrecalc = 0;
+	////queue.enqueueReadBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
+	//queue.enqueueReadBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
+	//(*Fa).Is_Precalc = isPrecalc;
+	//queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
 
 	//queue.enqueueUnmapMemObject(CUDA_End, clEnd);
-	free((void*)res);
-	delete[] pfr;
+	//free((void*)res);
+	//delete[] pfr;
+	_aligned_free(pfr);
 	delete[] pcc;
 
 	ave_dark_facet = sum_dark_facet / max_test_periods;
@@ -1078,7 +1127,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 	if (ave_dark_facet < 1.0)
 		*new_conw = 1; /* new correct conwexity weight */
 	if (ave_dark_facet >= 1.0)
-		*conw_r = *conw_r * 2; /* still not good */
+		*conw_r = *conw_r * 2;
 
 	//printf("ave_dark_facet: %10.17f\n", ave_dark_facet);
 	//printf("conw_r:         %10.17f\n", *conw_r);
@@ -1089,7 +1138,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_step, double stop_condition, int n_iter_min, double conw_r,
 	int ndata, int* ia, int* ia_par, double* cg_first, MFILE& mf, double escl, double* sig, int Numfac, double* brightness)
 {
-	freq_result* res;
+	//freq_result* res;
 	//void* pbrightness, * psig;
 	double iter_diff_max;
 	int retval, i, n, m, iC;
@@ -1257,11 +1306,11 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
 
 	// Allocate result space
-	res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
+	//res = (freq_result*)malloc(CUDA_grid_dim * sizeof(freq_result));
 
 	int frSize = CUDA_grid_dim * sizeof(freq_result);
 	//__declspec(align(8)) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
-	auto alignas(8) pfr = new freq_result[CUDA_grid_dim];
+	//auto alignas(8) pfr = new freq_result[CUDA_grid_dim];
 	//alignas(8) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
 	//pfr = static_cast<freq_result*>(malloc(frSize));
 
@@ -1277,8 +1326,14 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	//	pfr[m].per_best = 0.0;
 	//}
 
-	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
+	//auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
 	//queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+
+	void* memIn = (void*)_aligned_malloc(frSize, 256);
+	auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
+	void* pfr;
+	//pfr = queue.enqueueMapBuffer(CUDA_FR, CL_NON_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+	//queue.flush();
 
 #pragma region Kernels
 	cl_int kerr = 0;
@@ -1422,6 +1477,7 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 
 	//int firstreport = 0;//beta debug
 	auto oldFractionDone = 0.0001;
+	int count = 0;
 
 	for (n = n_start_from; n <= n_max; n += CUDA_grid_dim)
 	{
@@ -1437,18 +1493,23 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//		fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction);
 		//#endif
 
+		pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+		queue.flush();
+
 		for (int j = 0; j < CUDA_grid_dim; j++)
 		{
-			pfr[j].isInvalid = 1;
-			pfr[j].isReported = 0;
-			pfr[j].be_best = 0.0;
-			pfr[j].dark_best = 0.0;
-			pfr[j].dev_best = 0.0;
-			pfr[j].freq = 0.0;
-			pfr[j].la_best = 0.0;
-			pfr[j].per_best = 0.0;
+			((freq_result*)pfr)[j].isInvalid = 1;
+			((freq_result*)pfr)[j].isReported = 0;
+			((freq_result*)pfr)[j].be_best = 0.0;
+			((freq_result*)pfr)[j].dark_best = 0.0;
+			((freq_result*)pfr)[j].dev_best = 0.0;
+			((freq_result*)pfr)[j].freq = 0.0;
+			((freq_result*)pfr)[j].la_best = 0.0;
+			((freq_result*)pfr)[j].per_best = 0.0;
 		}
-		queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+		//queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, pfr);
+		queue.enqueueUnmapMemObject(CUDA_FR, pfr);
+		queue.flush();
 
 		kernelCalculatePrepare.setArg(6, sizeof(n), &n); // NOTE: CudaCalculatePrepare << <CUDA_grid_dim, 1 >> > (n, n_max, freq_start, freq_step);
 		queue.enqueueNDRangeKernel(kernelCalculatePrepare, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
@@ -1477,8 +1538,11 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 			queue.enqueueWriteBuffer(CUDA_End, CL_BLOCKING, 0, sizeof(cl_int), &theEnd);	 /// <<<<<<<<<<<<<<<	// CudaCalculatePreparePole << <CUDA_grid_dim, 1 >> > (m);
 			queue.enqueueNDRangeKernel(kernelCalculatePreparePole, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 
+			count = 0;
+
 			while (!theEnd)
 			{
+				count++;
 				// CudaCalculateIter1Begin << <CUDA_grid_dim, 1 >> > ();
 				queue.enqueueNDRangeKernel(kernelCalculateIter1Begin, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
 
@@ -1588,10 +1652,14 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 		//
 		//read results here synchronously
 		//err = cudaMemcpy(res, pfr, sizeof(freq_result) * CUDA_grid_dim, cudaMemcpyDeviceToHost);
-		queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
+		//queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
+
+		pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+		queue.flush();
 
 		oldFractionDone = fractionDone;
 		LinesWritten = 0;
+		auto res = (freq_result*)pfr;
 		for (m = 1; m <= CUDA_grid_dim; m++)
 		{
 			//mf.printf("%4d %3d  %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d %d\n",
@@ -1606,18 +1674,19 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 				{
 					//mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best));
 					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best_x2, conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best));
-					//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), conw_r * escl * escl, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
 				}
 				else
 				{
 					// period_best, deviation_best, x2
 					//mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best));
 					mf.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best_x2, res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best));
-					//mf.printf("%4d %3d %.8f  %.6f  %.6f %4.1f %4.0f %4.0f | %d %d\n", n, m, res[m - 1].isInvalid, res[m - 1].isReported, 24 * res[m - 1].per_best, res[m - 1].dev_best, res[m - 1].dev_best * res[m - 1].dev_best * (ndata - 3), res[m - 1].dark_best, round(res[m - 1].la_best), round(res[m - 1].be_best), res[m - 1].isReported, res[m - 1].isInvalid);
 				}
 			}
 			LinesWritten++;
 		}
+
+		queue.enqueueUnmapMemObject(CUDA_FR, pfr);
+		queue.flush();
 
 		if (boinc_time_to_checkpoint() || boinc_is_standalone())
 		{
@@ -1645,9 +1714,10 @@ int CUDAStart(int n_start_from, double freq_start, double freq_end, double freq_
 	//cudaFree(psig);
 
 	free((freq_context*)Fa);
-	free((void*)res);
+	//free((void*)res);
 	//free((freq_result*)pfr);
-	delete[] pfr;
+	//delete[] pfr;
+	_aligned_free(pfr);
 	delete[] pcc;
 
 	return 1;
