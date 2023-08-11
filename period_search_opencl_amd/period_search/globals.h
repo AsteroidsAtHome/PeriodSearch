@@ -1,10 +1,6 @@
 #pragma once
 
-#if defined (INTEL)
-#include <CL/cl.h>
-#else
 #include <CL/cl.hpp>
-#endif
 
 #include <cstdio>
 #include "constants.h"

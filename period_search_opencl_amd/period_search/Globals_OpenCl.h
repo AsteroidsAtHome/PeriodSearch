@@ -1,5 +1,5 @@
 #pragma once
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+//#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 //#define __CL_ENABLE_EXCEPTIONS
 #pragma pack(8)
 

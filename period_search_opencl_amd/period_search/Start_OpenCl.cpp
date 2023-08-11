@@ -1,5 +1,5 @@
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#define CL_HPP_TARGET_OPENCL_VERSION 120
+//#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+//#define CL_HPP_TARGET_OPENCL_VERSION 120
 
 //#define __CL_ENABLE_EXCEPTIONS  //- redefinition warning - Declared at Preprocessor directives command line
 //#define FP_64
@@ -124,7 +124,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		auto name = (*iter).getInfo<CL_PLATFORM_NAME>();
 		auto vendor = (*iter).getInfo<CL_PLATFORM_VENDOR>();
 		std::cerr << "Platform vendor: " << vendor << endl;
-#ifdef AMD
+#if defined (AMD)
 		if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc."))
 		{
 			break;
@@ -134,11 +134,11 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		{
 			break;
 		}
-#endif
-		//if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Intel(R) Corporation"))
-		//{
-		//	break;
-		//}
+#endif defined(INTEL)
+		if (!strcmp((*iter).getInfo<CL_PLATFORM_VENDOR>().c_str(), "Intel(R) Corporation"))
+		{
+			break;
+		}
 	}
 
 	// Create an OpenCL context
@@ -339,10 +339,12 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		//#else
 		//		if (binProgram.build(devices) != CL_SUCCESS)
 		//#endif
-#ifdef AMD
+#if defined (AMD)
 		binProgram.build(devices, "-D AMD -w -cl-std=CL1.2");
-#elif defined(NVIDIA)
+#elif defined (NVIDIA)
 		binProgram.build(devices, "-D NVIDIA -w -cl-std=CL1.2"); // "-w" "-Werror"
+#elif defined (INTEL)
+		binProgram.build(devices, "-D INTEL -cl-std=CL1.2");
 #endif
 
 		//if (binProgram.build(devices, "-w -x clc++") != CL_SUCCESS) // inhibit all warnings
@@ -405,6 +407,8 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 		program.build(devices, "-D AMD -w -cl-std=CL1.2"); // "-Werror" "-w"
 #elif defined (NVIDIA)
 		program.build(devices, "-D NVIDIA -w -cl-std=CL1.2"); // "-Werror" "-w"
+#elif defined (INTEL)
+		program.build(devices, "-D INTEL -cl-std=CL1.2");
 #endif
 
 		queue = cl::CommandQueue(context, devices[0]);

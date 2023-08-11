@@ -22,6 +22,21 @@
 
 */
 
+// Macros for OpenCL versions
+#define OPENCL_VERSION_1_2  1.2f
+
+// Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
+// Khronos ICD supports only latest OpenCL version
+#define CL_TARGET_OPENCL_VERSION 120
+
+// Suppress a compiler warning about 'clCreateCommandQueue': was declared deprecated
+// for OpenCL 1.2
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
+//we want to use POSIX functions
+#pragma warning( push )
+#pragma warning( disable : 4996 )
+
 #include <CL/cl.hpp>
 #include "stdafx.h"
 #include <cstdio>
