@@ -5,8 +5,6 @@ VisualStudioVersion = 17.7.33913.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psopencl_vs2022", "psopencl_vs2022.vcxproj", "{A0BEDFA0-1445-4ECA-A63E-08180D6A943E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psopencl_Intel_GPU_vs2022", "psopencl_Intel_GPU_vs2022.vcxproj", "{05D3AD85-0F8F-407A-AE51-03E5A166842D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
