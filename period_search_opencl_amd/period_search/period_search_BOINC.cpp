@@ -74,7 +74,7 @@
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"
-#include "boinc_opencl.h"
+//#include "graphics2.h"
 
 #ifdef APP_GRAPHICS
 #include "shmem.h"

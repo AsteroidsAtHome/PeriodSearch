@@ -1,7 +1,14 @@
 #pragma once
+
+#if defined (INTEL)
+#include <CL/cl.h>
+#else
 #include <CL/cl.hpp>
+#endif
+
 #include <cstdio>
 #include "constants.h"
+#include <string>
 
 extern cl_int l_max, m_max, n_iter, last_call,
 n_coef, num_fac, l_curves, n_ph_par,

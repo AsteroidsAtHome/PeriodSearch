@@ -14,7 +14,7 @@
 //#else
 //typedef struct mfreq_context
 //#endif
-struct mfreq_context
+typedef struct mfreq_context
 {
 	//double* Area;
 	//double* Dg;
@@ -74,7 +74,7 @@ struct mfreq_context
 	int indxr[MAX_N_PAR + 1];
 	int sh_icol[BLOCK_DIM];
 	int sh_irow[BLOCK_DIM];
-};
+} CUDA_LCC;
 
 //struct freq_context
 //typedef struct __attribute__((aligned(8))) freq_context
