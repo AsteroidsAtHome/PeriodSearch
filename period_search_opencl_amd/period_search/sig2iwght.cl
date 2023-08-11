@@ -1,4 +1,4 @@
-__kernel void sig(__global const double *sig,
+kernel void sig(__global const double *sig,
     __global const double *weight,
     __global double *sig2iwght,
     __global double *dy, 

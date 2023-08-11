@@ -1,64 +1,84 @@
-/* Convexity regularization function
+//Convexity regularization function
 
-   8.11.2006
-*/
+//  8.11.2006
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "globals_CUDA.h"
-#include "declarations_CUDA.h"
 
-//#define __device
-
-__device__ double conv(freq_context* CUDA_LCC, int nc, int tmpl, int tmph, int brtmpl, int brtmph)
+double conv(
+	__global struct mfreq_context* CUDA_LCC,
+	__global struct freq_context* CUDA_CC,
+	__local double* res,
+	int nc,
+	int tmpl,
+	int tmph,
+	int brtmpl,
+	int brtmph)
 {
 	int i, j, k;
-	__shared__ double res[CUDA_BLOCK_DIM];
-	double tmp, dtmp;
+	double tmp = 0.0;
+	double dtmp;
+	int3 threadIdx, blockIdx;
+	threadIdx.x = get_local_id(0);
+	blockIdx.x = get_group_id(0);
 
-	tmp = 0;
-	j = blockIdx.x * (CUDA_Numfac1)+brtmpl;
+	//j = blockIdx.x * (CUDA_Numfac1)+brtmpl;
+	j = brtmpl;
 	for (i = brtmpl; i <= brtmph; i++, j++)
 	{
-		int2 bfr;
-		bfr = tex1Dfetch(texArea, j);
-		tmp += __hiloint2double(bfr.y, bfr.x) * CUDA_Nor[i][nc];
+		//tmp += CUDA_Area[j] * CUDA_Nor[i][nc];
+		tmp += (*CUDA_LCC).Area[j] * (*CUDA_CC).Nor[i][nc];
 	}
+
 	res[threadIdx.x] = tmp;
-	__syncthreads();
+
+	//if (threadIdx.x == 0)
+	//    printf("conv>>> [%d] jp-1[%3d] res[%3d]: %10.7f\n", blockIdx.x, nc, threadIdx.x, res[threadIdx.x]);
+
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+
 	//parallel reduction
-	k = CUDA_BLOCK_DIM >> 1;
+	k = BLOCK_DIM >> 1;
 	while (k > 1)
 	{
-		if (threadIdx.x < k) res[threadIdx.x] += res[threadIdx.x + k];
+		if (threadIdx.x < k)
+			res[threadIdx.x] += res[threadIdx.x + k];
 		k = k >> 1;
-		__syncthreads();
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	}
+
 	if (threadIdx.x == 0)
 	{
 		tmp = res[0] + res[1];
 	}
 	//parallel reduction end
-	__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
-	int m = blockIdx.x * CUDA_Dg_block + tmpl * (CUDA_Numfac1);
-	for (j = tmpl; j <= tmph; j++, m += (CUDA_Numfac1))
+	//int m = blockIdx.x * (*CUDA_CC).Dg_block + tmpl * (*CUDA_CC).Numfac1);   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<< !!!
+	int m = tmpl * (*CUDA_CC).Numfac1;
+	for (j = tmpl; j <= tmph; j++)  //, m += (*CUDA_CC).Numfac1)
 	{
+		// printf("m: %4d\n", m);
 		dtmp = 0;
-		if (j <= CUDA_Ncoef)
+		if (j <= (*CUDA_CC).Ncoef)
 		{
 			int mm = m + 1;
-			for (i = 1; i <= CUDA_Numfac; i++, mm++)
+			for (i = 1; i <= (*CUDA_CC).Numfac; i++, mm++)
 			{
-				int2 xx;
-				xx = tex1Dfetch(texDg, mm);
-				dtmp += CUDA_Darea[i] * __hiloint2double(xx.y, xx.x) * CUDA_Nor[i][nc];
+				// dtmp += CUDA_Darea[i] * CUDA_Dg[mm] * CUDA_Nor[i][nc];
+				dtmp += (*CUDA_CC).Darea[i] * (*CUDA_LCC).Dg[mm] * (*CUDA_CC).Nor[i][nc];
+
+				//if (blockIdx.x == 0 && j == 8)
+				//	printf("[%d][%3d]  Darea[%4d]: %.7f, Dg[%4d]: %.7f, Nor[%3d][%3d]: %10.7f\n",
+				//		blockIdx.x, threadIdx.x, i, (*CUDA_CC).Darea[i], mm, (*CUDA_LCC).Dg[mm], i, nc, (*CUDA_CC).Nor[i][nc]);
 			}
 		}
+
 		(*CUDA_LCC).dyda[j] = dtmp;
+
+		//if (blockIdx.x == 0) // && threadIdx.x == 1)
+		//    printf("[mrqcof_curve1_last -> conv] [%d][%3d] jp - 1: %3d, j[%3d] dyda[%3d]: %10.7f\n",
+		//        blockIdx.x, threadIdx.x, nc, j, j, (*CUDA_LCC).dyda[j]);
 	}
-	__syncthreads();
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	return (tmp);
 }

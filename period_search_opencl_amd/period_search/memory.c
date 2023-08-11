@@ -5,6 +5,8 @@
    8.11.2006
 */
 
+#include <CL/cl.hpp>
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -18,6 +20,18 @@ double *vector_double(int length)
       fflush(stderr);
    }
    return (p_x);
+}
+
+cl_double* vector_cl_double(int length)
+{
+    cl_double* p_x;
+
+    if ((p_x = (cl_double*)malloc((length + 1) * sizeof(cl_double))) == NULL)
+    {
+        fprintf(stderr, "failure in 'vector_double()' \n");
+        fflush(stderr);
+    }
+    return (p_x);
 }
   
 int *vector_int(int length)

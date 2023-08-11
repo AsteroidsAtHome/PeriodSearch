@@ -10,6 +10,13 @@
     <ClCompile Include="period_search\phasec.c" />
     <ClCompile Include="period_search\stdafx.cpp" />
     <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\areanorm.cpp" />
+    <ClCompile Include="period_search\cpp.hint" />
+    <ClCompile Include="period_search\ellfit.cpp" />
+    <ClCompile Include="period_search\FreqContext.cpp" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\sphfunc.cpp" />
+    <ClCompile Include="period_search\Start_OpenCl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h" />
@@ -18,6 +25,8 @@
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
     <ClInclude Include="period_search\uc2.h" />
+    <ClInclude Include="period_search\declarations_OpenCl.h" />
+    <ClInclude Include="period_search\Start_OpenCl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\clear_files.bat" />
@@ -26,6 +35,11 @@
     <None Include="period_search\period_search_in" />
     <None Include="period_search\sig2iwght.cl" />
     <None Include="period_search\bright.cl" />
+    <None Include="period_search\blmatrix.cl" />
+    <None Include="period_search\conv.cl" />
+    <None Include="period_search\mrqcof.cl" />
+    <None Include="period_search\mrqmin.cl" />
+    <None Include="period_search\gauss_errc.cl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="period_search\ReadMe.txt" />

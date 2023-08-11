@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="period_search\areanorm.cpp" />
+    <ClCompile Include="period_search\Array2D.cpp" />
+    <ClCompile Include="period_search\Array3D.cpp" />
+    <ClCompile Include="period_search\compareResult.cpp" />
+    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\ellfit.cpp" />
+    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\host_dot_product.c" />
+    <ClCompile Include="period_search\lubksb.c" />
+    <ClCompile Include="period_search\ludcmp.c" />
+    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\sphfunc.cpp" />
+    <ClCompile Include="period_search\Start_OpenCl.cpp" />
+    <ClCompile Include="period_search\stdafx.cpp" />
+    <ClCompile Include="period_search\trifac.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\constants.h" />
+    <ClInclude Include="period_search\declarations.hpp" />
+    <ClInclude Include="period_search\declarations_OpenCl.h" />
+    <ClInclude Include="period_search\globals.h" />
+    <ClInclude Include="period_search\Globals_OpenCl.h" />
+    <ClInclude Include="period_search\resource.h" />
+    <ClInclude Include="period_search\Start_OpenCl.h" />
+    <ClInclude Include="period_search\stdafx.h" />
+    <ClInclude Include="period_search\targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="period_search\psamdopencl12.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="period_search\blmatrix.cl" />
+    <None Include="period_search\bright.cl" />
+    <None Include="period_search\conv.cl" />
+    <None Include="period_search\cpp.hint" />
+    <None Include="period_search\curv.cl" />
+    <None Include="period_search\Curv2.cl" />
+    <None Include="period_search\dave.cl" />
+    <None Include="period_search\gauss_errc.cl" />
+    <None Include="period_search\GlobalsCL.h" />
+    <None Include="period_search\Intrinsics.cl" />
+    <None Include="period_search\mrqcof.cl" />
+    <None Include="period_search\mrqmin.cl" />
+    <None Include="period_search\sig2iwght.cl" />
+    <None Include="period_search\Start.cl" />
+    <None Include="period_search\swap.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{b41b6d02-39da-4edb-982e-117c089eb243}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files CL">
+      <UniqueIdentifier>{abbbbb9e-ecff-4709-b045-5942ac6533ed}</UniqueIdentifier>
+      <Extensions>cl;ocl</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{d445735e-5b5e-4338-8452-4e1a286186fb}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{69877edf-9346-4ce3-a94a-33ef3a225b4c}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+</Project>

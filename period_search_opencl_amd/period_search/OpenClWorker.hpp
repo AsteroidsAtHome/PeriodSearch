@@ -1,4 +1,5 @@
 #pragma once
+#include <CL/cl.hpp>
 #include "constants.h"
 
 void Init(cl_double cg[]);
