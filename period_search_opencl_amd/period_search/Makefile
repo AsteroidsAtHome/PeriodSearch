@@ -5,23 +5,30 @@
 # To keep constinstance of the repository and not be relying to a hardcoded paths please create symbolic links that will be outside the path under
 # versioning controll and this way will not brake anyones environment setups.
 # From your /home/[YOUR_USERNAME] direcory run: 
-#	ln -s /usr/local/cuda-12.0 cuda-12.0
+#	ln -s [AMD_SDK_PATH]/AMDSKD
 #	ln -s /[your_bpinc_path] boinc_src 
 # or change those paths acordingly to your setup.
 #
 
 # DO-NOT-CHANGE!
-BOINC_DIR = ../../../boinc_src
+BOINC_DIR =../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
-OPENCL_PATH = ../../../cuda-12.0
+#OPENCL_PATH =../../../AMDSDK
+OPENCL_PATH = /opt/rocm
+OPENCL_LIB_PATH = ../../../AMDSDK/lib
+
+
 # END DO-NOT-CHANGE
 
 CXXFLAGS = -g -O3 \
+	-DAMD \
+	-D__CL_ENABLE_EXCEPTIONS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
 	-I$(OPENCL_PATH)/include \
+	-L$(OPENCL_LIB_PATH) \
 	-L /usr/X11R6/lib \
 	-L.
 
@@ -39,14 +46,22 @@ CXXFLAGS = -g -O3 \
 CC=g++
 CXX=g++
 OPTFLAGS=-O3
-CFLAGS=$(OPTFLAGS) -Wall
+CFLAGS=$(OPTFLAGS) -Wall \
+	-DAMD \
+	-D__CL_ENABLE_EXCEPTIONS \
+	-I$(BOINC_DIR) \
+	-I$(BOINC_LIB_DIR) \
+	-I$(BOINC_API_DIR) \
+	-I$(OPENCL_PATH)/include \
+	-L$(OPENCL_LIB_PATH) \
+	-L.
+	
 LDFLAGS=-lm -lrt -Xlinker -rpath .
 
 
-MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
-		curv.o blmatrix.o conv.o covsrt.o matrix.o bright.o memory.o\
-	dot_product.o gauss_errc.o pscuda.device-link.o start_CUDA.o curve2_CUDA.o Start.o\
-	ComputeCapability.o # ??
+MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o\
+	covsrt.o memory.o\
+	compareResult.o Start_OpenCl.o  # ??
 
 PROGS = period_search_BOINC_opencl_12
 
@@ -55,8 +70,8 @@ all: $(PROGS)
 libstdc++.a:
 	ln -s `g++ -print-file-name=libstdc++.a`
 
-opencl.so:
-	ln -s $(OPENCL_PATH)/lib64/opencl.so opencl.so
+livOpenCL.so:
+	ln -s $(OPENCL_PATH)/lib/libOpenCL.so libOpenCL.so
 
 # libcuda.so:
 # 	ln -s $(CUDA_PATH)/lib64/stubs/libcuda.so libcuda.so
@@ -65,19 +80,19 @@ opencl.so:
 # 	ln -f -s $(CUDA_PATH)/lib64/stubs/libnvidia-ml.so libnvidia-ml.so
 
 clean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a opencl.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libOpenCL.so
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a openlc.so
+	/bin/rm -f $(PROGS) *.o libstdc++.a libOpenCL.so
 
 install: period_search_BOINC_opencl_12
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
 
-period_search_BOINC_opencl_12: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a opencl.so
+period_search_BOINC_opencl_12: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a libOpenCL.so
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
-	$(BOINC_API_DIR)/libboinc_api.a opencl.so  \
+	$(BOINC_API_DIR)/libboinc_api.a libOpenCL.so  \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
 # curve2_CUDA.o: curve2_CUDA.cu
@@ -158,5 +173,5 @@ period_search_BOINC_opencl_12: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BO
 # 		--compiler-options="$(CXXFLAGS)" \
 # 	start_CUDA.o Start.o blmatrix.o bright.o conv.o curv.o gauss_errc.o mrqcof.o mrqmin.o matrix.o curve2_CUDA.o ComputeCapability.o
 
-%.o: %.c
+%.o: %.c .cpp
 	$(CC) $(CFLAGS) -c $<

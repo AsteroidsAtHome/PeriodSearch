@@ -38,7 +38,7 @@
 #pragma warning( disable : 4996 )
 
 #include <CL/cl.hpp>
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -79,7 +79,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <csignal>
-#include <io.h>
+//#include <io.h>
 //#include <unistd.h>
 #endif
 

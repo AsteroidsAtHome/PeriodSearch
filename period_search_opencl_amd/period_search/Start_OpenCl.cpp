@@ -40,7 +40,6 @@
 //#include <Shlwapi.h>
 #endif
 
-#include "Start_OpenCL.h"
 #include "Globals_OpenCl.h"
 #include <cstddef>
 #include <numeric>
