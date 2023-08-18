@@ -22,6 +22,11 @@
 
 */
 
+// Needed by mesa-*
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+
 // Macros for OpenCL versions
 #define OPENCL_VERSION_1_2  1.2f
 
@@ -72,7 +77,7 @@
 #include "boinc_win.h"
 
 #else
-#include "../win_build/config.h"
+// #include "../win_build/config.h"
 #include <cstdio>
 #include <cctype>
 #include <ctime>
@@ -208,7 +213,6 @@ int main(int argc, char** argv)
 	cl_double* tim;
 
 	char* stringTemp;
-
 	stringTemp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
 
 	//   ee = matrix_double(MAX_N_OBS,3);
@@ -227,7 +231,8 @@ int main(int argc, char** argv)
 	af = vector_double(MAX_N_FAC);
 	ia = vector_int(MAX_N_PAR);
 
-	tim = vector_cl_double(MAX_N_OBS);
+	// tim = vector_cl_double(MAX_N_OBS);
+	tim = vector_double(MAX_N_OBS);
 
 	lambdaPole[1] = 0;    betaPole[1] = 0;
 	lambdaPole[2] = 90;   betaPole[2] = 0;

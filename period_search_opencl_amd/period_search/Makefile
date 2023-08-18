@@ -4,9 +4,9 @@
 #
 # To keep constinstance of the repository and not be relying to a hardcoded paths please create symbolic links that will be outside the path under
 # versioning controll and this way will not brake anyones environment setups.
-# From your /home/[YOUR_USERNAME] direcory run: 
+# From your /home/[YOUR_USERNAME] direcory run:
 #	ln -s [AMD_SDK_PATH]/AMDSKD
-#	ln -s /[your_bpinc_path] boinc_src 
+#	ln -s /[your_bpinc_path] boinc_src
 # or change those paths acordingly to your setup.
 #
 
@@ -14,16 +14,18 @@
 BOINC_DIR =../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
-#OPENCL_PATH =../../../AMDSDK
-OPENCL_PATH = /opt/rocm
+OPENCL_PATH =../../../AMDSDK
+# OPENCL_PATH = /opt/rocm
 OPENCL_LIB_PATH = ../../../AMDSDK/lib
 
 
 # END DO-NOT-CHANGE
 
-CXXFLAGS = -g -O3 \
+# CXXFLAGS = -g -O3 .
+CXXFLAGS = -g -w \
+	-D_DEBUG \
 	-DAMD \
-	-D__CL_ENABLE_EXCEPTIONS \
+	-DCL_HPP_ENABLE_EXCEPTIONS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
@@ -34,7 +36,7 @@ CXXFLAGS = -g -O3 \
 
 # There were two cases from the legacy code - first was using --maxrregcount=80 which is very ineficient on block occupancy.
 # After precise wxamination on results from NVIDIA Nsight Performance Analysis both are set to 32 now. This way we achieve 100% block occupancy (most of the time).
-# 28 APR 2020 - Temporaryly '--maxrregcount' is set back to '80' for the NVCCFLAGS until further research proves it needs to be set back to '32' 
+# 28 APR 2020 - Temporaryly '--maxrregcount' is set back to '80' for the NVCCFLAGS until further research proves it needs to be set back to '32'
 
 # CUDA 5.5: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_20,code=sm_20 --generate-code arch=compute_20,code=sm_21 --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_35,code=compute_35 --maxrregcount=80 -rdc=true
 # CUDA 10.2 - CC: NVCCFLAGS = compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75
@@ -45,22 +47,23 @@ CXXFLAGS = -g -O3 \
 
 CC=g++
 CXX=g++
-OPTFLAGS=-O3
-CFLAGS=$(OPTFLAGS) -Wall \
+# OPTFLAGS=-O3
+OPTFLAGS=
+CFLAGS=$(OPTFLAGS) -w \
 	-DAMD \
-	-D__CL_ENABLE_EXCEPTIONS \
+	-DCL_HPP_ENABLE_EXCEPTIONS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
 	-I$(OPENCL_PATH)/include \
 	-L$(OPENCL_LIB_PATH) \
 	-L.
-	
+
 LDFLAGS=-lm -lrt -Xlinker -rpath .
 
 
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o\
-	covsrt.o memory.o\
+	covsrt.o memory.o host_dot_product.o\
 	compareResult.o Start_OpenCl.o  # ??
 
 PROGS = period_search_BOINC_opencl_12
@@ -70,7 +73,7 @@ all: $(PROGS)
 libstdc++.a:
 	ln -s `g++ -print-file-name=libstdc++.a`
 
-livOpenCL.so:
+libOpenCL.so:
 	ln -s $(OPENCL_PATH)/lib/libOpenCL.so libOpenCL.so
 
 # libcuda.so:

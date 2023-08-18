@@ -1,4 +1,4 @@
-__kernel void ClCheckEnd(
+kernel void ClCheckEnd(
 	__global int* CUDA_End,
 	int theEnd)
 {
@@ -850,7 +850,7 @@ __kernel void ClCalculateFinishPole(
 	}
 
 	//if (blockIdx.x == 2)
-		printf("dark_best: %10.7f \n", (*CUDA_LFR).dark_best);
+	//	printf("dark_best: %10.7f \n", (*CUDA_LFR).dark_best);
 
 	//debug
 	/*	(*CUDA_LFR).dark=dark;

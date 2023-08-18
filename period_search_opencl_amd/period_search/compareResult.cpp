@@ -1,5 +1,9 @@
 ﻿#include "declarations.hpp"
 #include "boinc_api.h"
+#include <cmath>
+#include <iostream>
+
+using namespace std;
 
 #if defined (_DEBUG)
 int getData(const char* filename, DATA*& data)
