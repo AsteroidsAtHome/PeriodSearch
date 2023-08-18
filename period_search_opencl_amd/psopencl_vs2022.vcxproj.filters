@@ -22,12 +22,6 @@
     <ClCompile Include="period_search\areanorm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\Array2D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\Array3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\covsrt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -115,6 +109,7 @@
     <None Include="period_search\swap.cl">
       <Filter>Source Files CL</Filter>
     </None>
+    <None Include="period_search\Makefile" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">

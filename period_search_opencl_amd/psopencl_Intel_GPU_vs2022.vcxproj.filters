@@ -25,13 +25,9 @@
     <ClInclude Include="period_search\declarations_OpenCl.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\Globals_OpenCl.h" />
-    <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\Start_OpenCl.h" />
     <ClInclude Include="period_search\stdafx.h" />
     <ClInclude Include="period_search\targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="period_search\psamdopencl12.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="period_search\logo_Nta_icon.ico" />

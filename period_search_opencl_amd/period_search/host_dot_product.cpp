@@ -1,4 +1,4 @@
-/* dot product of two vectors 
+/* dot product of two vectors
    input: vectors a, b
    output: dot product a.b
 

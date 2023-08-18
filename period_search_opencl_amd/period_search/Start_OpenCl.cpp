@@ -121,6 +121,8 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	Fa = static_cast<freq_context*>(malloc(sizeof(freq_context)));
 #endif
 
+	cl::STRING_CLASS name;
+	cl::STRING_CLASS vendor;
 	//try {
 	cl::Platform::get(&platforms);
 	vector<cl::Platform>::iterator iter;
@@ -304,7 +306,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	std::ifstream brightFile("bright.cl");
 	std::ifstream convFile("conv.cl");
 	std::ifstream mrqminFile("mrqmin.cl");
-	std::ifstream gauserrcFile("gauss_errc.cl");	
+	std::ifstream gauserrcFile("gauss_errc.cl");
 	std::ifstream testFile("test.cl");
 #else
 	// Load CL file, build CL program object, create CL kernel object
@@ -393,7 +395,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 
 #pragma endregion
 		cl_int* perr = nullptr;
-		
+
 		//cl::Program::Sources sources(1, std::make_pair(source.c_str(), source.length() + 1));
 // 		cl::Program binProgram = cl::Program(context, sources, perr);
 
@@ -512,7 +514,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 			}
 
 			std::cerr << "Build log for " << name << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
-			
+
 		}
 	}
 
@@ -592,7 +594,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 	}
 	catch (cl::Error& e)
 	{
-		cerr << "Error creating kernel: \"" << cl_error_to_str(e.err()) << "\"(" << e.err() << ") - " << e.what() <<  " | " << cl_error_to_str(kerr) << 
+		cerr << "Error creating kernel: \"" << cl_error_to_str(e.err()) << "\"(" << e.err() << ") - " << e.what() <<  " | " << cl_error_to_str(kerr) <<
 			" (" << kerr << ")" << std::endl;
 		cout << "Error while creating kernel. Check stderr.txt for details." << endl;
 		return(4);
@@ -783,9 +785,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #elif AMD
 	cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
 #if defined __GNUC__
-	auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);	
+	auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);
 #else
-	auto pcc = (mfreq_context*)_aligned_malloc(optimizedSize, 8);	
+	auto pcc = (mfreq_context*)_aligned_malloc(optimizedSize, 8);
 #endif
 	auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
 #else
