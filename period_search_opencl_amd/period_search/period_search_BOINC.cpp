@@ -30,7 +30,6 @@
 // Macros for OpenCL versions
 #define OPENCL_VERSION_1_2  1.2f
 
-
 // Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
 // Khronos ICD supports only latest OpenCL version
 #define CL_TARGET_OPENCL_VERSION 120

@@ -1,7 +1,11 @@
 ﻿#include "declarations.hpp"
-#include "boinc_api.h"
 #include <cmath>
 #include <iostream>
+#include "boinc_api.h"
+
+//#if defined __GNUC__
+//#include "app_ipc.h"
+//#endif
 
 using namespace std;
 

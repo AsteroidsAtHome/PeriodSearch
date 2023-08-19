@@ -8,7 +8,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef __GNUC__
 #include <CL/opencl.hpp>
+#endif
 
 #define CL_WRAPPER(FUNC) \
     { \

@@ -391,19 +391,19 @@
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.cpp" />
     <ClCompile Include="period_search\compareResult.cpp" />
-    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\covsrt.cpp" />
     <ClCompile Include="period_search\ellfit.cpp" />
-    <ClCompile Include="period_search\gauss_errc.c" />
-    <ClCompile Include="period_search\host_dot_product.c" />
-    <ClCompile Include="period_search\lubksb.c" />
-    <ClCompile Include="period_search\ludcmp.c" />
-    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\gauss_errc.cpp" />
+    <ClCompile Include="period_search\host_dot_product.cpp" />
+    <ClCompile Include="period_search\lubksb.cpp" />
+    <ClCompile Include="period_search\ludcmp.cpp" />
+    <ClCompile Include="period_search\memory.cpp" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
-    <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\phasec.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\Start_OpenCl.cpp" />
     <ClCompile Include="period_search\stdafx.cpp" />
-    <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\trifac.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\blmatrix.cl">

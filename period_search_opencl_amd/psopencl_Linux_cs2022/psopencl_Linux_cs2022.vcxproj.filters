@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{d37d486e-3436-4e4a-a586-328ceb4ab4bc}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{16f9ba2e-1aee-4429-b8f4-afc97e709ad8}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source files CL">
+      <UniqueIdentifier>{8ac79cc1-61e7-4118-b598-e473e49c8ba7}</UniqueIdentifier>
+      <Extensions>cl;ocl</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{e98b59fa-ac0a-47f2-8f81-11f51fd38292}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\period_search\areanorm.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\compareResult.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\ellfit.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\period_search_BOINC.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\sphfunc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\Start_OpenCl.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\stdafx.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\gauss_errc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\lubksb.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\ludcmp.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\memory.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\phasec.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\host_dot_product.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\period_search\trifac.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\period_search\blmatrix.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\bright.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\conv.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\cpp.hint" />
+    <None Include="..\period_search\curv.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\Curv2.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\dave.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\gauss_errc.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\Intrinsics.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\Makefile" />
+    <None Include="..\period_search\Makefile_OpenCL_1.2" />
+    <None Include="..\period_search\mrqcof.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\mrqmin.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+    <None Include="..\period_search\Start.cl">
+      <Filter>Source files CL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\period_search\constants.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\declarations.hpp">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\declarations_OpenCl.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\globals.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\Globals_OpenCl.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\GlobalsCL.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\Start_OpenCl.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\stdafx.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\period_search\opencl_helper.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\period_search\logo_Nta_icon.ico">
+      <Filter>Resource files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

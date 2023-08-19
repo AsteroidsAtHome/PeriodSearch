@@ -1,5 +1,8 @@
 //#pragma once
-#include <CL/cl_platform.h>
+// #include <CL/cl.h>
+// #include <CL/cl_platform.h>
+#
+#include <stdbool.h>
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);

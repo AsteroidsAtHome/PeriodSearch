@@ -91,7 +91,7 @@ __kernel void ClCalculatePreparePole(
 
 	//int t = *CUDA_End;
 	//*CUDA_End = 13;
-	//printf("[%d] PreparePole CUDA_End: %d\n", x, *CUDA_End);
+	//printf("[%d] PreparePole t: %d, CUDA_End: %d\n", x, t, *CUDA_End);
 
 
 	if ((*CUDA_LCC).isInvalid)
@@ -241,14 +241,12 @@ __kernel void ClCalculateIter1Begin(
 			int t = *CUDA_End;
 			atomic_inc(CUDA_End);
 
-			printf("[%d] t: %2d, Begin %2d\n", blockIdx.x, t, *CUDA_End);
+			//printf("[%d] t: %2d, Begin %2d\n", blockIdx.x, t, *CUDA_End);
 
 			(*CUDA_LFR).isReported = 1;
 		}
 	}
 
-	if (blockIdx.x == 0 && threadIdx.x == 1)
-		printf("|");
 	//if (threadIdx.x == 1)
 	//	printf("[begin] Alamda: %10.7f\n", (*CUDA_LCC).Alamda);
 	//barrier(CLK_GLOBAL_MEM_FENCE); // TEST
