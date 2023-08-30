@@ -67,6 +67,12 @@
     <ClCompile Include="period_search\kernels.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\VersionInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\binaries.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\cpp.hint" />

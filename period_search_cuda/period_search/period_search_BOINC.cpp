@@ -240,7 +240,7 @@ int main(int argc, char** argv)
 			);
 		exit(retval);
 	}
-	
+
 	boinc_get_init_data(aid);
 
 //#ifdef _WIN32
@@ -317,7 +317,7 @@ int main(int argc, char** argv)
 
 	char shmemName[256];
 	snprintf(shmemName, sizeof shmemName, "%s_%s", project_name, inputPath);
-	
+
 	shmem = (UC_SHMEM*)boinc_graphics_make_shmem(shmemName, sizeof(UC_SHMEM));
 	if (!shmem) {
 		fprintf(stderr, "%s failed to create shared mem segment\n",
@@ -858,12 +858,12 @@ int main(int argc, char** argv)
 #ifdef APP_GRAPHICS
 	update_shmem();
 #endif
-	
+
 //#ifdef _DEBUG
 //	boinc_get_init_data(aid);
 //	//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 //#endif
-	
+
 	boinc_finish(0);
 }
 

@@ -2175,7 +2175,7 @@ __kernel void ClCalculatePreparePole(
 	__global struct freq_result* CUDA_FR,
 	__global double* CUDA_cg_first,
 	__global int* CUDA_End,
-    __global double freq_context* CUDA_CC2,
+    __global struct freq_context* CUDA_CC2,
 	//double CUDA_cl,
 	int m)
 {
@@ -2289,9 +2289,13 @@ __kernel void ClCalculatePreparePole(
 	//	(*CUDA_LCC).Lastcall=0; always ==0
 	(*CUDA_LFR).isReported = 0;
 
-    for(int i = 0; i < MAX_N_OBS + 1; i++)
+    if(blockIdx.x == 0)
     {
-        (*CUDA_CC2).Brightness[i] = (*CUDA_CC).Brightness[i];
+        for(int i = 0; i < MAX_N_OBS + 1; i++)
+        {
+            //printf("[%d] %g", blockIdx.x, (*CUDA_CC).Brightness[i]);
+            (*CUDA_CC2).Brightness[i] = (*CUDA_CC).Brightness[i];
+        }
     }
 }
 
@@ -2942,7 +2946,7 @@ __kernel void ClCalculateFinishPole(
 		(*CUDA_LFR).dev_best_x2 = (*CUDA_LCC).rchisq;
 		(*CUDA_LFR).per_best = period;
 		(*CUDA_LFR).dark_best = dark / totarea * 100;
-		(*CUDA_LFR).la_best = la_tmp;
+		(*CUDA_LFR).la_best = la_tmp < 0 ? la_tmp + 360.0 : la_tmp;
 		(*CUDA_LFR).be_best = be_tmp;
 
 		//printf("[%d] dev_best: %12.8f\n", blockIdx.x, (*CUDA_LFR).dev_best);

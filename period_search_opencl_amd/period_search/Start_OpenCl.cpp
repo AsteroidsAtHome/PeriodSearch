@@ -47,8 +47,8 @@ typedef unsigned int uint;
 #include "globals.h"
 #include "constants.h"
 #include "declarations.hpp"
-// #include "declarations_OpenCl.h"
 #include "Start_OpenCl.h"
+#include "kernels.cpp"
 
 
 #ifdef _WIN32
@@ -136,6 +136,39 @@ auto Fa = (freq_context*)_aligned_malloc(faSize, 128);
 
 double* pee, * pee0, * pWeight;
 
+unsigned char* GetKernelBinaries(cl_program binProgram, const size_t binary_size)
+{
+    auto binary = new unsigned char[binary_size];
+    cl_int err = clGetProgramInfo(binProgram, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, NULL);
+
+    return binary;
+}
+
+cl_int SaveKernelsToBinary(cl_program binProgram, const char* kernelFileName)
+{
+
+    size_t binary_size;
+    clGetProgramInfo(binProgram, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binary_size, NULL);
+    auto binary = GetKernelBinaries(binProgram, binary_size);
+
+     FILE* fp = fopen(kernelFileName, "wb+");
+     if (!fp) {
+         cerr << "Error while saving kernels binary file." << endl;
+         return 1;
+     }
+
+     fwrite(binary, binary_size, 1, fp);
+     fclose(fp);
+
+    //std::ofstream file(kernelFileName, std::ios::binary);
+    ////size_t binary_size = file.tellg();
+    ////file.seekg(0, std::ios::beg);
+    ////char* binary = new char[*binary_size];
+    //file.write(binary, binary_size);
+    //file.close();
+
+     return 0;
+}
 
 cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, cl_double* par, cl_double lcoef, cl_double a_lamda_start, cl_double a_lamda_incr,
     cl_double ee[][3], cl_double ee0[][3], cl_double* tim, cl_double Phi_0, cl_int checkex, cl_int ndata)
@@ -165,8 +198,8 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     char vendor[1024];
 #else
 #if defined AMD
-    char name[1024];
-    char vendor[1024];
+    auto name = new char[1024];
+    auto vendor = new char[1024];
 #else
     cl::STRING_CLASS name;
     cl::STRING_CLASS vendor;
@@ -174,11 +207,11 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 #endif
 
     //for (iter = platforms.begin(); iter != platforms.end(); ++iter)
-    for (int i = 0; i < num_platforms_available; i++)
+    for (uint i = 0; i < num_platforms_available; i++)
     {
         platform = platforms[i];
-        err_num = clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(name), &name, NULL);
-        err_num = clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, sizeof(vendor), &vendor, NULL);
+        err_num = clGetPlatformInfo(platform, CL_PLATFORM_NAME, 1024, name, NULL);
+        err_num = clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 1024, vendor, NULL);
         std::cerr << "Platform name: " << name << endl;
         std::cerr << "Platform vendor: " << vendor << endl;
 #if defined (AMD)
@@ -261,7 +294,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     //char deviceName[strBufSize];
     err_num = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(char) * nameSize, &deviceName, NULL);
 #else
-    char deviceName[128]; // Another AMD thing... Don't ask
+    char deviceName[strBufSize]; // Another AMD thing... Don't ask
     err_num = clGetDeviceInfo(device, CL_DEVICE_BOARD_NAME_AMD, sizeof(deviceName), &deviceName, NULL);
 #endif
 
@@ -373,7 +406,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     std::cerr << "Grid dim: " << CUDA_grid_dim << " = 2 * " << msCount << " * " << SMXBlock << endl;
     std::cerr << "Block dim: " << BLOCK_DIM << endl;
 
-    int err;
+    //int err;
 
     //Global parameters
     memcpy((*Fa).beta_pole, beta_pole, sizeof(cl_double) * (N_POLES + 1));
@@ -484,16 +517,16 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     // sources.push_back({kernel_code.c_str(), kernel_code.length()});
 
     // program = clCreateProgramWithSource(context, 1, (const char**)&kernel_code, NULL, &err_num);
-#include "kernels.cpp"
-    binProgram = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
-    if (!binProgram || err_num != CL_SUCCESS)
-    {
-        cerr << "Error: Failed to create compute program! " << cl_error_to_str(err_num) << " (" << err_num << ")" << endl;
-        return EXIT_FAILURE;
-    }
 
     if (!kernelExist || readsource)
     {
+        binProgram = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
+        if (!binProgram || err_num != CL_SUCCESS)
+        {
+            cerr << "Error: Failed to create compute program! " << cl_error_to_str(err_num) << " (" << err_num << ")" << endl;
+            return EXIT_FAILURE;
+        }
+
         char options[]{ "-Werror" };
 #if defined (AMD)
         err_num = clBuildProgram(binProgram, 1, &device, options, NULL, NULL); // "-Werror -cl-std=CL1.1"
@@ -504,69 +537,72 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 #endif
 
 #if defined (NDEBUG)
-        std::remove(kernelSourceFile.c_str());
+        std::ifstream fs(kernelFileName);
+        bool kernelExist = fs.good();
+        if (kernelExist) {
+            std::remove(kernelSourceFile.c_str());
+        }
 #endif
 
-        //size_t len;
-        //clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+        size_t len;
+        err_num = clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
         //char* buildlog = (char*)calloc(len, sizeof(char));
-        //clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_LOG, len, buildlog, NULL);
+        auto buildlog = new char[len];
+        err_num = clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_LOG, len, buildlog, NULL);
 
-        //cl_build_status buildStatus;
-        //clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &buildStatus, NULL);
-        //std::cerr << "Binary build log for " << deviceName << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+        cl_build_status buildStatus;
+        err_num = clGetProgramBuildInfo(binProgram, device, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &buildStatus, NULL);
 
-        //size_t binary_size;
-        //char* binary;
-        //clGetProgramInfo(binProgram, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binary_size, NULL);
-        //binary = (char*)malloc(binary_size);
-        //clGetProgramInfo(binProgram, CL_PROGRAM_BINARIES, binary_size, &binary, NULL);
+        if (buildStatus == 0)
+        {
+            strcpy(buildlog, "Ok");
+        }
 
-        //// // vector<size_t> binSizes = binProgram.getInfo<CL_PROGRAM_BINARY_SIZES>();
-        //// // vector<char*> output = binProgram.getInfo<CL_PROGRAM_BINARIES>();
-        //// std::vector<char> binData(std::accumulate(binSizes.begin(), binSizes.end(), 0));
-        //// char* binChunk = &binData[0];
-        //// vector<char*> binaries;
+        cerr << "Binary build log for " << deviceName << ":" << std::endl << buildlog << " (" << buildStatus << ")" << endl;
 
-        //// for (unsigned int i = 0; i < binSizes.size(); ++i) {
-        //// 	binaries.push_back(binChunk);
-        //// 	binChunk += binSizes[i];
-        //// }
-
-        //// // binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-        //// // binProgram.getInfo(CL_PROGRAM_BINARIES, &binaries[0]);
-
-        //// std::ofstream binaryfile(kernelFileName, std::ios::binary);
-        //// for (unsigned int i = 0; i < binaries.size(); ++i)
-        //// 	binaryfile.write(binaries[i], binSizes[i]);
-
-        //// binaryfile.close();
-        //FILE* f;
-        //f = fopen(kernelFileName, "w");
-        //fwrite(binary, binary_size, 1, f);
-        //fclose(f);
-
-        //free(buildlog);
-        //free(binary);
+        err_num = SaveKernelsToBinary(binProgram, kernelFileName);
+        if (err_num > 0)
+        {
+            return err_num;
+        }
     }
 
     try
     {
-
-        //std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
-
-        //size_t binary_size = file.tellg();
-        //file.seekg(0, std::ios::beg);
-        //char* buffer = new char[binary_size];
-        //file.read(buffer, binary_size);
+        std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
+        size_t binary_size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        char* binary = new char[binary_size];
+        file.read(binary, binary_size);
         //file.close();
-        //char* binary = buffer;
-        //cl_int binary_status;
 
-        //program = clCreateProgramWithBinary(context, 1, &device, &binary_size, (const unsigned char**)&binary, &binary_status, &err_num);
+        //size_t* binary_size = (size_t*)malloc(sizeof(size_t));
+        //FILE* fp = fopen(kernelFileName, "rb");
+        //if (!fp) {
+        //    cerr << "Error while reading kernels binary file." << endl;
+        //}
+
+        //fseek(fp, 0, SEEK_END);
+        //*binary_size = ftell(fp);
+        //fseek(fp, 0, SEEK_SET);
+
+        //char* binary = (char*)malloc(*binary_size);
+        //if (!binary) {
+        //    fclose(fp);
+        //    cerr << "Error while reading kernels binary file." << endl;
+        //}
+
+        //fread(binary, *binary_size, 1, fp);
+        //fclose(fp);
+
+        //free(fp);
+
+        //auto kSource = kernel_code.c_str();
+        //program = clCreateProgramWithSource(context, 1, (const char**)&kSource, NULL, &err_num);
+
         //program = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
-        auto kSource = kernel_code.c_str();
-        program = clCreateProgramWithSource(context, 1, (const char**)&kSource, NULL, &err_num);
+        cl_int binary_status;
+        program = clCreateProgramWithBinary(context, 1, &device, &binary_size, (const unsigned char**)&binary, &binary_status, &err_num);
 
         char options[]{ "-Werror" };
 #if defined (AMD)
@@ -579,33 +615,39 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         if (err_num != CL_SUCCESS)
         {
             size_t len;
+            //size_t* len = (size_t*)malloc(sizeof(size_t));
             clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-            char* buffer = (char*)calloc(len, sizeof(char));
+            //char* buffer = (char*)calloc(len, sizeof(char));
+            auto buffer = new char[len];
             clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
             cerr << "Build log: " << name << " | " << deviceName << ":" << endl << buffer << endl;
             std::cerr << " Error creating queue: " << cl_error_to_str(err_num) << "(" << err_num << ")\n";
             free(buffer);
+            //free(len);
+            //free(binary);
+            //free(binary_size);
 
             return(1);
         }
 
-        cl_command_queue_properties properties;
+        //cl_command_queue_properties properties;
         queue = clCreateCommandQueue(context, device, 0, &err_num);
         if (err_num != CL_SUCCESS) {
             std::cerr << " Error creating queue: " << cl_error_to_str(err_num) << "(" << err_num << ")\n";
             return(1);
         }
 
-        size_t bufSize;
-        //err_num = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &bufSize);
+        //free(binary);
+        //free(binary_size);
+
         char *buildlog = new char[strBufSize];
-        //char* buildlog = (char*)malloc(bufSize);
         err_num = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, strBufSize, buildlog, NULL);
         cl_build_status buildStatus;
         err_num = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_STATUS, sizeof(buildStatus), &buildStatus, NULL);
 
 #if _DEBUG
 #if CL_TARGET_OPENCL_VERSION > 110
+        size_t bufSize;
         size_t numKernels;
         err_num = clGetProgramInfo(program, CL_PROGRAM_NUM_KERNELS, sizeof(numKernels), &numKernels, NULL);
         //auto kernels = program.getInfo<CL_PROGRAM_NUM_KERNELS>();
@@ -625,10 +667,13 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 #endif
         if (buildStatus == 0)
         {
-            strcpy(buildlog, "Ok\n");
+            strcpy(buildlog, "Ok");
         }
 
-        std::cerr << "Build log for " << name << " | " << deviceName << ":" << std::endl << buildlog << " (" << buildStatus << ")" << std::endl;
+        //char deviceName[128]; // Another AMD thing... Don't ask
+        err_num = clGetDeviceInfo(device, CL_DEVICE_BOARD_NAME_AMD, sizeof(deviceName), &deviceName, NULL);
+
+        cerr << "Program build log for " << deviceName << ":" << std::endl << buildlog << " (" << buildStatus << ")" << endl;
     }
 
     catch (Error& e)
@@ -646,7 +691,6 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
                 char* buildlog = new char[strBufSize];
                 err_num = clGetDeviceInfo(device, CL_PROGRAM_BUILD_LOG, sizeof(char) * 1024, buildlog, NULL);
                 cerr << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
-                cout << "Build log for " << name << ":" << std::endl << buildlog << std::endl;
             }
         }
         else
@@ -737,15 +781,17 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     //if (!strcmp(vendor, "Mesa"))
     //{
     size_t preferedWGS;
-    clGetKernelWorkGroupInfo(kernelCalculateIter1Mrqmin1End, device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), &preferedWGS, NULL);
-    cerr << "Prefered kernel work group size multiple: " << 2 * preferedWGS << " | " << preferedWGS << endl;
+    err_num = clGetKernelWorkGroupInfo(kernelCalculateIter1Mrqmin1End, device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), &preferedWGS, NULL);
+    if (err_num != CL_SUCCESS) {
+        std::cerr << " Error creating queue: " << cl_error_to_str(err_num) << "(" << err_num << ")\n";
+        return(1);
+    }
+    cerr << "Prefered kernel work group size multiple: " << preferedWGS << endl;
     if (CUDA_grid_dim > 2 * preferedWGS) {
         CUDA_grid_dim = 2 * preferedWGS;
         cerr << "Setting Grid Dim to " << CUDA_grid_dim << endl;
     }
     //}
-
-    //_aligned_free(Fa);
 
     return 0;
 }
@@ -943,7 +989,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
     //auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);
     //auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
-    cl_uint pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
+    size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
 #elif NVIDIA
     int pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
@@ -1184,7 +1230,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //void* memIn = (void*)_aligned_malloc(frSize, 256);
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
     //void* pfr;
-    cl_uint frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
+    size_t frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
     auto pfr = new freq_result[CUDA_grid_dim_precalc];
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
 #elif NVIDIA
@@ -1283,7 +1329,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     size_t local = BLOCK_DIM;
     size_t sLocal = 1;
 
-    for (n = 1; n <= max_test_periods; n += CUDA_grid_dim_precalc)
+    for (n = 1; n <= max_test_periods; n += (int)CUDA_grid_dim_precalc)
     {
 
 #if defined INTEL
@@ -1842,7 +1888,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim - 1) / 64 + 1) * 64;
     //auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);
     //auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
-    cl_uint pccSize = CUDA_grid_dim * sizeof(mfreq_context);
+    size_t pccSize = CUDA_grid_dim * sizeof(mfreq_context);
     auto pcc = new mfreq_context[CUDA_grid_dim];
 #elif NVIDIA
     int pccSize = CUDA_grid_dim * sizeof(mfreq_context);
@@ -1987,7 +2033,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //void* memIn = (void*)_aligned_malloc(frSize, 256);
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
     //void* pfr;
-    cl_uint frSize = sizeof(freq_result) * CUDA_grid_dim;
+    size_t frSize = sizeof(freq_result) * CUDA_grid_dim;
     auto pfr = new freq_result[CUDA_grid_dim];
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
 #elif NVIDIA
@@ -2119,7 +2165,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
     // freq_result* fres;
 
-    for (n = n_start_from; n <= n_max; n += CUDA_grid_dim)
+    for (n = n_start_from; n <= n_max; n += (int)CUDA_grid_dim)
     {
         auto fractionDone = (double)n / (double)n_max;
         //boinc_fraction_done(fractionDone);

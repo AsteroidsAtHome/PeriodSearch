@@ -80,7 +80,9 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
-
+#include "Windows.h"
+#include <Shlwapi.h>
+//#include "VersionInfo.hpp"
 #else
 // #include "../win_build/config.h"
 #include <cstdio>
@@ -184,6 +186,8 @@ cl_double weight[MAX_N_OBS + 1];
 cl_int max_l_points;
 cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
 
+APP_INIT_DATA aid;
+
 /*--------------------------------------------------------------*/
 
 int main(int argc, char** argv)
@@ -265,6 +269,8 @@ int main(int argc, char** argv)
 		);
 		exit(retval);
 	}
+
+    boinc_get_init_data(aid);
 
 	//// -------------------
 	//char buffer[MAX_PATH];
@@ -568,14 +574,37 @@ int main(int argc, char** argv)
 	l_points[l_curves] = 3;
 	in_rel[l_curves] = 0;
 
-	// extract a --device option
 	int clDevice = -1;
-	for (int ii = 0; ii < argc; ii++) {
-        if (clDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
-            clDevice = atoi(argv[++ii]);
-	}
+    if (aid.gpu_device_num >= 0)
+    {
+        clDevice = aid.gpu_device_num;
+    }
+    else
+    {
+	    for (int ii = 0; ii < argc; ii++) {
+            if (clDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+                clDevice = atoi(argv[++ii]);
+	    }
+    }
+
 	if (clDevice < 0)
 		clDevice = 0;
+
+    if (!checkpointExists)
+    {
+        fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
+        fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, clDevice, aid.slot);
+
+#ifdef _WIN32
+        int major, minor, build, revision;
+        TCHAR filepath[MAX_PATH]; // = getenv("_");
+        GetModuleFileName(nullptr, filepath, MAX_PATH);
+        auto filename = PathFindFileName(filepath);
+        GetVersionInfo(filename, major, minor, build, revision);
+        fprintf(stderr, "Application: %s\n", filename);
+        fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#endif
+    }
 
 	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (retval)
