@@ -75,7 +75,7 @@ __kernel void ClCalculatePreparePole(
 	__global struct freq_result* CUDA_FR,
 	__global double* CUDA_cg_first,
 	__global int* CUDA_End,
-    __global struct freq_context* CUDA_CC2,
+	__global struct freq_context* CUDA_CC2,
 	//double CUDA_cl,
 	int m)
 {
@@ -93,12 +93,18 @@ __kernel void ClCalculatePreparePole(
 	//int t = *CUDA_End;
 	//*CUDA_End = 13;
 	//printf("[%d] PreparePole t: %d, CUDA_End: %d\n", x, t, *CUDA_End);
-
+	if(blockIdx.x == 0)
+	{
+		for(int j = 0; j < MAX_N_OBS + 1; j++)
+		{
+			(*CUDA_CC2).Brightness[j] = (*CUDA_CC).Brightness[j];
+		}
+	}
 
 	if ((*CUDA_LCC).isInvalid)
 	{
-		//atomic_add(CUDA_End, 1);
-		atomic_inc(CUDA_End);
+		atomic_add(CUDA_End, 1);
+		// atomic_inc(CUDA_End);
 		//printf("prepare pole %d ", (*CUDA_End));
 
 		(*CUDA_FR).isReported = 0; //signal not to read result
@@ -188,15 +194,6 @@ __kernel void ClCalculatePreparePole(
 	(*CUDA_LCC).dev_new = 0;
 	//	(*CUDA_LCC).Lastcall=0; always ==0
 	(*CUDA_LFR).isReported = 0;
-
-    if(blockIdx.x == 0)
-    {
-        for(int i = 0; i < MAX_N_OBS + 1; i++)
-        {
-            //printf("[%d] %g", blockIdx.x, (*CUDA_CC).Brightness[i]);
-            (*CUDA_CC2).Brightness[i] = (*CUDA_CC).Brightness[i];
-        }
-    }
 }
 
 __kernel void ClCalculateIter1Begin(
@@ -247,9 +244,9 @@ __kernel void ClCalculateIter1Begin(
 		if (!(*CUDA_LFR).isReported)
 		{
 			//int oldEnd = *CUDA_End;
-			//atomic_add(CUDA_End, 1);
 			int t = *CUDA_End;
-			atomic_inc(CUDA_End);
+			atomic_add(CUDA_End, 1);
+			// atomic_inc(CUDA_End);
 
 			//printf("[%d] t: %2d, Begin %2d\n", blockIdx.x, t, *CUDA_End);
 
@@ -885,15 +882,19 @@ __kernel void ClCalculateFinish(
 
 	if ((*CUDA_LCC).isInvalid) return;
 
-	if ((*CUDA_LFR).la_best < 0.0)
+	if ((*CUDA_LFR).la_best < 0)
 	{
 		//double tmp = (*CUDA_LFR).la_best;
 		(*CUDA_LFR).la_best += 360;
 		//printf("[CalculateFinish] la_best: %4.0f -> %4.0f\n", tmp, (*CUDA_LFR).la_best);
 	}
+	// while ((*CUDA_LFR).la_best < 0.0){
+	// 	(*CUDA_LFR).la_best += 360;
+	// }
 
 	if (isnan((*CUDA_LFR).dark_best) == 1)
 	{
 		(*CUDA_LFR).dark_best = 1.0;
 	}
 }
+ 

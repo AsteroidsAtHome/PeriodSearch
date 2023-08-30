@@ -64,6 +64,9 @@
     <ClCompile Include="period_search\trifac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\kernels.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\cpp.hint" />
@@ -110,6 +113,11 @@
       <Filter>Source Files CL</Filter>
     </None>
     <None Include="period_search\Makefile" />
+    <None Include="period_search\test.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search_out_cuda_correct" />
+    <None Include="oclProgramFileToString.py" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">

@@ -1,6 +1,6 @@
 /* allocation and deallocation of memory
 
-   24.10.2005 consulted with Lada Subr 
+   24.10.2005 consulted with Lada Subr
 
    8.11.2006
 */
@@ -8,7 +8,7 @@
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
-#include <CL/cl.hpp>
+#include <CL/cl.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,7 +36,7 @@ cl_double* vector_cl_double(int length)
     }
     return (p_x);
 }
-  
+
 int *vector_int(int length)
 {
    int *p_x;
@@ -53,11 +53,11 @@ double **matrix_double(int rows, int columns)
 {
    double **p_x;
    int i;
-  
+
    p_x = (double **)malloc((rows + 1) * sizeof(double *));
-   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
+   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++)
       p_x[i] = (double *) malloc((columns + 1) * sizeof(double));
-   if (i < rows) 
+   if (i < rows)
    {
       fprintf(stderr,"failure in 'matrix_double()' \n");
       fflush(stderr);
@@ -71,7 +71,7 @@ int **matrix_int(int rows, int columns)
    int i;
 
    p_x = (int **) malloc((rows + 1) * sizeof(int *));
-   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
+   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++)
       p_x[i] = (int *) malloc((columns + 1) * sizeof(int));
    if (i < rows)
    {
@@ -85,20 +85,20 @@ double ***matrix_3_double(int n_1, int n_2, int n_3)
 {
    int i, j;
    double ***p_x;
- 
-   p_x = (double ***) malloc((n_1 + 1) * sizeof(double **));  
-   for (i = 0; i <= n_1; i++)   
+
+   p_x = (double ***) malloc((n_1 + 1) * sizeof(double **));
+   for (i = 0; i <= n_1; i++)
    {
       p_x[i] = (double **) malloc((n_2 + 1) * sizeof(double *));
-      for (j = 0; j <= n_2; j++) 
+      for (j = 0; j <= n_2; j++)
          p_x[i][j] = (double *)malloc((n_3 + 1) * sizeof(double));
-      if (j < n_2) 
+      if (j < n_2)
       {
          fprintf(stderr,"failure in 'matrix_3_double' \n");
          fflush(stderr);
       }
    }
-   if (i < n_1) 
+   if (i < n_1)
    {
       fprintf(stderr,"failure in 'matrix_3_double' \n");
       fflush(stderr);
@@ -106,7 +106,7 @@ double ***matrix_3_double(int n_1, int n_2, int n_3)
 
    return (p_x);
 }
-  
+
 void deallocate_vector(void *p_x)
 {
    free((void *) p_x);
@@ -115,7 +115,7 @@ void deallocate_vector(void *p_x)
 void deallocate_matrix_double(double **p_x, int rows)
 {
    int i;
-    
+
    for (i = 0; i <= rows; i++) free(p_x[i]);
    free(p_x);
 }
@@ -123,7 +123,7 @@ void deallocate_matrix_double(double **p_x, int rows)
 void deallocate_matrix_int(int **p_x, int rows)
 {
    int i;
-    
+
    for (i = 0; i <= rows; i++) free(p_x[i]);
    free(p_x);
 }
@@ -132,9 +132,9 @@ void deallocate_matrix_int(int **p_x, int rows)
 /*void deallocate_matrix_3(void ***p_x, int n_1, int n_2)
 {
    int i, j;
-    
+
    for (i = 0; i <= n_1; i++)
-   {  
+   {
       for (j = 1; j <= n_2; j++)
       {
          free(p_x[i][j]);

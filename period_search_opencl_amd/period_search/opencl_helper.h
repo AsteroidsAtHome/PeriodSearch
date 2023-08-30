@@ -8,8 +8,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __GNUC__
+
+#if defined __GNUC__
 #include <CL/opencl.hpp>
+#else  // _WIN32
+//#include <cl_boinc.h>
+#include <CL/cl.h>
 #endif
 
 #define CL_WRAPPER(FUNC) \

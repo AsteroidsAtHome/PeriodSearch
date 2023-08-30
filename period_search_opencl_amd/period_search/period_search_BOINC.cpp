@@ -25,24 +25,29 @@
 // Needed by mesa-*
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
+//#define CL_HPP_MINIMUM_OPENCL_VERSION 110
 #define CL_HPP_TARGET_OPENCL_VERSION 120
+//#define CL_HPP_TARGET_OPENCL_VERSION 110
 
 // Macros for OpenCL versions
 #define OPENCL_VERSION_1_2  1.2f
+//#define OPENCL_VERSION_1_1  1.1f
 
 // Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
 // Khronos ICD supports only latest OpenCL version
 #define CL_TARGET_OPENCL_VERSION 120
+//#define CL_TARGET_OPENCL_VERSION 110
 
 // Suppress a compiler warning about 'clCreateCommandQueue': was declared deprecated
 // for OpenCL 1.2
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+//#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 
 //we want to use POSIX functions
 #pragma warning( push )
 #pragma warning( disable : 4996 )
 
-#include <CL/cl.hpp>
+#include <CL/cl.h>
 //#include "stdafx.h"
 #include <cstdio>
 #include <cstdlib>
@@ -564,15 +569,15 @@ int main(int argc, char** argv)
 	in_rel[l_curves] = 0;
 
 	// extract a --device option
-	int cudaDevice = -1;
+	int clDevice = -1;
 	for (int ii = 0; ii < argc; ii++) {
-		if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
-			cudaDevice = atoi(argv[++ii]);
+        if (clDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+            clDevice = atoi(argv[++ii]);
 	}
-	if (cudaDevice < 0)
-		cudaDevice = 0;
+	if (clDevice < 0)
+		clDevice = 0;
 
-	retval = ClPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
+	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (retval)
 	{
 		fflush(stderr);
@@ -811,7 +816,7 @@ int main(int argc, char** argv)
 	}
 
 	//CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
-	CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+	ClStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
 
