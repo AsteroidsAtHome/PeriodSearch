@@ -3,7 +3,10 @@
 // #include <CL/cl_platform.h>
 
 #include <stdbool.h>
+#if defined _WIN32
 #include "Windows.h"
+#endif
+
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
@@ -105,4 +108,6 @@ void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[
 */
 void curv1D(double cg[]);
 
+#if defined _WIN32
 bool GetVersionInfo(LPCTSTR filename, int& major, int& minor, int& build, int& revision);
+#endif

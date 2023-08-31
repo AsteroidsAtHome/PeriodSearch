@@ -5,9 +5,16 @@
    8.11.2006
 */
 
+#if defined __GNUC__
+#define CL_TARGET_OPENCL_VERSION 110
+#define CL_HPP_MINIMUM_OPENCL_VERSION 110
+#define CL_HPP_TARGET_OPENCL_VERSION 110
+#else
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
+#endif
+
 #include <CL/cl.h>
 
 #include <stdlib.h>

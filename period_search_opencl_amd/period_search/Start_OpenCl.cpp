@@ -26,9 +26,9 @@ typedef unsigned int uint;
 // https://stackoverflow.com/questions/18056677/opencl-double-precision-different-from-cpu-double-precision
 
 // TODO:
-//<kernel>:2589 : 10 : warning : incompatible pointer types initializing '__generic double *' with an expression of type '__global float *'
-//double* dytemp = &CUDA_Dytemp[blockIdx.x];
-//^ ~~~~~~~~~~~~~~~~~~~~~~~~
+// <kernel>:2589 : 10 : warning : incompatible pointer types initializing '__generic double *' with an expression of type '__global float *'
+// double* dytemp = &CUDA_Dytemp[blockIdx.x];
+// ~~~~~~~~~~~~~~~~~~~~~~~~
 
 //#include <vector>
 #include <cmath>
@@ -41,8 +41,8 @@ typedef unsigned int uint;
 #include <array>
 #include <algorithm>
 #include <ctime>
-#include "mfile.h"
 #include "boinc_api.h"
+#include "mfile.h"
 
 #include "globals.h"
 #include "constants.h"
@@ -286,6 +286,13 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     char deviceVendor[strBufSize];
     char driverVersion[strBufSize];
 
+#if defined __GNUC__
+#if defined INTEL
+#else
+    char deviceName[strBufSize]; // Another AMD thing... Don't ask
+    err_num = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(deviceName), &deviceName, NULL);
+#endif
+#else
 #if defined INTEL
     size_t nameSize;
     err_num = clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &nameSize);
@@ -296,6 +303,8 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 #else
     char deviceName[strBufSize]; // Another AMD thing... Don't ask
     err_num = clGetDeviceInfo(device, CL_DEVICE_BOARD_NAME_AMD, sizeof(deviceName), &deviceName, NULL);
+#endif
+
 #endif
 
     //const auto devicePlatform = device.getInfo<CL_DEVICE_PLATFORM>();
@@ -401,9 +410,9 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     auto SMXBlock = block; // 32;
     //CUDA_grid_dim = msCount * SMXBlock; //  24 * 32
     //CUDA_grid_dim = 8 * 32 = 256; 6 * 32 = 192
-    CUDA_grid_dim = 2 * msCount * SMXBlock; // 256 (RX 550), 384 (1050Ti), 1536 (Nvidia GTX1660Ti), 768 (Intel Graphics HD)
+    CUDA_grid_dim = msCount * SMXBlock; // 256 (RX 550), 384 (1050Ti), 1536 (Nvidia GTX1660Ti), 768 (Intel Graphics HD)
     std::cerr << "Resident blocks per multiprocessor: " << SMXBlock << endl;
-    std::cerr << "Grid dim: " << CUDA_grid_dim << " = 2 * " << msCount << " * " << SMXBlock << endl;
+    std::cerr << "Grid dim: " << CUDA_grid_dim << " = " << msCount << " * " << SMXBlock << endl;
     std::cerr << "Block dim: " << BLOCK_DIM << endl;
 
     //int err;
@@ -430,20 +439,20 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 #if defined (_DEBUG)
 #if defined __GNUC__
     // Load CL file, build CL program object, create CL kernel object
-    std::ifstream constantsFile("constants.h", ios::in | ios::binary);
-    std::ifstream globalsFile("GlobalsCL.h", ios::in | ios::binary);
-    std::ifstream intrinsicsFile("Intrinsics.cl", ios::in | ios::binary);
-    std::ifstream swapFile("swap.cl", ios::in | ios::binary);
-    std::ifstream blmatrixFile("blmatrix.cl", ios::in | ios::binary);
-    std::ifstream curvFile("curv.cl", ios::in | ios::binary);
-    std::ifstream curv2File("Curv2.cl", ios::in | ios::binary);
-    std::ifstream mrqcofFile("mrqcof.cl", ios::in | ios::binary);
-    std::ifstream startFile("Start.cl", ios::in | ios::binary);
-    std::ifstream brightFile("bright.cl", ios::in | ios::binary);
-    std::ifstream convFile("conv.cl", ios::in | ios::binary);
-    std::ifstream mrqminFile("mrqmin.cl", ios::in | ios::binary);
-    std::ifstream gauserrcFile("gauss_errc.cl", ios::in | ios::binary);
-    std::ifstream testFile("test.cl", ios::in | ios::binary);
+    std::ifstream constantsFile("constants.h", std::ios::in | std::ios::binary);
+    std::ifstream globalsFile("GlobalsCL.h", std::ios::in | std::ios::binary);
+    std::ifstream intrinsicsFile("Intrinsics.cl", std::ios::in | std::ios::binary);
+    std::ifstream swapFile("swap.cl", std::ios::in | std::ios::binary);
+    std::ifstream blmatrixFile("blmatrix.cl", std::ios::in | std::ios::binary);
+    std::ifstream curvFile("curv.cl", std::ios::in | std::ios::binary);
+    std::ifstream curv2File("Curv2.cl", std::ios::in | std::ios::binary);
+    std::ifstream mrqcofFile("mrqcof.cl", std::ios::in | std::ios::binary);
+    std::ifstream startFile("Start.cl", std::ios::in | std::ios::binary);
+    std::ifstream brightFile("bright.cl", std::ios::in | std::ios::binary);
+    std::ifstream convFile("conv.cl", std::ios::in | std::ios::binary);
+    std::ifstream mrqminFile("mrqmin.cl", std::ios::in | std::ios::binary);
+    std::ifstream gauserrcFile("gauss_errc.cl", std::ios::in | std::ios::binary);
+    std::ifstream testFile("test.cl", std::ios::in | std::ios::binary);
 #else
     // Load CL file, build CL program object, create CL kernel object
     std::ifstream constantsFile("period_search/constants.h");
@@ -780,6 +789,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     //CUDA_grid_dim = msCount * SMXBlock
     //if (!strcmp(vendor, "Mesa"))
     //{
+
     size_t preferedWGS;
     err_num = clGetKernelWorkGroupInfo(kernelCalculateIter1Mrqmin1End, device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), &preferedWGS, NULL);
     if (err_num != CL_SUCCESS) {
@@ -791,6 +801,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         CUDA_grid_dim = 2 * preferedWGS;
         cerr << "Setting Grid Dim to " << CUDA_grid_dim << endl;
     }
+
     //}
 
     return 0;

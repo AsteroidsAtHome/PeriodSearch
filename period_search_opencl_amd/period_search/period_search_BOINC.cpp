@@ -22,7 +22,21 @@
 
 */
 
-// Needed by mesa-*
+#if defined __GNUC__
+#define CL_HPP_MINIMUM_OPENCL_VERSION 110
+#define CL_HPP_TARGET_OPENCL_VERSION 110
+/* Macros for OpenCL versions */
+#define OPENCL_VERSION_1_1  1.1f
+/* Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
+   Khronos ICD supports only latest OpenCL version */
+#define CL_TARGET_OPENCL_VERSION 110
+
+// Suppress a compiler warning about 'clCreateCommandQueue': was declared deprecated
+// for OpenCL 1.2
+// #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
+#else // _WIN32
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 //#define CL_HPP_MINIMUM_OPENCL_VERSION 110
@@ -42,6 +56,7 @@
 // for OpenCL 1.2
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 //#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#endif
 
 //we want to use POSIX functions
 #pragma warning( push )

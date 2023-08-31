@@ -5,27 +5,25 @@
 # To keep constinstance of the repository and not be relying to a hardcoded paths please create symbolic links that will be outside the path under
 # versioning controll and this way will not brake anyones environment setups.
 # From your /home/[YOUR_USERNAME] direcory run:
-#	ln -s /[OpenSL_SDK_PATH] AMDSKD
+#	ln -s [AMD_SDK_PATH]/AMDSKD
 #	ln -s /[your_bpinc_path] boinc_src
 # or change those paths acordingly to your setup.
 #
-# Some materials
-# https://stackoverflow.com/questions/57361083/gcc-equivalent-of-gs-gl-gy-oi-md-in-msvc
 
 # DO-NOT-CHANGE!
 BOINC_DIR =../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
-# OPENCL_PATH =../../../AMDSDK
-OPENCL_PATH = /usr
+OPENCL_PATH =/usr
+# OPENCL_PATH = /opt/rocm
 OPENCL_LIB_PATH = $(OPENCL_PATH)/lib
-OBJ_DIR =build/Release
+OBJ_DIR =build/Debug
 
 # END DO-NOT-CHANGE
 
 # CXXFLAGS = -g -O3 .
-CXXFLAGS = -O2 -fstack-protector-strong -fstack-clash-protection -ffunction-sections \
-	-DNDEBUG \
+CXXFLAGS = -g \
+	-D_DEBUG \
 	-DAMD \
 	-DCL_HPP_ENABLE_EXCEPTIONS \
 	-I$(BOINC_DIR) \
@@ -35,13 +33,14 @@ CXXFLAGS = -O2 -fstack-protector-strong -fstack-clash-protection -ffunction-sect
 	-L$(OPENCL_LIB_PATH) \
 	-L /usr/X11R6/lib \
 	-L. 
+#	-lOpenCL 
 
 CC=g++
 CXX=g++
-# OPTFLAGS=
-OPTFLAGS= -O2
+# OPTFLAGS=-O3
+OPTFLAGS=
 CFLAGS=$(OPTFLAGS) \
-	-DNDEBUG \
+	-D_DEBUG \
 	-DAMD \
 	-DCL_HPP_ENABLE_EXCEPTIONS \
 	-I$(BOINC_DIR) \
@@ -50,6 +49,7 @@ CFLAGS=$(OPTFLAGS) \
 	-I$(OPENCL_PATH)/include \
 	-L$(OPENCL_LIB_PATH) \
 	-L. 
+#	-lOpenCL
 
 LDFLAGS=-lm -lrt -Xlinker -rpath .
 
@@ -63,7 +63,7 @@ SOURCE_FILES = trifac.cpp areanorm.cpp sphfunc.cpp ellfit.cpp ludcmp.cpp lubksb.
 
 OBJECT_FILES     = $(SOURCE_FILES:%.cpp=$(OBJ_DIR)/%.o)
 
-PROGS = period_search_BOINC_linux_amd_opencl_110_x64_Release
+PROGS = period_search_BOINC_linux_amd_opencl_110_x64_Debug
 EXECUTABLE_FILES = $(PROGS:%=$(OBJ_DIR)/%)
 
 all: $(EXECUTABLE_FILES)
@@ -92,6 +92,6 @@ $(EXECUTABLE_FILES): period_search_BOINC.cpp  $(OBJECT_FILES) $(OBJ_DIR)/libstdc
 	@echo "Build successful!"
 
 $(OBJ_DIR)/%.o: %.cpp
-	@echo Compiling $<
-	@mkdir -p $(dir $@)
+	mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
