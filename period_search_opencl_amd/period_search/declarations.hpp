@@ -1,5 +1,12 @@
-#pragma once
-#include <CL/cl_platform.h>
+//#pragma once
+// #include <CL/cl.h>
+// #include <CL/cl_platform.h>
+
+#include <stdbool.h>
+#if defined _WIN32
+#include "Windows.h"
+#endif
+
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
@@ -37,19 +44,19 @@ void deallocate_vector(void *p_x);
 void deallocate_matrix_double(double **p_x, int rows);
 void deallocate_matrix_int(int **p_x, int rows);
 
-cl_double* vector_cl_double(int length);
+//cl_double* vector_cl_double(int length);
 
 //void deallocate_matrix_3(void ***p_x, int n_1, int n_2);
 
 double host_dot_product(double a[], double b[]);
 
-#ifdef _DEBUG
 struct DATA {
 	int nlines;
 	double* per;
 	double* rms;
 	double* chisq;
 };
+#ifdef _DEBUG
 void CompareResult(const char* output_filename);
 int getData(const char* filename, DATA*& data);
 int compare_results(DATA* _data1, DATA* _data2, bool& match);
@@ -100,3 +107,7 @@ double bright_ell_YORP(double ee[], double ee0[], double t, double cg[],
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
 */
 void curv1D(double cg[]);
+
+#if defined _WIN32
+bool GetVersionInfo(LPCTSTR filename, int& major, int& minor, int& build, int& revision);
+#endif

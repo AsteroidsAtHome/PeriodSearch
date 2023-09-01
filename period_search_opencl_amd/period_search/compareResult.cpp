@@ -1,5 +1,13 @@
 ﻿#include "declarations.hpp"
+#include <cmath>
+#include <iostream>
 #include "boinc_api.h"
+
+//#if defined __GNUC__
+//#include "app_ipc.h"
+//#endif
+
+using namespace std;
 
 #if defined (_DEBUG)
 int getData(const char* filename, DATA*& data)

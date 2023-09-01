@@ -1,0 +1,62 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${vcpkgRoot}/x64-windows-static/include",
+                "C:/Program Files (x86)/AMD APP SDK/3.0/include",
+                "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.0\\include",
+                "C:/boincsdk/boinc/api"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.25252.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "windows-msvc-x64"
+        },
+        {
+            "name": "GCC",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${vcpkgRoot}/x64-windows-static/include",
+                "C:/boincsdk/boinc/api",
+                "C:/boincsdk/boinc/win_build/Build/x64/Debug",
+                "C:/Program Files (x86)/AMD APP SDK/3.0/lib/x86_64",
+                "C:/Program Files (x86)/AMD APP SDK/3.0/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__CL_ENABLE_EXCEPTIONS",
+                "_NDEBUG",
+                "AMD"
+            ],
+            "windowsSdkVersion": "10.0.25252.0",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "compilerPath": "C:/msys64/mingw64/bin/g++.exe",
+            "compilerArgs": [],
+            "forcedInclude": [
+                "OpenCL.lib",
+                "libboinc.lib",
+                "libboincapi.lib"
+            ],
+            "browse": {
+                "path": [
+                    "C:/Program Files (x86)/AMD APP SDK/3.0/include",
+                    "C:/boincsdk/boinc/api"
+                ]
+            },
+            "compileCommands": ""
+        }
+    ],
+    "version": 4
+}

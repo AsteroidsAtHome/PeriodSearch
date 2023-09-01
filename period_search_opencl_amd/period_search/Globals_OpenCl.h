@@ -4,7 +4,7 @@
 #pragma pack(8)
 
 #include <CL/cl.h>
-#include <CL/cl.hpp>
+//#include <CL/cl.hpp>
 #include "constants.h"
 #include <vector>
 #include <iostream>
@@ -147,3 +147,53 @@ struct alignas(8) freq_result
 	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;
 	cl_int isReported, isInvalid, isNiter;
 };
+
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+/*! \brief Exception class
+ *
+ *  This may be thrown by API functions when CL_HPP_ENABLE_EXCEPTIONS is defined.
+ */
+class Error : public std::exception
+{
+private:
+    cl_int err_;
+    const char* errStr_;
+public:
+    /*! \brief Create a new CL error exception for a given error code
+     *  and corresponding message.
+     *
+     *  \param err error code value.
+     *
+     *  \param errStr a descriptive string that must remain in scope until
+     *                handling of the exception has concluded.  If set, it
+     *                will be returned by what().
+     */
+    Error(cl_int err, const char* errStr = nullptr) : err_(err), errStr_(errStr)
+    {}
+
+    ~Error() throw() {}
+
+    /*! \brief Get error string associated with exception
+     *
+     * \return A memory pointer to the error message string.
+     */
+    virtual const char* what() const throw ()
+    {
+        if (errStr_ == nullptr) {
+            return "empty";
+        }
+        else {
+            return errStr_;
+        }
+    }
+
+    /*! \brief Get error code associated with exception
+     *
+     *  \return The error code.
+     */
+    cl_int err(void) const { return err_; }
+};
+#define CL_HPP_ERR_STR_(x) #x
+#else
+#define CL_HPP_ERR_STR_(x) nullptr
+#endif // CL_HPP_ENABLE_EXCEPTIONS

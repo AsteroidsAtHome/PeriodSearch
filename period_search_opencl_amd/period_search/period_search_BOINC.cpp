@@ -22,23 +22,48 @@
 
 */
 
+#if defined __GNUC__
+#define CL_HPP_MINIMUM_OPENCL_VERSION 110
+#define CL_HPP_TARGET_OPENCL_VERSION 110
+/* Macros for OpenCL versions */
+#define OPENCL_VERSION_1_1  1.1f
+/* Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
+   Khronos ICD supports only latest OpenCL version */
+#define CL_TARGET_OPENCL_VERSION 110
+
+// Suppress a compiler warning about 'clCreateCommandQueue': was declared deprecated
+// for OpenCL 1.2
+// #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
+#else // _WIN32
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+//#define CL_HPP_MINIMUM_OPENCL_VERSION 110
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+//#define CL_HPP_TARGET_OPENCL_VERSION 110
+
 // Macros for OpenCL versions
 #define OPENCL_VERSION_1_2  1.2f
+//#define OPENCL_VERSION_1_1  1.1f
 
 // Suppress a compiler warning about undefined CL_TARGET_OPENCL_VERSION
 // Khronos ICD supports only latest OpenCL version
 #define CL_TARGET_OPENCL_VERSION 120
+//#define CL_TARGET_OPENCL_VERSION 110
 
 // Suppress a compiler warning about 'clCreateCommandQueue': was declared deprecated
 // for OpenCL 1.2
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+//#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#endif
 
 //we want to use POSIX functions
 #pragma warning( push )
 #pragma warning( disable : 4996 )
 
-#include <CL/cl.hpp>
-#include "stdafx.h"
+#include <CL/cl.h>
+//#include "stdafx.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -70,16 +95,18 @@
 
 #ifdef _WIN32
 #include "boinc_win.h"
-
+#include "Windows.h"
+#include <Shlwapi.h>
+//#include "VersionInfo.hpp"
 #else
-#include "../win_build/config.h"
+// #include "../win_build/config.h"
 #include <cstdio>
 #include <cctype>
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
 #include <csignal>
-#include <io.h>
+//#include <io.h>
 //#include <unistd.h>
 #endif
 
@@ -174,6 +201,8 @@ cl_double weight[MAX_N_OBS + 1];
 cl_int max_l_points;
 cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
 
+APP_INIT_DATA aid;
+
 /*--------------------------------------------------------------*/
 
 int main(int argc, char** argv)
@@ -208,7 +237,6 @@ int main(int argc, char** argv)
 	cl_double* tim;
 
 	char* stringTemp;
-
 	stringTemp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
 
 	//   ee = matrix_double(MAX_N_OBS,3);
@@ -227,7 +255,8 @@ int main(int argc, char** argv)
 	af = vector_double(MAX_N_FAC);
 	ia = vector_int(MAX_N_PAR);
 
-	tim = vector_cl_double(MAX_N_OBS);
+	// tim = vector_cl_double(MAX_N_OBS);
+	tim = vector_double(MAX_N_OBS);
 
 	lambdaPole[1] = 0;    betaPole[1] = 0;
 	lambdaPole[2] = 90;   betaPole[2] = 0;
@@ -255,6 +284,8 @@ int main(int argc, char** argv)
 		);
 		exit(retval);
 	}
+
+    boinc_get_init_data(aid);
 
 	//// -------------------
 	//char buffer[MAX_PATH];
@@ -558,16 +589,39 @@ int main(int argc, char** argv)
 	l_points[l_curves] = 3;
 	in_rel[l_curves] = 0;
 
-	// extract a --device option
-	int cudaDevice = -1;
-	for (int ii = 0; ii < argc; ii++) {
-		if (cudaDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
-			cudaDevice = atoi(argv[++ii]);
-	}
-	if (cudaDevice < 0)
-		cudaDevice = 0;
+	int clDevice = -1;
+    if (aid.gpu_device_num >= 0)
+    {
+        clDevice = aid.gpu_device_num;
+    }
+    else
+    {
+	    for (int ii = 0; ii < argc; ii++) {
+            if (clDevice < 0 && strcmp(argv[ii], "--device") == 0 && ii + 1 < argc)
+                clDevice = atoi(argv[++ii]);
+	    }
+    }
 
-	retval = ClPrepare(cudaDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
+	if (clDevice < 0)
+		clDevice = 0;
+
+    if (!checkpointExists)
+    {
+        fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
+        fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, clDevice, aid.slot);
+
+#ifdef _WIN32
+        int major, minor, build, revision;
+        TCHAR filepath[MAX_PATH]; // = getenv("_");
+        GetModuleFileName(nullptr, filepath, MAX_PATH);
+        auto filename = PathFindFileName(filepath);
+        GetVersionInfo(filename, major, minor, build, revision);
+        fprintf(stderr, "Application: %s\n", filename);
+        fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#endif
+    }
+
+	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (retval)
 	{
 		fflush(stderr);
@@ -806,7 +860,7 @@ int main(int argc, char** argv)
 	}
 
 	//CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
-	CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+	ClStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
 

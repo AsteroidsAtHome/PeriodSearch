@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x86">
+      <Configuration>Debug</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x86">
+      <Configuration>Release</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{a2af7e83-7ea3-4c2d-8a48-533ec6a74e91}</ProjectGuid>
+    <Keyword>Linux</Keyword>
+    <RootNamespace>psopencl_Linux_cs2022</RootNamespace>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <ApplicationType>Linux</ApplicationType>
+    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
+    <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
+    <LinuxProjectType>{D51BCBC9-82E9-4017-911E-C93873C4EA2B}</LinuxProjectType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfStl>libstdc++_static</UseOfStl>
+    <RemoteCopyIncludeDirectories>~/projects/boinc_src;~/projects/boinc_src/api;~/projects/boinc_src/lib;</RemoteCopyIncludeDirectories>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <RemoteCompileLocalCopyObjectFiles>true</RemoteCompileLocalCopyObjectFiles>
+    <IncludePath>
+    </IncludePath>
+    <LibraryPath>
+    </LibraryPath>
+    <MultiProcNumber>
+    </MultiProcNumber>
+    <SourcePath>
+    </SourcePath>
+    <ProjectPublicIncludePath>
+    </ProjectPublicIncludePath>
+    <ValidateArchitecture>true</ValidateArchitecture>
+    <RemoteLdToolExe>g++</RemoteLdToolExe>
+    <TargetName>period_search_BOINC_opencl_12</TargetName>
+    <TargetExt />
+    <LocalRemoteCopySources>true</LocalRemoteCopySources>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="..\period_search\areanorm.cpp" />
+    <ClCompile Include="..\period_search\compareResult.cpp" />
+    <ClCompile Include="..\period_search\ellfit.cpp" />
+    <ClCompile Include="..\period_search\gauss_errc.cpp" />
+    <ClCompile Include="..\period_search\host_dot_product.cpp" />
+    <ClCompile Include="..\period_search\lubksb.cpp" />
+    <ClCompile Include="..\period_search\ludcmp.cpp" />
+    <ClCompile Include="..\period_search\memory.cpp" />
+    <ClCompile Include="..\period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="..\period_search\phasec.cpp" />
+    <ClCompile Include="..\period_search\sphfunc.cpp" />
+    <ClCompile Include="..\period_search\Start_OpenCl.cpp" />
+    <ClCompile Include="..\period_search\stdafx.cpp" />
+    <ClCompile Include="..\period_search\trifac.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\period_search\blmatrix.cl">
+      <DeploymentContent>false</DeploymentContent>
+    </None>
+    <None Include="..\period_search\bright.cl" />
+    <None Include="..\period_search\conv.cl" />
+    <None Include="..\period_search\cpp.hint" />
+    <None Include="..\period_search\curv.cl" />
+    <None Include="..\period_search\Curv2.cl" />
+    <None Include="..\period_search\dave.cl" />
+    <None Include="..\period_search\gauss_errc.cl" />
+    <None Include="..\period_search\Intrinsics.cl" />
+    <None Include="..\period_search\Makefile" />
+    <None Include="..\period_search\Makefile_OpenCL_1.2" />
+    <None Include="..\period_search\mrqcof.cl" />
+    <None Include="..\period_search\mrqmin.cl" />
+    <None Include="..\period_search\Start.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\period_search\constants.h" />
+    <ClInclude Include="..\period_search\declarations.hpp" />
+    <ClInclude Include="..\period_search\declarations_OpenCl.h" />
+    <ClInclude Include="..\period_search\globals.h" />
+    <ClInclude Include="..\period_search\GlobalsCL.h" />
+    <ClInclude Include="..\period_search\Globals_OpenCl.h" />
+    <ClInclude Include="..\period_search\opencl_helper.h" />
+    <ClInclude Include="..\period_search\Start_OpenCl.h" />
+    <ClInclude Include="..\period_search\stdafx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RemoteRootDir)/boinc_src;$(RemoteRootDir)/boinc_src/api;$(RemoteRootDir)/boinc_src/lib;~/AMDSDK/include;/usr/X11R6/lib</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;AMD;__CL_ENABLE_EXCEPTIONS;__GNUC__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <UndefinePreprocessorDefinitions>_WIN32%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+      <CAdditionalWarning />
+      <CppAdditionalWarning />
+      <StrictAliasing />
+      <UnrollLoops />
+      <LinkTimeOptimization />
+      <OmitFramePointers />
+      <NoCommonBlocks />
+      <RuntimeTypeInfo>
+      </RuntimeTypeInfo>
+      <PositionIndependentCode />
+      <ThreadSafeStatics />
+      <RelaxIEEE />
+      <HideInlineMethods />
+      <SymbolsHiddenByDefault />
+      <ExceptionHandling />
+      <CLanguageStandard>gnu11</CLanguageStandard>
+      <ObjectFileName>$(RemoteProjectRelDir)/obj/$(Platform)/$(Configuration)/%(filename).o</ObjectFileName>
+      <Optimization />
+      <Verbose>true</Verbose>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(RemoteRootDir)/boinc_src;$(RemoteRootDir)/boinc_src/api;$(RemoteRootDir)/boinc_src/lib;~/AMDSDK/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <VerboseOutput>true</VerboseOutput>
+      <ShowProgress>true</ShowProgress>
+      <AdditionalOptions>--verbose -lm -lrt -Xlinker -rpath . %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(RemoteOutDir)period_search_BOINC_opencl_12</OutputFile>
+      <UnresolvedSymbolReferences>false</UnresolvedSymbolReferences>
+      <OptimizeforMemory />
+      <Relocation />
+      <FunctionBinding>false</FunctionBinding>
+      <NoExecStackRequired />
+      <SharedLibrarySearchPath>
+      </SharedLibrarySearchPath>
+      <Trace>false</Trace>
+      <IgnoreDefaultLibraries>false</IgnoreDefaultLibraries>
+      <AdditionalDependencies>~/AMDSDK/lib/libOpenCL.so</AdditionalDependencies>
+      <LibraryDependencies>boinc;boinc_api;stdc++</LibraryDependencies>
+      <DebuggerSymbolInformation>true</DebuggerSymbolInformation>
+      <WholeArchiveBegin>true</WholeArchiveBegin>
+    </Link>
+    <RemotePreBuildEvent>
+      <Command>
+      </Command>
+    </RemotePreBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

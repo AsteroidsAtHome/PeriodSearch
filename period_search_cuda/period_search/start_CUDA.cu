@@ -20,7 +20,7 @@
 #include <nvml.h>
 
 #ifdef __GNUC__
-#include <time.h>
+#include <ctime>
 #endif
 #include "ComputeCapability.h"
 

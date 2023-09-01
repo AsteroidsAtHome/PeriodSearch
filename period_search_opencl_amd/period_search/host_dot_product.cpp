@@ -4,8 +4,8 @@
 
    8.11.2006
 */
-#pragma once
-#include "declarations.hpp"
+
+// #include "declarations.hpp"
 
 double host_dot_product(double a[4], double b[4])
 {

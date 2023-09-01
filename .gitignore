@@ -113,9 +113,9 @@ boinc_finish_called
 stderr.txt
 init_data*.xml
 period_search_in*
-# But keep test data
-!*/input_period_search/period_search_in_*
 period_search_out*
+# But keep test data
+!*/input_period_search/period_search_*
 period_search_state*
 test_*.txt
 test_values*.txt
