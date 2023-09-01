@@ -1,6 +1,17 @@
-v10000	pocita dobre, ale je tam casta neshoda vystupu, casto se to lisi na poslednim miste, zbytecna presnost
-v10010	23.7.2012	uprava formatu vystupu - o jedno desetinne misto mene, snizi se pocet problemu s validaci, i kdyz to uplne nepomuze
-v10100	24.8.2012	10 misto 6ti pocatecnich polu - melo by spolehliveji konvergovat, 
-			format vystupu vracen na puvodni presnost, musi se to stejne validovat jinak
+v10000	--.--.2006	EN: it feels good, but there is often a mismatch of performance, it often differs in the last place, unnecessary accuracy
+					CZ: pocita dobre, ale je tam casta neshoda vystupu, casto se to lisi na poslednim miste, zbytecna presnost
 
-gauss_1.c - nebylo to vubec potreba, smazano
+v10010	23.07.2012	EN: editing the output format - one decimal place less, the number of validation problems will be reduced, even if it doesn't help at all
+					CZ: uprava formatu vystupu - o jedno desetinne misto mene, snizi se pocet problemu s validaci, i kdyz to uplne nepomuze
+
+v10100	24.08.2012	EN: 10 instead of 6 initial fields - it should convert more reliably, the output format is returned to the original accuracy,
+						it must be validated differently
+					CZ: 10 misto 6ti pocatecnich polu - melo by spolehliveji konvergovat, 
+						format vystupu vracen na puvodni presnost, musi se to stejne validovat jinak
+
+					gauss_1.c - EN: it was not needed at all, deleted
+								CZ: nebylo to vubec potreba, smazano
+
+v10218	01.09.2023	New Release using CUDA 12.0. Supported CC 5.0 - 9.0. Add few improvements. Removed use of 'textures'. Add application name and version. 
+					Note: Linux application has to be built using GCC 12.2.1-4. Initiall try using GCC 13.0.1-6 was not succsessfull. It turns out CUDAv12.xx has issues
+					with the GCC 13 (https://forums.developer.nvidia.com/t/identifier-float32-is-undefined-etc-cuda-12-2-0-gcc-13-1/258930). 
