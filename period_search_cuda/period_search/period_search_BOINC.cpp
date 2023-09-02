@@ -60,7 +60,7 @@
 #include "boinc_win.h"
 #include "Windows.h"
 #include <Shlwapi.h>
-#include "Version.h"
+
 #else
 //#include "../win_build/config.h"
 #include <cstdio>
@@ -80,6 +80,7 @@
 #include "boinc_api.h"
 #include "mfile.h"
 #include "start_CUDA.h"
+#include "Version.h"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -594,15 +595,18 @@ int main(int argc, char** argv)
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 		fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, cuda_device, aid.slot);
 
-#ifdef _WIN32
 		int major, minor, build, revision;
+#if defined __GNUC__
+		GetVersionInfo(major, minor, build, revision);
+		fprintf(stderr, "Application: period_search_BOINC_cuda12000\n");
+#elif defined _WIN32
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);
 		GetVersionInfo(filename, major, minor, build, revision);
 		fprintf(stderr, "Application: %s\n", filename);
-		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 #endif
+		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 	}
 
 	retval = CUDAPrepare(cuda_device, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
