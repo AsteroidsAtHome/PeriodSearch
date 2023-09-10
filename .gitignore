@@ -127,6 +127,6 @@ test_values*.txt
 period_search_BOINC*
 
 # Profiler directories
-*Profiler Results/**
-Dawn Cache/**
-/period_search_opencl_amd/DawnCache
+/*/DawnCache
+/*/*Profiler Results
+/*/GPUCache

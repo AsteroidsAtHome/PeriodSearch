@@ -242,23 +242,13 @@ void bright(
 	blockIdx.x = get_group_id(0);
 	threadIdx.x = get_local_id(0);
 
-	//if (threadIdx.x == 0)
-	//printf("[%3d] jp[%3d] dytemp[315]: %10.7f\n", blockIdx.x, jp, (*CUDA_LCC).dytemp[315]);
-
 	ncoef0 = (*CUDA_CC).Ncoef0;//ncoef - 2 - CUDA_Nphpar;
 	ncoef = (*CUDA_CC).ma;
 	cl = exp(cg[ncoef - 1]); /* Lambert */
 	cls = cg[ncoef];       /* Lommel-Seeliger */
 
-	//if (blockIdx.x == 0 && threadIdx.x == 0)
-	//{
-	//	printf("cg[%d]: %10.7f, cg[%d]: %10.7f\n", ncoef - 1, cg[ncoef - 1], ncoef, cg[ncoef]);
-	//	printf("cl: %10.7f, cls: %10.7f\n", cl, cls);
-	//}
-
 	/* matrix from neo */
 	/* derivatives */
-
 	e_1 = (*CUDA_LCC).e_1[jp];
 	e_2 = (*CUDA_LCC).e_2[jp];
 	e_3 = (*CUDA_LCC).e_3[jp];
@@ -284,28 +274,11 @@ void bright(
 	de0[3][2] = (*CUDA_LCC).de0[jp][3][2];
 	de0[3][3] = (*CUDA_LCC).de0[jp][3][3];
 
-	//if (blockIdx.x == 0 && threadIdx.x == 0) //blockIdx.x == 0 &&
-	//{
-	//	printf("[%d] jp[%3d] %10.7f, %10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n", blockIdx.x, jp, e_1, e_2, e_3, e0_1, e0_2, e0_3);
-
-	//}
-	//	printf("[%d] jp[%3d] de11: %10.7f, de12: %10.7f, de13: %10.7f\n", blockIdx.x, jp, de[1][1], de[1][2], de[1][3]);
-		//printf("[%d] jp[%3d] e_1: %10.7f, e_2: %10.7f, e_3: %10.7f\n", blockIdx.x, jp, e_1, e_2, e_3);
-
-	//	printf("[%3d] de0[3][3]: %10.7f\n", threadIdx.x, de[3][3]);
-		//printf("[%3d] jp[%d] e_1: %10.7f,\te_2: %10.7f,\te_3: %10.7f\n", threadIdx.x, jp, e_1, e_2, e_3);
-
-	/* Directions (and ders.) in the rotating system */
-
-	//
 	/*Integrated brightness (phase coeff. used later) */
 	double lmu, lmu0, dsmu, dsmu0, sum1, sum10, sum2, sum20, sum3, sum30;
 	double br, ar, tmp1, tmp2, tmp3, tmp4, tmp5;
-	//   short int *incl=&(*CUDA_LCC).incl[threadIdx.x*MAX_N_FAC];
-	//   double *dbr=&(*CUDA_LCC).dbr[threadIdx.x*MAX_N_FAC];
 	short int incl[MAX_N_FAC];
 	double dbr[MAX_N_FAC];
-	//int2 bfr;
 
 	br = 0;
 	tmp1 = 0;
@@ -314,42 +287,22 @@ void bright(
 	tmp4 = 0;
 	tmp5 = 0;
 
-	//j = blockIdx.x * (CUDA_Numfac1)+1; // j = 1, 290, 579 etc.
 	j = 1;
 	for (i = 1; i <= (*CUDA_CC).Numfac; i++, j++)
 	{
 		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
 		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
 
-		//if (blockIdx.x == 0 && threadIdx.x == 0 && i == 1) //blockIdx.x == 0 &&
-		//	printf("[%d] jp[%3d] i[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f\n",
-		//		blockIdx.x, jp, i, (*CUDA_CC).Nor[i][0], i,  (*CUDA_CC).Nor[i][1], i, (*CUDA_CC).Nor[i][2]);
-			//printf("[%d] jp[%3d] i[%3d] lmu: %10.7f, lmu0: %10.7f\n", blockIdx.x, jp, i, lmu, lmu0);
-
 		if ((lmu > TINY) && (lmu0 > TINY))
 		{
 			dnom = lmu + lmu0;
 			s = lmu * lmu0 * (cl + cls / dnom);
-			//bfr=tex1Dfetch(texArea,j);
-			//ar=__hiloint2double(bfr.y,bfr.x);
-
 			ar = (*CUDA_LCC).Area[j];
-			//if (blockIdx.x == 0 && threadIdx.x == 1) //blockIdx.x == 0 &&
-			//	printf("[%d] s: %10.7f, Area[%3d]: %.7f (j: %5d)\n", blockIdx.x, s, i, ar, j);
-
 			br += ar * s;
-			//
+
 			incl[incl_count] = i;
 			dbr[incl_count] = (*CUDA_CC).Darea[i] * s;
 			incl_count++;
-			//
-			//double dnom_lmu0 = (lmu0 / dnom); // *(lmu0 / dnom);
-			//double dnom_lmu = (lmu / dnom); // *(lmu / dnom);
-			//dsmu = cls * pow(dnom_lmu0, 2.0) + cl * lmu0;
-			//dsmu0 = cls * pow(dnom_lmu, 2.0) + cl * lmu;
-
-			//dsmu = cls * pow(lmu0 / dnom, 2.0) + cl * lmu0;
-			//dsmu0 = cls * pow(lmu / dnom, 2.0) + cl * lmu;
 
 			double lmu0_dnom = lmu0 / dnom;
 			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
@@ -358,10 +311,6 @@ void bright(
 
 
 			sum1 = (*CUDA_CC).Nor[i][0] * de[1][1] + (*CUDA_CC).Nor[i][1] * de[2][1] + (*CUDA_CC).Nor[i][2] * de[3][1];
-			//if (threadIdx.x == 0 && i == 1)
-			//	printf("[%d][%3d]jp[%3d] Nor[%d][0]: %10.7f, Nor[%d][1]: %10.7f, Nor[%d][2]: %10.7f, sum1: %10.7f\n",
-			//		blockIdx.x, threadIdx.x, jp, i, CUDA_Nor[i][0], i, CUDA_Nor[i][1], i, CUDA_Nor[i][2], sum1);
-
 			sum10 = (*CUDA_CC).Nor[i][0] * de0[1][1] + (*CUDA_CC).Nor[i][1] * de0[2][1] + (*CUDA_CC).Nor[i][2] * de0[3][1];
 			tmp1 += ar * (dsmu * sum1 + dsmu0 * sum10);
 			sum2 = (*CUDA_CC).Nor[i][0] * de[1][2] + (*CUDA_CC).Nor[i][1] * de[2][2] + (*CUDA_CC).Nor[i][2] * de[3][2];
@@ -370,10 +319,6 @@ void bright(
 			sum3 = (*CUDA_CC).Nor[i][0] * de[1][3] + (*CUDA_CC).Nor[i][1] * de[2][3] + (*CUDA_CC).Nor[i][2] * de[3][3];
 			sum30 = (*CUDA_CC).Nor[i][0] * de0[1][3] + (*CUDA_CC).Nor[i][1] * de0[2][3] + (*CUDA_CC).Nor[i][2] * de0[3][3];
 			tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
-
-			//if (blockIdx.x == 9 && threadIdx.x == 10 && i <= 10)
-			//	printf("[%d][%3d]jp[%3d] i[%4d] tmp1: %10.7f, tmp2: %10.7f, tmp3: %10.7f\n", blockIdx.x, threadIdx.x, jp, i, tmp1, tmp2, tmp3);
-				//printf("[%d][%3d]jp[%3d] sum1: %10.7f, sum2: %10.7f, sum3: %10.7f\n", blockIdx.x, threadIdx.x, jp, sum1, sum2, sum3);
 
 			tmp4 += lmu * lmu0 * ar;
 			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
@@ -385,17 +330,10 @@ void bright(
 	/* Ders. of brightness w.r.t. rotation parameters */
 	(*CUDA_LCC).dytemp[i] = Scale * tmp1;
 
-	//if (threadIdx.x == 0) //blockIdx.x == 0 &&
-	//	printf("[%3d] jp[%3d] Scale: %10.7f, tmp1: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, Scale, tmp1, i, (*CUDA_LCC).dytemp[i]);
-	//	printf("[%3d] dytemp[%5d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).dytemp[i]);
-
 	i += Lpoints1;
 	(*CUDA_LCC).dytemp[i] = Scale * tmp2;
 	i += Lpoints1;
 	(*CUDA_LCC).dytemp[i] = Scale * tmp3;
-
-	//if (blockIdx.x == 0)
-	//	printf("[%d][%3d][%4d] Scale: %10.7f, tmp1: %10.7f, tmp2; %10.7f, tmp3: %10.7f\n", blockIdx.x, threadIdx.x, jp, Scale, tmp1, tmp2, tmp3);
 
 	i += Lpoints1;
 	/* Ders. of br. w.r.t. phase function params. */
@@ -411,9 +349,6 @@ void bright(
 
 	/* Scaled brightness */
 	(*CUDA_LCC).ytemp[jp] = br * Scale;
-
-	//if (blockIdx.x == 0 && threadIdx.x == 0) //blockIdx.x == 0 &&
-	//	printf("[%d][%d] br: %10.7f, Scale: %10.7f, ytemp[%d]: %10.6f\n", blockIdx.x, threadIdx.x, br, Scale, jp, (*CUDA_LCC).ytemp[jp]);
 
 	ncoef0 -= 3;
 	int m, m1, mr, iStart;
@@ -433,14 +368,10 @@ void bright(
 		d = jp + (Lpoints1);
 	}
 
-
 	m1 = m + (*CUDA_CC).Numfac1;
 	mr = 2 * (*CUDA_CC).Numfac1;
 	d1 = d + Lpoints1;
 	dr = 2 * Lpoints1;
-
-	//if (blockIdx.x == 0 && threadIdx.x == 0)
-	//	printf("m: %d, m1: %d, Dg_block: %d, Numfac1: %d\n", m, m1, CUDA_Dg_block, CUDA_Numfac1);
 
 	/* Derivatives of brightness w.r.t. g-coeffs */
 	if (incl_count)
@@ -448,22 +379,11 @@ void bright(
 		for (i = iStart; i <= ncoef0; i += 2, m += mr, m1 += mr, d += dr, d1 += dr)
 		{
 			double tmp = 0, tmp1 = 0;
-
 			double l_dbr = dbr[0];
 			int l_incl = incl[0];
-
-			//int2 xx;
-			//xx=tex1Dfetch(texDg,m+l_incl);
-			//tmp = l_dbr * __hiloint2double(xx.y,xx.x);
 			tmp = l_dbr * (*CUDA_LCC).Dg[m + l_incl];
-
-			//if (blockIdx.x == 0 && threadIdx.x == 0 && i < 10)
-			//	printf("[%d] jp[%3d] i[%2d] l_dbr: %10.7f, Dg[%5d]: %10.7f\n", blockIdx.x, jp, i, l_dbr, m + l_incl, (*CUDA_LCC).Dg[m + l_incl]);
-
 			if ((i + 1) <= ncoef0)
 			{
-				//xx=tex1Dfetch(texDg,m1+l_incl);
-				//tmp1 = l_dbr * __hiloint2double(xx.y,xx.x);
 				tmp1 = l_dbr * (*CUDA_LCC).Dg[m1 + l_incl];
 			}
 
@@ -471,50 +391,17 @@ void bright(
 			{
 				double l_dbr = dbr[j];
 				int l_incl = incl[j];
-
-				//int2 xx;
-				//xx=tex1Dfetch(texDg,m+l_incl);
-				//tmp += l_dbr * __hiloint2double(xx.y,xx.x);
 				tmp += l_dbr * (*CUDA_LCC).Dg[m + l_incl];
 				if ((i + 1) <= ncoef0)
 				{
-					//xx=tex1Dfetch(texDg,m1+l_incl);
-					//tmp1 += l_dbr * __hiloint2double(xx.y,xx.x);
 					tmp1 += l_dbr * (*CUDA_LCC).Dg[m1 + l_incl];
 				}
 			}
 
 			(*CUDA_LCC).dytemp[d] = Scale * tmp;
-
-			//>>>>>>>>>
-			// Check for these values at this point on first pass if any anomalies were suspected within results:
-			//
-			//[  4] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3356285, dytemp[  315]:  1.1364109
-			//[  5] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3368231, dytemp[  315]:  1.1374274
-			//[  2] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3322120, dytemp[  315]:  1.1335041
-			//[  3] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3341985, dytemp[  315]:  1.1351942
-			//[  9] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3412586, dytemp[  315]:  1.1412013
-			//[  7] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3400172, dytemp[  315]:  1.1401451
-			//[  8] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3400477, dytemp[  315]:  1.1401710
-			//[  1] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3339482, dytemp[  315]:  1.1349812
-			//[  6] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3382762, dytemp[  315]:  1.1386637
-			//[  0] jp[  1] i[  2] Scale:  0.8508436, tmp:  1.3369873, dytemp[  315]:  1.1375671
-			//
-			//
-			//if (threadIdx.x == 0 && jp == 1 && i == 2)
-			//	printf("[%3d] jp[%3d] i[%3d] Scale: %10.7f, tmp: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, i, Scale, tmp, d, (*CUDA_LCC).dytemp[d]);
-
-			//if (threadIdx.x == 0 && i == 2)
-			//	printf("[%3d] jp[%3d] i[%3d] Scale: %10.7f, tmp: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, i, Scale, tmp, d, (*CUDA_LCC).dytemp[d]);
-
-			//>>>>>>>>> dytemp [315]
-
 			if ((i + 1) <= ncoef0)
 			{
 				(*CUDA_LCC).dytemp[d1] = Scale * tmp1;
-
-				//if (threadIdx.x == 0 && jp == 1)
-				//	printf("[%3d] jp[%3d] i[%3d] Scale: %10.7f, tmp1: %10.7f, dytemp[%5d]: %10.7f\n", blockIdx.x, jp, i, Scale, tmp1, d1, (*CUDA_LCC).dytemp[d1]);
 			}
 		}
 	}

@@ -30,16 +30,19 @@ int gauss_errc(
 	if (brtmph > n) brtmph = n;			// false | 1
 	brtmpl++;							// 1
 
+	// <<< GausErrorCPre
 	if (threadIdx.x == 0)
 	{
 		for (j = 1; j <= n; j++) (*CUDA_LCC).ipiv[j] = 0;
 	}
 
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	// >>> GausErrorCPre End
 
 	//if (blockIdx.x == 0 && threadIdx.x == 0)
 	//	printf("brtmpl: %3d, brtmph: %3d\n", brtmpl, brtmph);
 
+	// <<< GausErrorC
 	for (i = 1; i <= n; i++)
 	{
 		big = 0;
@@ -232,6 +235,7 @@ int gauss_errc(
 		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	}
 
+	// << GausErrorCPost
 	if (threadIdx.x == 0)
 	{
 		for (l = n; l >= 1; l--)
@@ -252,6 +256,7 @@ int gauss_errc(
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	return(0);
+	// >>> GaussErrorCPost END
 }
 // #undef SWAP
  //from Numerical Recipes

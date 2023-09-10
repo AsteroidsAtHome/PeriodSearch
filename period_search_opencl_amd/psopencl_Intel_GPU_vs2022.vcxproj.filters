@@ -4,9 +4,6 @@
     <ClCompile Include="period_search\covsrt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\FreqContext.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\gauss_errc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -53,6 +50,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\Start_OpenCl_Intel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

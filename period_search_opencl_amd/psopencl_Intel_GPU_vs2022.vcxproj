@@ -126,7 +126,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>NotSet</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseD|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -214,12 +214,12 @@
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(CUDA_PATH_V12_0\lib\x86_64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_AMD_OpenCL_$(Configuration)</TargetName>
-    <IncludePath>$(AMDAPPSDKROOT)\include;$(IncludePath)</IncludePath>
-    <ReferencePath>$(AMDAPPSDKROOT)\include;$(ReferencePath)</ReferencePath>
-    <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Release;$(AMDAPPSDKROOT)\lib\x86_64;$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)$(Platform)_Intel\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)_Intel\$(Configuration)\</IntDir>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(Platform)_INTEL_OpenCL_$(Configuration)</TargetName>
+    <IncludePath>$(INTELOCLSDKROOT)include\include;$(IncludePath)</IncludePath>
+    <ReferencePath>$(INTELOCLSDKROOT)include\include;$(ReferencePath)</ReferencePath>
+    <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Release;$(INTELOCLSDKROOT)lib\x64;$(LibraryPath)</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseD|x64'">
@@ -334,13 +334,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)lib\x86_64;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)lib\x64;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OpenCL.lib;libcmtd.lib;libcpmtd.lib;libboinc.lib;libboincapi.lib;shlwapi.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>10000000</StackReserveSize>
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Linux_AMD|x64'">
     <ClCompile>
@@ -426,22 +430,25 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_USE_MATH_DEFINES;__CL_ENABLE_EXCEPTIONS;AMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;NDEBUG;_CONSOLE;_USE_MATH_DEFINES;__CL_ENABLE_EXCEPTIONS;INTEL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;$(AMDAPPSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;$(INTELOCLSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CompileAs>CompileAsCpp</CompileAs>
-      <Optimization>Disabled</Optimization>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <Optimization>MaxSpeed</Optimization>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(AMDAPPSDKROOT)lib\x86_64;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)lib\x64;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <StackReserveSize>10000000</StackReserveSize>
-      <AdditionalDependencies>OpenCL.lib;libcmt.lib;libcpmt.lib;libboinc.lib;libboincapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;libcmt.lib;libcpmt.lib;libboinc.lib;libboincapi.lib;shlwapi.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseD|x64'">
@@ -473,7 +480,6 @@
     <ClCompile Include="period_search\compareResult.cpp" />
     <ClCompile Include="period_search\covsrt.cpp" />
     <ClCompile Include="period_search\ellfit.cpp" />
-    <ClCompile Include="period_search\FreqContext.cpp" />
     <ClCompile Include="period_search\gauss_errc.cpp" />
     <ClCompile Include="period_search\host_dot_product.cpp" />
     <ClCompile Include="period_search\kernels.cpp" />
@@ -484,6 +490,7 @@
     <ClCompile Include="period_search\phasec.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\Start_OpenCl.cpp" />
+    <ClCompile Include="period_search\Start_OpenCl_Intel.cpp" />
     <ClCompile Include="period_search\stdafx.cpp" />
     <ClCompile Include="period_search\trifac.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
