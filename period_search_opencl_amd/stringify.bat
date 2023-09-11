@@ -1,0 +1,1 @@
+python oclProgramFileToString.py kernelSource.cl ./period_search/kernels.cpp

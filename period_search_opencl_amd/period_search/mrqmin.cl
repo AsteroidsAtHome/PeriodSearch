@@ -7,13 +7,7 @@
 int mrqmin_1_end(
 	__global struct mfreq_context* CUDA_LCC,
 	__global struct freq_context* CUDA_CC)
-	//int mrqmin_1_end(struct mfreq_context* CUDA_LCC, struct freq_context* CUDA_CC, int* sh_icol, int* sh_irow, double* sh_big, int icol, double pivinv)
 {
-	//const int* ia = (*CUDA_CC).ia;
-	//const int ma = (*CUDA_CC).ma;
-	//const int mfit = (*CUDA_CC).Mfit;
-	//const int mfit1 = (*CUDA_CC).Mfit1;
-
 	int j;
 	int3 threadIdx, blockIdx;
 	threadIdx.x = get_local_id(0);
@@ -38,86 +32,59 @@ int mrqmin_1_end(
 	if (brtmph > (*CUDA_CC).Mfit) brtmph = (*CUDA_CC).Mfit;
 	brtmpl++;
 
+	// <<< Iter1Mrqmin1EndPre1
 	if ((*CUDA_LCC).isAlamda)
 	{
 		for (j = tmpl; j <= tmph; j++)
 		{
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
-
 	}
+	// >>> Iter1Mrqmin1EndPre1 END
 
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
+	// <<< Iter1Mrqmin1EndPre2
 	for (j = brtmpl; j <= brtmph; j++)
 	{
 		int ixx = j * (*CUDA_CC).Mfit1 + 1;
 		for (int k = 1; k <= (*CUDA_CC).Mfit; k++, ixx++)
 		{
 			(*CUDA_LCC).covar[ixx] = (*CUDA_LCC).alpha[ixx];
-
-			//if(blockIdx.x == 0 && threadIdx.x == 0 && ixx == 56)
-			//	printf("[%d][%3d] alpha[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, ixx, (*CUDA_LCC).alpha[ixx]); // On second pass alpha[56] = 0.0000 instead of 80.8776359 ?!?
-				//printf("[%d][%3d] covar[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, ixx, (*CUDA_LCC).covar[ixx]);
 		}
 
 		int qq = j * (*CUDA_CC).Mfit1 + j;
 		(*CUDA_LCC).covar[qq] = (*CUDA_LCC).alpha[qq] * (1 + (*CUDA_LCC).Alamda);
-
-		//if (blockIdx.x == 0)
-		//	printf("[%3d] j[%3d] alpha[%3d]: %10.7f, 1 + Alamda: %10.7f, covar[%3d]: %10.7f\n",
-		//		threadIdx.x, j, qq, (*CUDA_LCC).alpha[qq], 1 + (*CUDA_LCC).Alamda, qq, (*CUDA_LCC).covar[qq]);
-
 		(*CUDA_LCC).da[j] = (*CUDA_LCC).beta[j];
-
-		//if (blockIdx.x == 0)
-		//	printf("[%d][%3d] da[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, j, (*CUDA_LCC).da[j]); // da -> OK
-
-		//if(threadIdx.x == 1)
-		//	printf("[%d] covar[%3d]: %10.7f, alpha[%3d]: %10.7f, (1 + Alamda: %10.7f)\n",
-		//		blockIdx.x, qq, (*CUDA_LCC).covar[qq], qq, (*CUDA_LCC).alpha[qq], 1 + (*CUDA_LCC).Alamda);
 	}
 
-	//if(threadIdx.x == 0)
-	//	printf("[%d] covar[56]: %10.7f\n", blockIdx.x,  (*CUDA_LCC).covar[56]);
-	//sh_icol[threadIdx.x] = threadIdx.x;
-
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	// >>> Iter1Mrqmin1EndPre2 END
 
-	// ---- GAUS ERROR CODE ----
+	// <<< gauss_errc    ---- GAUS ERROR CODE ----
 	int err_code = gauss_errc(CUDA_LCC, CUDA_CC);
-
-	//if (blockIdx.x == 0 && threadIdx.x == 0)
-	//	printf("mrqmin_1_end >>> [%3d] ma[%d3] err_code: %3d\n", threadIdx.x, ma, err_code);
-
 	if (err_code)
 	{
 		return err_code;
 	}
-
-	//err_code = gauss_errc(CUDA_LCC, CUDA_mfit, (*CUDA_LCC).da);
-
 	//     __syncthreads(); inside gauss
+	// <<< gaus_errc END
 
+	// >>> Iter1Mrqmin1EndPost
 	if (threadIdx.x == 0)
 	{
-
 		//		if (err_code != 0) return(err_code);  "bacha na sync threads" - Watch out for Sync Threads
-
 		j = 0;
 		for (int l = 1; l <= ma; l++)
 			if ((*CUDA_CC).ia[l])
 			{
 				j++;
 				(*CUDA_LCC).atry[l] = (*CUDA_LCC).cg[l] + (*CUDA_LCC).da[j];
-
-				//if (blockIdx.x == 0 && j == 50)
-				//	printf("[mrqmin_1_end] [%3d] atry[%3d]: %10.7f, cg[%3d]: %10.7f, da[%3d]: %10.7f\n",
-				//		threadIdx.x, j, (*CUDA_LCC).atry[j], j, (*CUDA_LCC).cg[l], j, (*CUDA_LCC).da[j]);
 			}
 	}
 
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	// <<< Iter1Mrqmin1EndPost END
 
 	return err_code;
 }

@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #if defined __GNUC__
 #include <CL/opencl.hpp>
@@ -104,3 +105,47 @@ const char *cl_error_to_str(cl_int e)
 }
 
 #endif
+
+bool getError(cl_int err)
+{
+    if(err != CL_SUCCESS)
+    {
+        std::cerr << "Error enqueueing kernel: " << cl_error_to_str(err) << " (" << err << ")" << std::endl;
+        return true;
+    }
+
+    return false;
+}
+
+cl_int EnqueueNDRangeKernel(cl_command_queue command_queue,
+                            cl_kernel kernel,
+                            cl_uint work_dim,
+                            const size_t* global_work_offset,
+                            const size_t* global_work_size,
+                            const size_t* local_work_size,
+                            cl_uint num_events_in_wait_list,
+                            const cl_event* event_wait_list,
+                            cl_event* event)
+{
+    size_t nameSize;
+    clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, 0, NULL, &nameSize);
+    auto kernelName = new char[nameSize];
+    clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, nameSize, kernelName, NULL);
+
+#if defined DEBUG_LEVEL_5
+    std::cerr << "Starting kernel [" << kernelName << "]... ";
+#endif
+
+    cl_int err = clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset, global_work_size, local_work_size, num_events_in_wait_list, event_wait_list, event);
+    if (err != CL_SUCCESS)
+    {
+        std::cerr << std::endl << "Error enqueueing kernel ["<< kernelName << "]: " << cl_error_to_str(err) << " (" << err << ")" << std::endl;
+        return true;
+    }
+
+#if defined DEBUG_LEVEL_5
+    std::cerr << "done." << std::endl;
+#endif
+
+    return false;
+}

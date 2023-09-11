@@ -48,7 +48,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
     <VCToolsVersion>
     </VCToolsVersion>
@@ -95,9 +95,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Debug;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_sse3_$(Configuration)</TargetName>
-    <OutDir>$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>Period_search_WinXP_$(PlatformTarget)_sse3_$(Configuration)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_XP_SSE2\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)_XP_SSE2\$(Configuration)\</IntDir>
+    <ExternalIncludePath>C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -113,6 +114,9 @@
     <OutDir>$(SolutionDir)\$(Platform)_XP\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)_XP\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgUseStatic>true</VcpkgUseStatic>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>
@@ -120,7 +124,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\api;C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\win_build\Build\Win32\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CompileAs>CompileAsCpp</CompileAs>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -152,21 +156,21 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CompileAs>CompileAsCpp</CompileAs>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\api;C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\win_build\Build\x64\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
       <OmitFramePointers>false</OmitFramePointers>
       <MinimalRebuild>false</MinimalRebuild>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <AdditionalOptions>/arch:SSE3;%(AdditionalOptions)</AdditionalOptions>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -176,8 +180,8 @@
       <!-- <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;libboincapi_staticcrt.lib;libboinc_staticcrt.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies> -->
       <!-- <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries> -->
       <StackReserveSize>20000000</StackReserveSize>
-      <AdditionalDependencies>libboincapi_staticcrt.lib;libboinc.lib;ShLwApi.lib;Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\boincsdk\boinc_repo\win_build\Build\x64\Debug;$(WindowsSDK_LibraryPath_x64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libboincapi_static_xp.lib;libboinc.lib;ShLwApi.lib;Version.Lib;libucrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(WindowsSDK_LibraryPath_x64);C:\Program Files (x86)\Windows Kits\10\Lib\10.0.10240.0\ucrt\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -188,7 +192,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\api;C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\win_build\Build\Win32\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -224,7 +228,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc_repo\api;C:\boincsdk\boinc_repo\lib;C:\boincsdk\boinc_repo\win_build\Build\x64\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>

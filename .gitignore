@@ -120,9 +120,13 @@ period_search_state*
 test_*.txt
 test_values*.txt
 
-
 # Files build unde Linux
 *.o
 *.so
 *.a
 period_search_BOINC*
+
+# Profiler directories
+/*/DawnCache
+/*/*Profiler Results
+/*/GPUCache

@@ -743,11 +743,11 @@ int main(int argc, char** argv)
 		}
 
 		retval = ClPrecalc(startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness, cl, n_coef);
-		//if (retval) // Test
-		//{
-		//    fflush(stderr);
-		//    exit(retval);
-		//}
+		if (retval)
+		{
+		    fflush(stderr);
+		    exit(retval);
+		}
 
 		ndata = ndata - 3;
 

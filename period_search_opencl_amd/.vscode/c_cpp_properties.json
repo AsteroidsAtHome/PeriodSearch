@@ -16,8 +16,8 @@
             ],
             "windowsSdkVersion": "10.0.25252.0",
             "compilerPath": "cl.exe",
-            "cStandard": "c17",
-            "cppStandard": "c++14",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
             "intelliSenseMode": "windows-msvc-x64"
         },
         {
