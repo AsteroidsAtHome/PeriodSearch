@@ -202,6 +202,8 @@ cl_int max_l_points;
 cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
 
 APP_INIT_DATA aid;
+bool compareWithFile = false;
+char *compareFilename;
 
 /*--------------------------------------------------------------*/
 
@@ -589,6 +591,14 @@ int main(int argc, char** argv)
 	l_points[l_curves] = 3;
 	in_rel[l_curves] = 0;
 
+    for (int ii = 0; ii < argc; ii++) {
+        if (strcmp(argv[ii], "--compare") == 0 && ii + 1 < argc)
+        {
+            compareWithFile = true;
+            compareFilename = argv[++ii];
+        }
+    }
+
 	int clDevice = -1;
     if (aid.gpu_device_num >= 0)
     {
@@ -860,6 +870,7 @@ int main(int argc, char** argv)
 	}
 
 	//CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+    //        ClPrecalc(startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness, cl, n_coef);
 	ClStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
@@ -893,7 +904,10 @@ int main(int argc, char** argv)
 #endif
 
 #ifdef _DEBUG
-	CompareResult(output_filename);
+    if(compareWithFile)
+    {
+	    CompareResult(output_filename, compareFilename);
+    }
 #endif
 
 	boinc_finish(0);

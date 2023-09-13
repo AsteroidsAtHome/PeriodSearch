@@ -127,18 +127,24 @@ cl_int EnqueueNDRangeKernel(cl_command_queue command_queue,
                             const cl_event* event_wait_list,
                             cl_event* event)
 {
+
+#if defined DEBUG_LEVEL_5
     size_t nameSize;
     clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, 0, NULL, &nameSize);
     auto kernelName = new char[nameSize];
     clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, nameSize, kernelName, NULL);
-
-#if defined DEBUG_LEVEL_5
     std::cerr << "Starting kernel [" << kernelName << "]... ";
 #endif
 
     cl_int err = clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset, global_work_size, local_work_size, num_events_in_wait_list, event_wait_list, event);
     if (err != CL_SUCCESS)
     {
+#if !defined DEBUG_LEVEL_5
+        size_t nameSize;
+        clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, 0, NULL, &nameSize);
+        auto kernelName = new char[nameSize];
+        clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, nameSize, kernelName, NULL);
+#endif
         std::cerr << std::endl << "Error enqueueing kernel ["<< kernelName << "]: " << cl_error_to_str(err) << " (" << err << ")" << std::endl;
         return true;
     }

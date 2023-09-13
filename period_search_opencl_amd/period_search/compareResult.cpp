@@ -30,7 +30,7 @@ int getData(const char* filename, DATA*& data)
 			"Couldn't find input file, resolved name %s.\n",
 			filepath
 		);
-		exit(-1);
+		return -1;
 	}
 
 	//if (retval) return retval;
@@ -124,15 +124,22 @@ int cleanup_result(DATA* data)
 	return 0;
 }
 
-void CompareResult(const char* output_filename)
+void CompareResult(const char* output_filename, char* compareFilename)
 {
 	DATA* result;
 	DATA* comparrer;
-	const char* cmpFilename = "period_search_out_cuda_correct";
+    const char* cmpFilename = compareFilename; // "period_search_out_cuda_correct";
 	bool match = false;
 
-	getData(output_filename, result);
-	getData(cmpFilename, comparrer);
+	int res = getData(output_filename, result);
+    if (res) return;
+	res = getData(cmpFilename, comparrer);
+    if (res)
+    {
+        cleanup_result(result);
+        return;
+    }
+
 	compare_results(result, comparrer, match);
 	if (match)
 	{
