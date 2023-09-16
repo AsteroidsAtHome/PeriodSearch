@@ -50,11 +50,16 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
+#if defined _WIN32 
+#if !defined WINXP
+#include "Version.h"
+#endif
+#endif
+
 #ifdef _WIN32
 #include "boinc_win.h"
 #include <Windows.h>
-#include <Shlwapi.h>
-#include "Version.h"
+//#include <Shlwapi.h>
 #else
 #include "config.h"
 #include <cstdio>
@@ -525,7 +530,7 @@ int main(int argc, char **argv) {
 
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
-#ifdef _WIN32
+#if defined _WIN32 && !WINXP
 		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
