@@ -976,8 +976,12 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
 #else
     //auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
-    // queue.enqueueWriteBuffer(cgFirst, CL_TRUE, 0, sizeof(double) * (MAX_N_PAR + 1), cg_first);
-    cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+     //queue.enqueueWriteBuffer(cgFirst, CL_TRUE, 0, sizeof(double) * (MAX_N_PAR + 1), cg_first);
+
+    cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+    clEnqueueWriteBuffer(queue, cgFirst, CL_BLOCKING, 0, sizeof(cl_double)* (MAX_N_PAR + 1), cg_first, 0, NULL, NULL);
+
+    //cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
 #endif
 
 #if defined __GNUC__
@@ -1024,8 +1028,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //void *pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_WRITE, 0, pccSize, 0, NULL, NULL, &err);
 
     // 18-SEP-2023
-    size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
-    auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
+    //size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
+    //auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
+    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
+    auto pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
 #elif NVIDIA
     int pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     auto alignas(8) pcc = new mfreq_context[CUDA_grid_dim_precalc];
@@ -1056,8 +1062,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         ((mfreq_context*)pcc)[m].pivinv = 0;
     }
 
-    auto t = sizeof(struct mfreq_context); // 351160 B / 384 * 351160 = 134,845,440 (128.6MB)   // 4232760 B / 384 * 4232760 = 1,625,379,840 ( 1.6 GB)
-    auto tt = t * CUDA_grid_dim_precalc;
+    //auto t = sizeof(struct mfreq_context); // 351160 B / 384 * 351160 = 134,845,440 (128.6MB)   // 4232760 B / 384 * 4232760 = 1,625,379,840 ( 1.6 GB)
+    //auto tt = t * CUDA_grid_dim_precalc;
 
     //void* test;
     //int testSize = 10 * sizeof(double);
@@ -1113,22 +1119,27 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #if defined (INTEL)
     auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faOptimizedSize, Fa, err);
 #else
-    auto memFa = (freq_context*)_aligned_malloc(faSize, 128);
+    /*auto memFa = (freq_context*)_aligned_malloc(faSize, 128);
     cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
     void* pFa = clEnqueueMapBuffer(queue, CUDA_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
     memcpy(pFa, Fa, faSize);
     clEnqueueUnmapMemObject(queue, CUDA_CC, pFa, 0, NULL, NULL);
-    clFlush(queue);
+    clFlush(queue);*/
+    auto pFa = (freq_context*)_aligned_malloc(faSize, 128);
+    //memcpy(pFa, Fa, faSize);
+    cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFa, &err);
+    clEnqueueWriteBuffer(queue, CUDA_CC, CL_BLOCKING, 0, faSize, Fa, 0, NULL, NULL);
 #endif
 #endif
 
     // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, err);
 #if defined __GNUC__
     auto memFb = (freq_context*)aligned_alloc(128, faSize);
-#else
-    auto memFb = (freq_context*)_aligned_malloc(faSize, 128);
-#endif
     cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
+#else
+    auto pFb = (freq_context*)_aligned_malloc(faSize, 128);
+    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFb, &err);
+#endif
 
     //cl_int* end = (cl_int*)malloc(sizeof(cl_int));
     //*end = -90;
@@ -1208,8 +1219,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //void* memIn = (void*)_aligned_malloc(frSize, 256);
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
     //void* pfr;
-    size_t frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
-    auto pfr = new freq_result[CUDA_grid_dim_precalc];
+
+    //size_t frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
+    int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
+    auto pfr = (freq_result*)_aligned_malloc(frSize, 128);
+    //auto pfr = new freq_result[CUDA_grid_dim_precalc];
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
 #elif NVIDIA
     int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
@@ -1353,8 +1367,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             if (getError(err)) return err;
             //clFinish(queue);
 
-            void* pFb = clEnqueueMapBuffer(queue, CUDA_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
-            clFlush(queue);
+            //void* pFb = clEnqueueMapBuffer(queue, CUDA_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
+            //clFlush(queue);
+            clEnqueueReadBuffer(queue, CUDA_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
             int error = 0;
             for (int j = 0; j < MAX_N_OBS + 1; j++) {
                 if ((*(freq_context*)pFb).Brightness[j] != (*Fa).Brightness[j]) {
@@ -1608,11 +1623,12 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #if defined (INTEL)
     _aligned_free(pcc);
 #elif defined AMD
-    _aligned_free(memFa);
-    _aligned_free(memFb);
-    delete[] pfr;
+    _aligned_free(pcc);
+    _aligned_free(pFb);
+    _aligned_free(pfr);
+    //delete[] pfr;
     //_aligned_free(memPcc);
-    delete[] pcc;
+    //delete[] pcc;
 #elif defined NVIDIA
     delete[] pcc;
 #endif
