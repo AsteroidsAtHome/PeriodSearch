@@ -357,6 +357,12 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     uint block;
     err_num = clGetDeviceInfo(device, CL_DEVICE_MAX_SAMPLERS, sizeof(uint), &block, NULL);
 
+    cl_uint baseAddrAlign;
+    err_num = clGetDeviceInfo(device, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof(cl_uint), &baseAddrAlign, NULL);
+
+    cl_uint minDataTypeAlignSize;
+    err_num = clGetDeviceInfo(device, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, sizeof(cl_uint), &minDataTypeAlignSize, NULL);
+
     size_t extSize;
     clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, NULL, &extSize);
     auto deviceExtensions = new char[extSize];
@@ -371,8 +377,9 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     //size_t *devWorkItemSizes = new size_t[devMaxWorkItemDims];
     //auto devWorkItemSizes = new size_t[devMaxWorkItemDims]{ 0,0,0 };
 
-    /*auto devWorkItemSizes = (size_t*)malloc(devMaxWorkItemDims);
-    err_num = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, devMaxWorkItemDims, &devWorkItemSizes, NULL);*/
+    //auto devWorkItemSizes = (size_t*)malloc(devMaxWorkItemDims);
+    size_t devWorkItemSizes[3];
+    err_num = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(devWorkItemSizes), &devWorkItemSizes, NULL);
 
     cerr << "OpenCL device C version: " << openClVersion << " | " << clDeviceVersion << endl;
     cerr << "OpenCL device Id: " << deviceId << endl;
@@ -393,15 +400,18 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     cerr << "CL_DEVICE_LOCAL_MEM_SIZE: " << clDeviceLocalMemSize << " B" << endl;
     cerr << "CL_DEVICE_MAX_CONSTANT_ARGS: " << clDeviceMaxConstantArgs << endl;
     cerr << "CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE: " << clDeviceMaxConstantBufferSize << " B" << endl;
+    cerr << "CL_DEVICE_MEM_BASE_ADDR_ALIGN: " << baseAddrAlign << endl;
+    cerr << "CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE: " << minDataTypeAlignSize << endl;
     cerr << "CL_DEVICE_MAX_PARAMETER_SIZE: " << clDeviceMaxParameterSize << " B" << endl;
     cerr << "CL_DEVICE_MAX_MEM_ALLOC_SIZE: " << clDeviceMaxMemAllocSize << " B" << endl;
     cerr << "CL_DEVICE_MAX_WORK_GROUP_SIZE: " << devMaxWorkGroupSize << endl;
-    /*cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: ";
+    cerr << "CL_DEVICE_MAX_WORK_ITEM_SIZES: {";
 
     for (size_t work_item_dim = 0; work_item_dim < devMaxWorkItemDims; work_item_dim++) {
-        cerr << (long int)devWorkItemSizes[work_item_dim] << " ";
+        if (work_item_dim > 0) cerr << ", ";
+        cerr << (long int)devWorkItemSizes[work_item_dim];
     }
-    cerr << endl;*/
+    cerr << "}" << endl;
 
 #endif
     // cl_khr_fp64 || cl_amd_fp64
@@ -537,6 +547,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 
     if (!kernelExist || readsource)
     {
+        //auto kernelSource = ocl_src_kernelSource.c_str();
         binProgram = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
         if (!binProgram || err_num != CL_SUCCESS)
         {
@@ -1007,9 +1018,12 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     auto pcc = (mfreq_context*)_aligned_malloc(optimizedSize, 4096);
     auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
 #elif AMD
-    //cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
-    //auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);
-    //auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
+    //cl_uint pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
+    //auto memPcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+    //cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, memPcc, &err);
+    //void *pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_WRITE, 0, pccSize, 0, NULL, NULL, &err);
+
+    // 18-SEP-2023
     size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
 #elif NVIDIA
@@ -1060,8 +1074,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // err = clEnqueueWriteBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
     // queue.enqueueUnmapMemObject(CUDA_MCC2, pcc);
     // queue.flush();
-    // clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
-    // clFlush(queue);
+
+     //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
+     //clFlush(queue);
+
+    // 18-SEP-2023
     cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
     clEnqueueWriteBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
 #elif defined NVIDIA
@@ -1346,6 +1363,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             }
 
             clEnqueueReadBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+            //pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_READ, 0, pccSize, 0, NULL, NULL, &err);
+            //clFlush(queue);
             int errCnt = 0;
             for (int j = 0; j < CUDA_grid_dim_precalc; j++)
             {
@@ -1360,7 +1379,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                     //	printf("cg[%3d]: %10.7f\n", i, CUDA_cg_first[i]);
                 }
             }
-
+            //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
             clEnqueueUnmapMemObject(queue, CUDA_CC2, pFb, 0, NULL, NULL);
             clFlush(queue);
 #ifdef _DEBUG
@@ -1592,6 +1611,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     _aligned_free(memFa);
     _aligned_free(memFb);
     delete[] pfr;
+    //_aligned_free(memPcc);
     delete[] pcc;
 #elif defined NVIDIA
     delete[] pcc;
@@ -1752,9 +1772,11 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     auto pcc = (mfreq_context*)_aligned_malloc(optimizedSize, 4096);
     auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
 #elif AMD
-    //cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim - 1) / 64 + 1) * 64;
-    //auto pcc = (mfreq_context*)aligned_alloc(8, optimizedSize);
-    //auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, optimizedSize, pcc, err);
+    //cl_uint pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim - 1) / 64 + 1) * 64;
+    //auto memPcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+    //cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, memPcc, &err);
+    //void* pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_WRITE, 0, pccSize, 0, NULL, NULL, &err);
+
     size_t pccSize = CUDA_grid_dim * sizeof(mfreq_context);
     auto pcc = new mfreq_context[CUDA_grid_dim];
 #elif NVIDIA
@@ -1786,22 +1808,39 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
     for (m = 0; m < CUDA_grid_dim; m++)
     {
-        std::fill_n(pcc[m].Area, MAX_N_FAC + 1, 0.0);
-        std::fill_n(pcc[m].Dg, (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0.0);
-        std::fill_n(pcc[m].alpha, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
-        std::fill_n(pcc[m].covar, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
-        std::fill_n(pcc[m].beta, MAX_N_PAR + 1, 0.0);
-        std::fill_n(pcc[m].da, MAX_N_PAR + 1, 0.0);
-        std::fill_n(pcc[m].atry, MAX_N_PAR + 1, 0.0);
-        std::fill_n(pcc[m].dave, MAX_N_PAR + 1, 0.0);
-        std::fill_n(pcc[m].dytemp, (POINTS_MAX + 1) * (MAX_N_PAR + 1), 0.0);
-        std::fill_n(pcc[m].ytemp, POINTS_MAX + 1, 0.0);
-        std::fill_n(pcc[m].sh_big, BLOCK_DIM, 0.0);
-        std::fill_n(pcc[m].sh_icol, BLOCK_DIM, 0);
-        std::fill_n(pcc[m].sh_irow, BLOCK_DIM, 0);
+        //std::fill_n(pcc[m].Area, MAX_N_FAC + 1, 0.0);
+        //std::fill_n(pcc[m].Dg, (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0.0);
+        //std::fill_n(pcc[m].alpha, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+        //std::fill_n(pcc[m].covar, (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+        //std::fill_n(pcc[m].beta, MAX_N_PAR + 1, 0.0);
+        //std::fill_n(pcc[m].da, MAX_N_PAR + 1, 0.0);
+        //std::fill_n(pcc[m].atry, MAX_N_PAR + 1, 0.0);
+        //std::fill_n(pcc[m].dave, MAX_N_PAR + 1, 0.0);
+        //std::fill_n(pcc[m].dytemp, (POINTS_MAX + 1) * (MAX_N_PAR + 1), 0.0);
+        //std::fill_n(pcc[m].ytemp, POINTS_MAX + 1, 0.0);
+        //std::fill_n(pcc[m].sh_big, BLOCK_DIM, 0.0);
+        //std::fill_n(pcc[m].sh_icol, BLOCK_DIM, 0);
+        //std::fill_n(pcc[m].sh_irow, BLOCK_DIM, 0);
+        ////pcc[m].conw_r = 0.0;
+        //pcc[m].icol = 0;
+        //pcc[m].pivinv = 0;
+
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].Area), MAX_N_FAC + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].Dg), (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].alpha), (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].covar), (MAX_N_PAR + 1) * (MAX_N_PAR + 1), 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].beta), MAX_N_PAR + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].da), MAX_N_PAR + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].atry), MAX_N_PAR + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].dave), MAX_N_PAR + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].dytemp), (POINTS_MAX + 1) * (MAX_N_PAR + 1), 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].ytemp), POINTS_MAX + 1, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].sh_big), BLOCK_DIM, 0.0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].sh_icol), BLOCK_DIM, 0);
+        std::fill_n(std::begin(((mfreq_context*)pcc)[m].sh_irow), BLOCK_DIM, 0);
         //pcc[m].conw_r = 0.0;
-        pcc[m].icol = 0;
-        pcc[m].pivinv = 0;
+        ((mfreq_context*)pcc)[m].icol = 0;
+        ((mfreq_context*)pcc)[m].pivinv = 0;
     }
 
 #if defined __GNUC__
@@ -1816,9 +1855,11 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #if defined (INTEL)
     queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, optimizedSize, pcc);
 #else
-    //queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
     cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
     clEnqueueWriteBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+
+    //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
+    //clFlush(queue);
 #endif
 #endif
 
@@ -2306,6 +2347,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     _aligned_free(memFa);
     _aligned_free(memFb);
     delete[] pfr;
+    //_aligned_free(memPcc);
     delete[] pcc;
     _aligned_free(Fa);
 #elif defined NVIDIA
