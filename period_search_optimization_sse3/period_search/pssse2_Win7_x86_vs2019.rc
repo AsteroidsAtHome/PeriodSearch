@@ -1,7 +1,5 @@
 // Microsoft Visual C++ generated resource script.
 //
-#pragma code_page(65001)
-
 #include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -15,58 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Neutral (Default) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
-LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Version
-//
-
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION 102,19,0,0
- PRODUCTVERSION 102,19,0,0
- FILEFLAGSMASK 0x3fL
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x40004L
- FILETYPE 0x1L
- FILESUBTYPE 0x0L
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904b0"
-        BEGIN
-            VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
-            VALUE "FileDescription", "Period search application Windows 10 x64 AMD OpenCL 1.2"
-            VALUE "FileVersion", "102.19.0.0"
-            VALUE "InternalName", "Period_search_Windows_10_x64_amd_opencl_v1_2.exe"
-            VALUE "LegalCopyright", "(C) 2023 Astronomical Institute at Charles University in Prague"
-            VALUE "OriginalFilename", "Period_search_Windows_10_x64_amd_opencl_v1_2.exe"
-            VALUE "ProductName", "Asteroids@home for BOINC"
-            VALUE "ProductVersion", "102.19.0.0"
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x409, 1200
-    END
-END
-
-#endif    // Neutral (Default) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////
 // Bulgarian (Bulgaria) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_BGR)
 LANGUAGE LANG_BULGARIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -92,6 +43,45 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 102,14,0,0
+ PRODUCTVERSION 102,14,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
+            VALUE "FileDescription", "Period search application for Win7 x86 SSE2"
+            VALUE "FileVersion", "102.14.0.0"
+            VALUE "InternalName", "Period_search_10214_windows_win7_x86_sse2.exe"
+            VALUE "LegalCopyright", "(C) 2023 Astronomical Institute at Charles University in Prague"
+            VALUE "OriginalFilename", "Period_search_10214_windows_win7_x86_sse2.exe"
+            VALUE "ProductName", "Asteroids@home for BOINC"
+            VALUE "ProductVersion", "102.14.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
 
 
 /////////////////////////////////////////////////////////////////////////////

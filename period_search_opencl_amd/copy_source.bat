@@ -1,0 +1,1 @@
+copy \\PrometheusOne\VSRemote\kernelSource.cl kernelSource.cl /Y

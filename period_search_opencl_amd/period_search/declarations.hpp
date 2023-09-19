@@ -57,7 +57,7 @@ struct DATA {
 	double* chisq;
 };
 #ifdef _DEBUG
-void CompareResult(const char* output_filename);
+void CompareResult(const char* output_filename, char *compareFilename);
 int getData(const char* filename, DATA*& data);
 int compare_results(DATA* _data1, DATA* _data2, bool& match);
 int cleanup_result(DATA* data);
