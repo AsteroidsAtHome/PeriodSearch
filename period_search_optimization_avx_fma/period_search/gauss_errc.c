@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "declarations.h"
 #include <immintrin.h>
+#include <string.h>
 
 int gauss_errc(double **a, int n, double b[])
 {
@@ -16,7 +17,7 @@ int gauss_errc(double **a, int n, double b[])
     indxr = vector_int(n + 1);
     ipiv = vector_int(n + 1);
 
-    for (j = 0; j < n; j++) ipiv[j] = 0;
+    memset(ipiv, 0, n);
 
     for (i = 1; i <= n; i++) {
         big = 0.0;

@@ -1,6 +1,6 @@
 #if !defined INTEL
 
-#if defined __GNUC__
+#if !defined _WIN32
 #define CL_TARGET_OPENCL_VERSION 110
 #define CL_HPP_MINIMUM_OPENCL_VERSION 110
 #define CL_HPP_TARGET_OPENCL_VERSION 110
@@ -104,13 +104,12 @@ cl_kernel kernelCalculateIter1Mrqcof2End;
 cl_kernel kernelCalculateIter1Mrqmin2End;
 cl_kernel kernelCalculateIter2;
 cl_kernel kernelCalculateFinishPole;
-cl_kernel kernelCalculateFinish;
 
 size_t CUDA_grid_dim;
 //int CUDA_grid_dim_precalc;
 
 // NOTE: global to one thread
-#ifdef __GNUC__
+#if !defined _WIN32
 // TODO: Check compiler version. If  GCC 4.8 or later is used switch to 'alignas(n)'.
 #if defined (INTEL)
 cl_uint faOptimizedSize = ((sizeof(freq_context) - 1) / 64 + 1) * 64;
@@ -161,6 +160,7 @@ cl_int SaveKernelsToBinary(cl_program binProgram, const char* kernelFileName)
 
     fwrite(binary, binary_size, 1, fp);
     fclose(fp);
+    free(binary);
 
     //std::ofstream file(kernelFileName, std::ios::binary);
     ////size_t binary_size = file.tellg();
@@ -175,7 +175,7 @@ cl_int SaveKernelsToBinary(cl_program binProgram, const char* kernelFileName)
 cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, cl_double* par, cl_double lcoef, cl_double a_lamda_start, cl_double a_lamda_incr,
     cl_double ee[][3], cl_double ee0[][3], cl_double* tim, cl_double Phi_0, cl_int checkex, cl_int ndata)
 {
-#if defined __GNUC__
+#if !defined _WIN32
 
 #else
 #ifndef INTEL
@@ -195,7 +195,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     // clGetPlatformIDs(1, platforms, &num_platforms);
     // vector<cl::Platform>::iterator iter;
     cl_platform_id platform = nullptr;
-#if defined __GNUC__
+#if !defined _WIN32
     char name[1024];
     char vendor[1024];
 #else
@@ -289,7 +289,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     char deviceVendor[strBufSize];
     char driverVersion[strBufSize];
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
 #else
     char deviceName[strBufSize]; // Another AMD thing... Don't ask
@@ -455,7 +455,7 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     string kernelSourceFile = "kernelSource.cl";
     const char* kernelFileName = "kernels.bin";
 #if defined (_DEBUG)
-#if defined __GNUC__
+#if !defined _WIN32
     // Load CL file, build CL program object, create CL kernel object
     std::ifstream constantsFile("constants.h", std::ios::in | std::ios::binary);
     std::ifstream globalsFile("GlobalsCL.h", std::ios::in | std::ios::binary);
@@ -770,7 +770,6 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         kernelCalculateIter1Mrqmin2End = clCreateKernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
         kernelCalculateIter2 = clCreateKernel(program, "ClCalculateIter2", &kerr);
         kernelCalculateFinishPole = clCreateKernel(program, "ClCalculateFinishPole", &kerr);
-        kernelCalculateFinish = clCreateKernel(program, "ClCalculateFinish", &kerr);
     }
     catch (Error& e)
     {
@@ -984,7 +983,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
 #endif
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
     auto pcc = (mfreq_context*)aligned_alloc(4096, optimizedSize);
@@ -1094,7 +1093,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //auto clPcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize, NULL, NULL, &r);
     //queue.enqueueUnmapMemObject(CUDA_MCC2, clPcc);
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined (INTEL)
     auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faOptimizedSize, Fa, err);
 #else
@@ -1133,7 +1132,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #endif
 
     // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, err);
-#if defined __GNUC__
+#if !defined _WIN32
     auto memFb = (freq_context*)aligned_alloc(128, faSize);
     cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
 #else
@@ -1181,7 +1180,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
     //void* memIn = (void*)_aligned_malloc(frSize, 256);
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     cl_uint frOptimizedSize = ((sizeof(freq_result) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
     auto pfr = (mfreq_context*)aligned_alloc(4096, optimizedSize);
@@ -1308,9 +1307,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     err = clSetKernelArg(kernelCalculateFinishPole, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateFinishPole, 1, sizeof(cl_mem), &CUDA_CC);
     err = clSetKernelArg(kernelCalculateFinishPole, 2, sizeof(cl_mem), &CUDA_FR);
-
-    err = clSetKernelArg(kernelCalculateFinish, 0, sizeof(cl_mem), &CUDA_MCC2);
-    err = clSetKernelArg(kernelCalculateFinish, 2, sizeof(cl_mem), &CUDA_FR);
 #pragma endregion
 
     // Allocate result space
@@ -1514,12 +1510,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
         printf("\n");
 
-        // NOTE: CudaCalculateFinish();	<<<CUDA_grid_dim_precalc, 1 >> >
-        // queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
-        // err = clEnqueueNDRangeKernel(queue, kernelCalculateFinish, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
-        // clFinish(queue);
         //queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined (INTEL)
         fres = (freq_result*)queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ, 0, frOptimizedSize, NULL, NULL, err);
         queue.finish();
@@ -1568,7 +1560,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             }
         }
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined (INTEL)
         queue.enqueueUnmapMemObject(CUDA_FR, fres);
         queue.flush();
@@ -1603,7 +1595,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     clReleaseMemObject(CUDA_FR);
     clReleaseMemObject(cgFirst);
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     free(pcc);
 #elif defined AMD
@@ -1765,7 +1757,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
 #endif
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim - 1) / 64 + 1) * 64;
     auto pcc = (mfreq_context*)aligned_alloc(4096, optimizedSize);
@@ -1805,7 +1797,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
     //#if defined (INTEL)
     //	cl_uint optimizedSize = ((sizeof(mfreq_context) * CUDA_grid_dim - 1) / 64 + 1) * 64;
-    //#if defined __GNUC__
+    //#if !defined _WIN32
     //	auto pcc = (mfreq_context*)_aligned_malloc(4096, optimizedSize);
     //#else
     //	auto pcc = (mfreq_context*)_aligned_malloc(optimizedSize, 4096);
@@ -1859,7 +1851,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
         ((mfreq_context*)pcc)[m].pivinv = 0;
     }
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined (INTEL)
     queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, optimizedSize, pcc);
 #else
@@ -1879,7 +1871,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #endif
 #endif
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined (INTEL)
     auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faOptimizedSize, Fa, err);
 #else
@@ -1918,7 +1910,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 #endif
 
-#if defined __GNUC__
+#if !defined _WIN32
     // freq_context* Fb;
     // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(freq_context), Fb, err);
     auto memFb = (freq_context*)aligned_alloc(128, faSize);
@@ -1928,7 +1920,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
 #endif
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     cl_uint frOptimizedSize = ((sizeof(freq_result) * CUDA_grid_dim - 1) / 64 + 1) * 64;
     auto pfr = (mfreq_context*)aligned_alloc(4096, optimizedSize);
@@ -1970,7 +1962,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
     //#if defined (INTEL)
     //	cl_uint frOptimizedSize = ((sizeof(freq_result) * CUDA_grid_dim - 1) / 64 + 1) * 64;
-    //#if defined __GNUC__
+    //#if !defined _WIN32
     //	auto pfr = (mfreq_context*)aligned_alloc(4096, frOptimizedSize);
     //#else
     //	auto pfr = (mfreq_context*)_aligned_malloc(frOptimizedSize, 4096);
@@ -1984,7 +1976,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //	//pfr = static_cast<freq_result*>(malloc(frSize));
     //
     //	//auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, err);
-    //#if defined __GNUC__
+    //#if !defined _WIN32
     //	void* memIn = (void*)aligned_alloc(8, frSize);
     //#else
     //	void* memIn = (void*)_aligned_malloc(frSize, 256);
@@ -2071,9 +2063,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clSetKernelArg(kernelCalculateFinishPole, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateFinishPole, 1, sizeof(cl_mem), &CUDA_CC);
     err = clSetKernelArg(kernelCalculateFinishPole, 2, sizeof(cl_mem), &CUDA_FR);
-
-    err = clSetKernelArg(kernelCalculateFinish, 0, sizeof(cl_mem), &CUDA_MCC2);
-    err = clSetKernelArg(kernelCalculateFinish, 2, sizeof(cl_mem), &CUDA_FR);
 #pragma endregion
     //	}
         // catch (cl::Error& e)
@@ -2261,11 +2250,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             //clFinish(queue);
         }
 
-        //CudaCalculateFinish << <CUDA_grid_dim, 1 >> > ();
-        // queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
-        // err = clEnqueueNDRangeKernel(queue, kernelCalculateFinish, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
-        // clFinish(queue);
-
 #if defined (INTEL)
         fres = (freq_result*)queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ, 0, frOptimizedSize, NULL, NULL, err);
         queue.finish();
@@ -2342,7 +2326,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     clReleaseMemObject(CUDA_FR);
     clReleaseMemObject(cgFirst);
 
-#if defined __GNUC__
+#if !defined _WIN32
 #if defined INTEL
     free(pcc);
 #elif defined AMD

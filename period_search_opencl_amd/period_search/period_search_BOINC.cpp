@@ -22,7 +22,7 @@
 
 */
 
-#if defined __GNUC__
+#if !defined _WIN32
 #define CL_HPP_MINIMUM_OPENCL_VERSION 110
 #define CL_HPP_TARGET_OPENCL_VERSION 110
 /* Macros for OpenCL versions */
@@ -620,7 +620,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
         fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, clDevice, aid.slot);
 
-#ifdef _WIN32
+#if !defined __GNUC__ && defined _WIN32
         int major, minor, build, revision;
         TCHAR filepath[MAX_PATH]; // = getenv("_");
         GetModuleFileName(nullptr, filepath, MAX_PATH);
