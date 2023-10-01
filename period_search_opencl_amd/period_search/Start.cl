@@ -876,6 +876,11 @@ __kernel void ClCalculateFinishPole(
         //}
     }
 
+    if (isnan((*CUDA_LFR).dark_best) == 1)
+    {
+        (*CUDA_LFR).dark_best = 1.0;
+    }
+
     //if (blockIdx.x == 2)
     //	printf("dark_best: %10.7f \n", (*CUDA_LFR).dark_best);
 
@@ -887,32 +892,3 @@ __kernel void ClCalculateFinishPole(
     (*CUDA_LFR).chck[3]=(*CUDA_LCC).chck[3];*/
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
-
-__kernel void ClCalculateFinish(
-    __global struct mfreq_context* CUDA_mCC,
-    __global struct freq_result* CUDA_FR)
-{
-    int3 blockIdx;
-    blockIdx.x = get_group_id(0);
-
-    //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-    //const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
-
-    __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-    __global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
-
-    if ((*CUDA_LCC).isInvalid) return;
-
-    if ((*CUDA_LFR).la_best < 0.0)
-    {
-        //double tmp = (*CUDA_LFR).la_best;
-        (*CUDA_LFR).la_best += 360;
-        //printf("[CalculateFinish] la_best: %4.0f -> %4.0f\n", tmp, (*CUDA_LFR).la_best);
-    }
-
-    if (isnan((*CUDA_LFR).dark_best) == 1)
-    {
-        (*CUDA_LFR).dark_best = 1.0;
-    }
-}
-
