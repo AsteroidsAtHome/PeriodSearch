@@ -104,7 +104,6 @@ cl_kernel kernelCalculateIter1Mrqcof2End;
 cl_kernel kernelCalculateIter1Mrqmin2End;
 cl_kernel kernelCalculateIter2;
 cl_kernel kernelCalculateFinishPole;
-cl_kernel kernelCalculateFinish;
 
 size_t CUDA_grid_dim;
 //int CUDA_grid_dim_precalc;
@@ -770,7 +769,6 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         kernelCalculateIter1Mrqmin2End = clCreateKernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
         kernelCalculateIter2 = clCreateKernel(program, "ClCalculateIter2", &kerr);
         kernelCalculateFinishPole = clCreateKernel(program, "ClCalculateFinishPole", &kerr);
-        kernelCalculateFinish = clCreateKernel(program, "ClCalculateFinish", &kerr);
     }
     catch (Error& e)
     {
@@ -1294,9 +1292,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     err = clSetKernelArg(kernelCalculateFinishPole, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateFinishPole, 1, sizeof(cl_mem), &CUDA_CC);
     err = clSetKernelArg(kernelCalculateFinishPole, 2, sizeof(cl_mem), &CUDA_FR);
-
-    err = clSetKernelArg(kernelCalculateFinish, 0, sizeof(cl_mem), &CUDA_MCC2);
-    err = clSetKernelArg(kernelCalculateFinish, 2, sizeof(cl_mem), &CUDA_FR);
 #pragma endregion
 
     // Allocate result space
@@ -1499,10 +1494,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
         printf("\n");
 
-        // NOTE: CudaCalculateFinish();	<<<CUDA_grid_dim_precalc, 1 >> >
-        // queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim_precalc), cl::NDRange(1));
-        // err = clEnqueueNDRangeKernel(queue, kernelCalculateFinish, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
-        // clFinish(queue);
         //queue.enqueueReadBuffer(CUDA_FR, CL_BLOCKING, 0, frSize, res);
 #if defined __GNUC__
 #if defined (INTEL)
@@ -2055,9 +2046,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clSetKernelArg(kernelCalculateFinishPole, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateFinishPole, 1, sizeof(cl_mem), &CUDA_CC);
     err = clSetKernelArg(kernelCalculateFinishPole, 2, sizeof(cl_mem), &CUDA_FR);
-
-    err = clSetKernelArg(kernelCalculateFinish, 0, sizeof(cl_mem), &CUDA_MCC2);
-    err = clSetKernelArg(kernelCalculateFinish, 2, sizeof(cl_mem), &CUDA_FR);
 #pragma endregion
     //	}
         // catch (cl::Error& e)
@@ -2244,11 +2232,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             if (getError(err)) return err;
             //clFinish(queue);
         }
-
-        //CudaCalculateFinish << <CUDA_grid_dim, 1 >> > ();
-        // queue.enqueueNDRangeKernel(kernelCalculateFinish, cl::NDRange(), cl::NDRange(CUDA_grid_dim), cl::NDRange(1));
-        // err = clEnqueueNDRangeKernel(queue, kernelCalculateFinish, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
-        // clFinish(queue);
 
 #if defined (INTEL)
         fres = (freq_result*)queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ, 0, frOptimizedSize, NULL, NULL, err);
