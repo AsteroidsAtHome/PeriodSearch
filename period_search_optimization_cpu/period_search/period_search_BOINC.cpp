@@ -572,7 +572,7 @@ int main(int argc, char** argv) {
 
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
-#ifdef _WIN32
+#if !defined __GNUC__ && defined _WIN32
 		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
@@ -580,10 +580,10 @@ int main(int argc, char** argv) {
 		GetVersionInfo(filename, major, minor, build, revision);
 		fprintf(stderr, "Application: %s\n", filename);
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+		getSystemInfo();
 #else
 		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
-		getSystemInfo();
 	}
 
 	while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))

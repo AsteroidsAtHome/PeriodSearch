@@ -540,7 +540,7 @@ int main(int argc, char **argv) {
 
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
-#ifdef _WIN32
+#if !defined __GNUC__ && defined _WIN32
 		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);

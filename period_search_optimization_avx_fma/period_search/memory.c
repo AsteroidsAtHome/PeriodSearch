@@ -54,7 +54,7 @@ double **aligned_matrix_double(int rows, int columns)
    double **p_x;
    int i;
   
-#ifdef __GNUC__
+#if !defined _WIN32
    p_x = (double **)memalign(32,(rows + 1) * sizeof(double *));
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
       p_x[i] = (double *) memalign(32,(columns + 1) * sizeof(double));
@@ -130,7 +130,7 @@ void aligned_deallocate_matrix_double(double **p_x, int rows)
 {
    int i;
     
-#ifdef __GNUC__
+#if !defined _WIN32
    for (i = 0; i <= rows; i++) free(p_x[i]);
    free(p_x);
 #else

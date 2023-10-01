@@ -10,11 +10,11 @@
 #include <stdlib.h>
 #include <iostream>
 
-#if defined __GNUC__
-#include <CL/opencl.hpp>
-#else  // _WIN32
+#if defined _WIN32
 //#include <cl_boinc.h>
 #include <CL/cl.h>
+#else
+#include <CL/opencl.hpp>
 #endif
 
 #define CL_WRAPPER(FUNC) \
