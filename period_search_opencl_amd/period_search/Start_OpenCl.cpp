@@ -160,6 +160,7 @@ cl_int SaveKernelsToBinary(cl_program binProgram, const char* kernelFileName)
 
     fwrite(binary, binary_size, 1, fp);
     fclose(fp);
+    free(binary);
 
     //std::ofstream file(kernelFileName, std::ios::binary);
     ////size_t binary_size = file.tellg();
