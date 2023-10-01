@@ -353,20 +353,10 @@ void bright(
 	ncoef0 -= 3;
 	int m, m1, mr, iStart;
 	int d, d1, dr;
-	if (Inrel)
-	{
-		iStart = 2;
-		//m = blockIdx.x * CUDA_Dg_block + 2 * (CUDA_Numfac1);
-		m = 2 * (*CUDA_CC).Numfac1;
-		d = jp + 2 * (Lpoints1);
-	}
-	else
-	{
-		iStart = 1;
-		//m = blockIdx.x * CUDA_Dg_block + (CUDA_Numfac1);
-		m = (*CUDA_CC).Numfac1;
-		d = jp + (Lpoints1);
-	}
+
+	iStart = Inrel + 1;
+	m = iStart * (*CUDA_CC).Numfac1;
+	d = jp + (Inrel * 2) * (Lpoints1);
 
 	m1 = m + (*CUDA_CC).Numfac1;
 	mr = 2 * (*CUDA_CC).Numfac1;
