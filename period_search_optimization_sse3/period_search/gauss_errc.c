@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <cstdio>
 #include <cstdlib>
+#include <string.h>
 #include "declarations.h"
 #ifdef NO_SSE3
  #include <emmintrin.h>
@@ -25,7 +26,7 @@ int gauss_errc(double **a, int n, double b[])
 
 		ipivsize=(n>>3)<<3;
 		if (n%8) ipivsize+=8;
-#ifdef __GNUC__
+#if !defined _WIN32
 		ipiv=(short *)memalign(16,ipivsize*sizeof(short)); //is zero indexed
 #else
 		ipiv=(short *)_aligned_malloc(ipivsize*sizeof(short),16); //is zero indexed
@@ -33,7 +34,8 @@ int gauss_errc(double **a, int n, double b[])
 
     __m128i avx_zeros=_mm_setzero_si128(); 
 
-	for (j=0;j<n;j++) ipiv[j]=0;
+    memset(ipiv, 0, n * sizeof(short));
+
 	for (j=n;j<ipivsize;j++) ipiv[j]=1;
 
 	for (i=1;i<=n;i++) {
@@ -46,7 +48,7 @@ int gauss_errc(double **a, int n, double b[])
 					int ria=_mm_movemask_epi8(avx_iserror);
 					if (ria)
 					{
-#ifdef __GNUC__
+#if !defined _WIN32
 				        free(ipiv);
 #else
 						_aligned_free(ipiv);
@@ -149,7 +151,7 @@ int gauss_errc(double **a, int n, double b[])
 		indxr[i]=irow;
 		indxc[i]=icol;
 		if (a[icol][icol] == 0.0) {
-#ifdef __GNUC__
+#if !defined _WIN32
 				        free(ipiv);
 #else
 						_aligned_free(ipiv);
@@ -196,7 +198,7 @@ int gauss_errc(double **a, int n, double b[])
 			for (k=0;k<n;k++)
 				SWAP(a[k][indxr[l]],a[k][indxc[l]]);
 	}
-#ifdef __GNUC__
+#if !defined _WIN32
         free(ipiv);
 #else
         _aligned_free(ipiv);

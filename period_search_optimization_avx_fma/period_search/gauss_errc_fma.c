@@ -17,7 +17,7 @@ int gauss_errc_fma(double **a, int n, double b[])
     indxr = vector_int(n + 1);
     ipiv = vector_int(n + 1);
 
-    memset(ipiv, 0, n);
+    memset(ipiv, 0, n * sizeof(int));
 
     for (i = 1; i <= n; i++) {
         big = 0.0;
