@@ -1,6 +1,26 @@
 #include "stdafx.h"
+#if defined __GNUC__
+const int _major = 102;
+const int _minor = 18;
+const int _build = 0;
+const int _revision = 0;
+#else
 #include <windows.h>
 #include <tchar.h>
+#endif
+
+#if defined __GNUC__
+bool GetVersionInfo(int &major, int &minor, int &build, int &revision)
+{
+    major = _major;
+    minor = _minor;
+    build = _build;
+    revision = _revision;
+    
+    return true;
+}
+
+#else
 
 bool GetVersionInfo(LPCTSTR filename, int &major, int &minor, int &build, int &revision)
 {
@@ -36,3 +56,5 @@ bool GetVersionInfo(LPCTSTR filename, int &major, int &minor, int &build, int &r
 
     return false;
 }
+
+#endif
