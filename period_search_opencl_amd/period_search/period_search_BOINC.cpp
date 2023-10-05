@@ -97,7 +97,6 @@
 #include "boinc_win.h"
 #include "Windows.h"
 #include <Shlwapi.h>
-//#include "VersionInfo.hpp"
 #else
 // #include "../win_build/config.h"
 #include <cstdio>
@@ -108,8 +107,11 @@
 #include <csignal>
 //#include <io.h>
 //#include <unistd.h>
+#include <filesystem>
+#include <iostream>
 #endif
 
+#include "VersionInfo.hpp"
 #include "Start_OpenCl.h"
 #include "str_util.h"
 #include "util.h"
@@ -620,15 +622,20 @@ int main(int argc, char** argv)
         fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
         fprintf(stderr, "BOINC GPU type '%s', deviceId=%d, slot=%d\n", aid.gpu_type, clDevice, aid.slot);
 
-#if !defined __GNUC__ && defined _WIN32
         int major, minor, build, revision;
+#if !defined __GNUC__ && defined _WIN32
         TCHAR filepath[MAX_PATH]; // = getenv("_");
         GetModuleFileName(nullptr, filepath, MAX_PATH);
         auto filename = PathFindFileName(filepath);
         GetVersionInfo(filename, major, minor, build, revision);
         fprintf(stderr, "Application: %s\n", filename);
-        fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#elif defined __GNUC__
+		GetVersionInfo(major, minor, build, revision);
+		auto path = std::filesystem::current_path();
+		// auto filename = std::filesystem::canonical(path).c_str();
+		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
+        fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
     }
 
 	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);

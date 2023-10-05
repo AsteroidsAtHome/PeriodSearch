@@ -1003,8 +1003,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // cl_uint pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
     // auto memPcc = (mfreq_context *)aligned_alloc(128, pccSize);
     // auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, pcc, err);
-    cl_uint pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
-    auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
+    
+    // cl_uint pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
+    // auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
+    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
+    auto pcc = (mfreq_context*)aligned_alloc(128, pccSize);
 
     // auto pcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize, NULL, NULL, err);
     // queue.flush();
@@ -1102,17 +1105,17 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // cl_uint faSize = ((sizeof(freq_context) - 1) / 64 + 1) * 64;
     // auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, err);
     // auto pFa = queue.enqueueMapBuffer(CUDA_CC, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, faSize);
-    auto memFa = (freq_context*)aligned_alloc(128, faSize);
-    cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
-    void* pFa = clEnqueueMapBuffer(queue, CUDA_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
-    memcpy(pFa, Fa, faSize);
-    clEnqueueUnmapMemObject(queue, CUDA_CC, pFa, 0, NULL, NULL);
-    clFlush(queue);
-    // queue.enqueueUnmapMemObject(CUDA_CC, pFa);
-    // queue.flush();
-    // queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
-    // auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(freq_context), Fa, err);
-    // queue.enqueueWriteBuffer(CUDA_CC, CL_BLOCKING, 0, faSize, Fa);
+    
+    // auto memFa = (freq_context*)aligned_alloc(128, faSize);
+    // cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
+    // void* pFa = clEnqueueMapBuffer(queue, CUDA_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
+    // memcpy(pFa, Fa, faSize);
+    // clEnqueueUnmapMemObject(queue, CUDA_CC, pFa, 0, NULL, NULL);
+    // clFlush(queue);
+    auto pFa = (freq_context*)aligned_alloc(128, faSize);
+    cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFa, &err);
+    clEnqueueWriteBuffer(queue, CUDA_CC, CL_BLOCKING, 0, faSize, Fa, 0, NULL, NULL);
+
 #endif
 #else // WIN32
 #if defined (INTEL)
@@ -1133,8 +1136,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
     // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, err);
 #if !defined _WIN32
-    auto memFb = (freq_context*)aligned_alloc(128, faSize);
-    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
+    auto pFb = (freq_context*)aligned_alloc(128, faSize);
+    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, pFb, &err);
 #else
     auto pFb = (freq_context*)_aligned_malloc(faSize, 128);
     cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFb, &err);
@@ -1201,7 +1204,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // auto memFr = new (freq_result *)aligned_alloc(128, frSize);
     // auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,  frSize, memFr, err);
     cl_uint frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
-    auto pfr = new freq_result[CUDA_grid_dim_precalc];
+    // auto pfr = new freq_result[CUDA_grid_dim_precalc];
+    auto pfr = (freq_result*)aligned_alloc(128, frSize);
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
     // void *pfr;
 #elif NVIDIA
@@ -1569,6 +1573,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         // queue.flush();
         // clEnqueueUnmapMemObject(queue, CUDA_FR, pfr, 0, NULL, NULL);
         // clFlush(queue);
+        delete[] res;
 #elif NVIDIA
 #elif NVIDIA
         queue.enqueueUnmapMemObject(CUDA_FR, pfr);
@@ -1599,12 +1604,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #if defined INTEL
     free(pcc);
 #elif defined AMD
-    // free(memIn);
-    // free(mcc);
-    // free(memPcc);
-    // free(memFr);
-    delete[] pcc;
-    delete[] pfr;
+    free(pcc);
+    free(pFb);
+    free(pfr);
 #elif defined NVIDIA
     free(memIn);
     free(pcc);
@@ -2334,6 +2336,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     // free(pcc);
     delete[] pcc;
     delete[] pfr;
+    free(pFa);
 #elif defined NVIDIA
     free(memIn);
     free(pcc);
