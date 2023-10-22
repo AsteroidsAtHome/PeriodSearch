@@ -85,6 +85,12 @@ bool x64 = true;
 bool x64 = false;
 #endif
 
+#ifdef AVX512
+  #define AALPHA_EXTRA_SIZE 8
+#else
+  #define AALPHA_EXTRA_SIZE 4
+#endif
+
 using std::string;
 
 constexpr auto checkpoint_file = "period_search_state";
@@ -152,13 +158,24 @@ Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 Dblm[3][4][4],
 Weight[MAX_N_OBS + 1];
 
-#ifdef __GNUC__
-double Nor[3][MAX_N_FAC + 4] __attribute__((aligned(32))),
-Area[MAX_N_FAC + 4] __attribute__((aligned(32))),
-Darea[MAX_N_FAC + 4] __attribute__((aligned(32))),
-Dg[MAX_N_FAC + 8][MAX_N_PAR + 4] __attribute__((aligned(32)));
+#ifdef AVX512
+  #ifdef __GNUC__
+    double Nor[3][MAX_N_FAC + 8] __attribute__((aligned(64))),
+    Area[MAX_N_FAC + 8] __attribute__((aligned(64))),
+    Darea[MAX_N_FAC + 8] __attribute__((aligned(64))),
+    Dg[MAX_N_FAC + 16][MAX_N_PAR + 8] __attribute__((aligned(64)));
+  #else
+    __declspec(align(64)) double Nor[3][MAX_N_FAC + 8], Area[MAX_N_FAC + 8], Darea[MAX_N_FAC + 8], Dg[MAX_N_FAC + 16][MAX_N_PAR + 8]; //Nor,Dg ARE ZERO INDEXED
+  #endif
 #else
-__declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4]; //Nor,Dg ARE ZERO INDEXED
+  #ifdef __GNUC__
+    double Nor[3][MAX_N_FAC + 4] __attribute__((aligned(32))),
+    Area[MAX_N_FAC + 4] __attribute__((aligned(32))),
+    Darea[MAX_N_FAC + 4] __attribute__((aligned(32))),
+    Dg[MAX_N_FAC + 8][MAX_N_PAR + 4] __attribute__((aligned(32)));
+  #else
+    __declspec(align(32)) double Nor[3][MAX_N_FAC + 4], Area[MAX_N_FAC + 4], Darea[MAX_N_FAC + 4], Dg[MAX_N_FAC + 8][MAX_N_PAR + 4]; //Nor,Dg ARE ZERO INDEXED
+  #endif
 #endif
 
 /*--------------------------------------------------------------*/
@@ -199,7 +216,7 @@ int main(int argc, char **argv) {
 	ee = matrix_double(MAX_N_OBS, 3);
 	ee0 = matrix_double(MAX_N_OBS, 3);
 	covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
-	aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 4);
+	aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + AALPHA_EXTRA_SIZE);
 	ifp = matrix_int(MAX_N_FAC, 4);
 
 	tim = vector_double(MAX_N_OBS);
@@ -754,7 +771,11 @@ int main(int argc, char **argv) {
 					if ((Niter == 1) || (Chisq < Ochisq))
 					{
 						Ochisq = Chisq;
-						curv(cg);
+						#ifdef AVX512
+							curv_avx512(cg);
+						#else
+					  		curv(cg);
+						#endif
 						for (i = 1; i <= 3; i++)
 						{
 							chck[i] = 0;
@@ -1016,7 +1037,11 @@ int main(int argc, char **argv) {
 				if ((Niter == 1) || (Chisq < Ochisq))
 				{
 					Ochisq = Chisq;
-					curv(cg);
+					#ifdef AVX512
+						curv_avx512(cg);
+					#else
+					  	curv(cg);
+					#endif
 					for (i = 1; i <= 3; i++)
 					{
 						chck[i] = 0;
