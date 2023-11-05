@@ -303,7 +303,7 @@ __device__ double bright(freq_context *CUDA_LCC, double cg[],int jp,int Lpoints1
   int d,d1,dr;
 
   iStart=Inrel+1;
-  m=blockIdx.x*CUDA_Dg_block+IStart*(CUDA_Numfac1);
+  m=blockIdx.x*CUDA_Dg_block+iStart*(CUDA_Numfac1);
   d=jp+(Inrel*2)*(Lpoints1);
 
   m1=m+(CUDA_Numfac1);
