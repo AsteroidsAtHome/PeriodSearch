@@ -37,7 +37,7 @@ void sphfunc(int ndir, double at[], double af[])
    for (m = 0; m <= Lmax; m++)
       for (l = 0; l <= Lmax; l++)
          for (n = 0; n <= Lmax; n++)
-            aleg[n][l][m]=0;
+            aleg[m][l][n]=0;
 
    aleg[0][0][0] = 1;
    aleg[1][1][0] = 1;
