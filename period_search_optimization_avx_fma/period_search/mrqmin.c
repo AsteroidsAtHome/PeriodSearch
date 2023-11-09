@@ -57,11 +57,14 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			}
 			
 			Alamda = Alamda_start; /* initial alambda */
-			
-#ifdef FMA
-			temp = mrqcof_fma(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
+#ifdef AVX512
+	temp = mrqcof_avx512(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
 #else
+	#ifdef FMA
+			temp = mrqcof_fma(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
+	#else
 			temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
+	#endif
 #endif
 			Ochisq = temp;
 			for (j = 1; j <= ma; j++)
@@ -81,10 +84,14 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			da[j] = beta[j];
 		}
 
-#ifdef FMA
-		err_code = gauss_errc_fma(covar, mfit, da);
+#ifdef AVX512
+	err_code = gauss_errc_avx512(covar, mfit, da);
 #else
+	#ifdef FMA
+		err_code = gauss_errc_fma(covar, mfit, da);
+	#else
 		err_code = gauss_errc(covar, mfit, da);
+	#endif
 #endif
 		if (err_code != 0) return(err_code);
 
@@ -108,10 +115,14 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 		}
 	}
 
-#ifdef FMA
-	temp = mrqcof_fma(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
+#ifdef AVX512
+	temp = mrqcof_avx512(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
 #else
-	temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
+	#ifdef FMA
+		temp = mrqcof_fma(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
+	#else
+		temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
+	#endif
 #endif
 	Chisq = temp;
 

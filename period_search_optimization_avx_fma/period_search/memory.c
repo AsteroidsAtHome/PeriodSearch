@@ -9,6 +9,12 @@
 #include <stdio.h>
 #include <malloc.h>
 
+#ifdef AVX512
+  #define SIMD_WIDTH 64
+#else
+  #define SIMD_WIDTH 32
+#endif
+
 double *vector_double(int length)
 {
    double *p_x;
@@ -55,13 +61,13 @@ double **aligned_matrix_double(int rows, int columns)
    int i;
   
 #if !defined _WIN32
-   p_x = (double **)memalign(32,(rows + 1) * sizeof(double *));
+   p_x = (double **)memalign(SIMD_WIDTH,(rows + 1) * sizeof(double *));
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
-      p_x[i] = (double *) memalign(32,(columns + 1) * sizeof(double));
+      p_x[i] = (double *) memalign(SIMD_WIDTH,(columns + 1) * sizeof(double));
 #else
-   p_x = (double **)_aligned_malloc((rows + 1) * sizeof(double *),32);
+   p_x = (double **)_aligned_malloc((rows + 1) * sizeof(double *),SIMD_WIDTH);
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
-      p_x[i] = (double *) _aligned_malloc((columns + 1) * sizeof(double),32);
+      p_x[i] = (double *) _aligned_malloc((columns + 1) * sizeof(double),SIMD_WIDTH);
 #endif
    if (i < rows) 
    {

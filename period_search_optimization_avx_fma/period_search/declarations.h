@@ -12,21 +12,34 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** covar, double** alpha);
 
+#ifdef AVX512
+double mrqcof_avx512(double** x1, double** x2, double x3[], double y[],
+	double sig[], double a[], int ia[], int ma,
+	double** alpha, double beta[], int mfit, int lastone, int lastma);
+double conv_avx512(int nc, double dres[], int ma);
+double bright_avx512(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+int gauss_errc_avx512(double** aa, int n, double b[]);
+void curv_avx512(double cg[]);
+#else
 #ifdef FMA
 double mrqcof_fma(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** alpha, double beta[], int mfit, int lastone, int lastma);
 double conv_fma(int nc, double dres[], int ma);
 double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+int gauss_errc_fma(double** aa, int n, double b[]);
+void curv(double cg[]);
 #else
 double mrqcof(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** alpha, double beta[], int mfit, int lastone, int lastma);
 double conv(int nc, double dres[], int ma);
 double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+int gauss_errc(double** aa, int n, double b[]);
+void curv(double cg[]);
+#endif
 #endif
 
-void curv(double cg[]);
 void blmatrix(double bet, double lam);
 //void gauss_1(double **aa, int n, double b[]);
 void covsrt(double** covar, int ma, int ia[], int mfit);
@@ -43,5 +56,3 @@ void deallocate_matrix_double(double** p_x, int rows);
 void aligned_deallocate_matrix_double(double** p_x, int rows);
 void deallocate_matrix_int(int** p_x, int rows);
 double dot_product(double a[], double b[]);
-int gauss_errc(double** aa, int n, double b[]);
-int gauss_errc_fma(double** aa, int n, double b[]);
