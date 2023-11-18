@@ -26,12 +26,12 @@ void sphfunc(int ndir, double at[], double af[])
         t_s[i][j] = t_s[i][1] * t_s[i][j-1];
         t_c[i][j] = t_c[i][1] * t_c[i][j-1];
      }
-     f_s[i][0] = 0;
-     f_c[i][0] = 1;
+     f_s[0][i] = 0;
+     f_c[0][i] = 1;
      for (j = 1; j <= m_max; j++)
      {
-        f_s[i][j] = sin(j*af[i]);
-        f_c[i][j] = cos(j*af[i]);
+        f_s[j][i] = sin(j*af[i]);
+        f_c[j][i] = cos(j*af[i]);
      }
    }
 
@@ -68,20 +68,20 @@ void sphfunc(int ndir, double at[], double af[])
       for (m = 0; m <= m_max; m++)
          for (l = m; l <= l_max; l++)
 	 {
-            pleg[i][l][m] = 0;
+            pleg[m][l][i] = 0;
             if ((2 * ((l - m) / 2)) == (l - m))
                ibot=0;
             else
                ibot=1;
 
             for (n = ibot; n <= l-m; n = n+2)
-               pleg[i][l][m] = pleg[i][l][m] + aleg[n][l][m] * t_c[i][n] * t_s[i][m];
+               pleg[m][l][i] = pleg[m][l][i] + aleg[n][l][m] * t_c[i][n] * t_s[i][m];
             k++;
-            d_sphere[i][k] = f_c[i][m] * pleg[i][l][m];
+            d_sphere[k][i] = f_c[m][i] * pleg[m][l][i];
             if (m != 0)
 	    {
                k++;
-               d_sphere[i][k] = f_s[i][m] * pleg[i][l][m];
+               d_sphere[k][i] = f_s[m][i] * pleg[m][l][i];
             }
          }
    }

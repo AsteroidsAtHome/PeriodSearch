@@ -45,12 +45,12 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
             n++;
             if (m != 0)
 	    {
-               fmat[i][n] = pleg[i][l][m] * cos(m * af[i]);
+               fmat[i][n] = pleg[m][l][i] * cos(m * af[i]);
                n++;
-               fmat[i][n] = pleg[i][l][m] * sin(m * af[i]);
+               fmat[i][n] = pleg[m][l][i] * sin(m * af[i]);
             }
             else
-               fmat[i][n] = pleg[i][l][m];
+               fmat[i][n] = pleg[m][l][i];
          }
    }
 

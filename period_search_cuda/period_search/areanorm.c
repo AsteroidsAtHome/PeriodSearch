@@ -45,12 +45,12 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
       clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
       clen = sqrt(clen2);
       /* normal */
-      normal[i][0] = c[1] / clen;
-      normal[i][1] = c[2] / clen;
-      normal[i][2] = c[3] / clen;
+      normal[0][i] = c[1] / clen;
+      normal[1][i] = c[2] / clen;
+      normal[2][i] = c[3] / clen;
       /* direction angles of normal */
-      at[i] = acos(normal[i][2]);
-      af[i] = atan2(normal[i][1], normal[i][0]);
+      at[i] = acos(normal[2][i]);
+      af[i] = atan2(normal[1][i], normal[0][i]);
       /* triangle area */
       d_area[i]= 0.5 * clen;
    }
