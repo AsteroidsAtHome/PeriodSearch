@@ -1092,7 +1092,7 @@ inline const char* ocl_src_kernelSource =
 "	int d, d1, dr;\n"
 "	iStart = Inrel + 1;\n"
 "	m = iStart * (*CUDA_CC).Numfac1;\n"
-"	d = jp + (Inrel * 2) * (Lpoints1);\n"
+"	d = jp + (Lpoints1 << Inrel);\n"
 "\n"
 "	m1 = m + (*CUDA_CC).Numfac1;\n"
 "	mr = 2 * (*CUDA_CC).Numfac1;\n"

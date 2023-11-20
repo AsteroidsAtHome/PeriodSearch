@@ -356,7 +356,7 @@ void bright(
 
 	iStart = Inrel + 1;
 	m = iStart * (*CUDA_CC).Numfac1;
-	d = jp + (Inrel * 2) * (Lpoints1);
+	d = jp + (Lpoints1 << Inrel);
 
 	m1 = m + (*CUDA_CC).Numfac1;
 	mr = 2 * (*CUDA_CC).Numfac1;
