@@ -66,6 +66,10 @@
 #include <iostream>
 #endif
 
+#ifdef __GNUC__
+#include <filesystem>
+#endif
+
 #include "str_util.h"
 #include "util.h"
 #include "filesys.h"
@@ -557,8 +561,8 @@ int main(int argc, char **argv) {
 
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
+int major, minor, build, revision;
 #if !defined __GNUC__ && defined _WIN32
-		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; //NOTE: Equal to 'getenv("_")';
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);

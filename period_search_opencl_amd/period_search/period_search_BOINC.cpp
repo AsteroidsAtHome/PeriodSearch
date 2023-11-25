@@ -107,8 +107,11 @@
 #include <csignal>
 //#include <io.h>
 //#include <unistd.h>
-#include <filesystem>
 #include <iostream>
+#endif
+
+#ifdef __GNUC__
+#include <filesystem>
 #endif
 
 #include "VersionInfo.hpp"
