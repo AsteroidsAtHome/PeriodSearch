@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
 
 		if (Lpoints[i] > MAX_LC_PONTS)
 		{
-			fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", MAX_LC_PONTS); fflush(stderr); exit(2);
+			fprintf(stderr, "\nError: Number of lc points is greater than MAX_LC_PONTS = %d\n", MAX_LC_PONTS); fflush(stderr); exit(2);
 		}
 
 		/* loop over one lightcurve */
