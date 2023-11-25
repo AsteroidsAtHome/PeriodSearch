@@ -23,7 +23,7 @@ __declspec(align(32)) double dyda[MAX_N_PAR + 8]; //is zero indexed for aligned 
 #endif
 
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-ytemp[MAX_LC_PONTS + 1], dytemp[MAX_LC_PONTS + 1][MAX_N_PAR + 1 + 4],
+ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
 dave[MAX_N_PAR + 1 + 4],
 coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
 

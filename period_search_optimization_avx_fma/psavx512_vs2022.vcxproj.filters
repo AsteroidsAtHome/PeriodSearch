@@ -10,25 +10,13 @@
     <ClCompile Include="period_search\blmatrix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\bright.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\conv.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\covsrt.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\curv.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\dot_product.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\ellfit.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\gauss_errc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\lubksb.c">
@@ -41,9 +29,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\memory.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\mrqcof.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\mrqmin.c">
@@ -64,6 +49,21 @@
     <ClCompile Include="period_search\VersionInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\mrqcof_avx512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\gauss_errc_avx512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\curv_avx512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\conv_avx512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\bright_avx512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\arrayHelpers.hpp">
@@ -78,11 +78,11 @@
     <ClInclude Include="period_search\globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\VersionInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="period_search\resource.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\stdafx.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -113,9 +113,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="period_search\psavx_vs2019.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
     <ResourceCompile Include="period_search\psavx512.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>

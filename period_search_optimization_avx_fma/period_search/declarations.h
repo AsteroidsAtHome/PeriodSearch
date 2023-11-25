@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined _WIN32
+#include "Windows.h"
+#endif
+
 void trifac(int nrows, int** ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int** ifp,
 	double at[], double af[]);
@@ -12,32 +16,33 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** covar, double** alpha);
 
-#ifdef AVX512
-double mrqcof_avx512(double** x1, double** x2, double x3[], double y[],
-	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma);
-double conv_avx512(int nc, double dres[], int ma);
-double bright_avx512(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
-int gauss_errc_avx512(double** aa, int n, double b[]);
-void curv_avx512(double cg[]);
-#else
-#ifdef FMA
-double mrqcof_fma(double** x1, double** x2, double x3[], double y[],
-	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma);
-double conv_fma(int nc, double dres[], int ma);
-double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
-int gauss_errc_fma(double** aa, int n, double b[]);
-void curv(double cg[]);
-#else
-double mrqcof(double** x1, double** x2, double x3[], double y[],
-	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma);
-double conv(int nc, double dres[], int ma);
-double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
-int gauss_errc(double** aa, int n, double b[]);
-void curv(double cg[]);
-#endif
+#if defined AVX512
+	double mrqcof_avx512(double** x1, double** x2, double x3[], double y[],
+		double sig[], double a[], int ia[], int ma,
+		double** alpha, double beta[], int mfit, int lastone, int lastma);
+
+	double conv_avx512(int nc, double dres[], int ma);
+	double bright_avx512(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+	int gauss_errc_avx512(double** aa, int n, double b[]);
+	void curv_avx512(double cg[]);
+#elif defined FMA
+	double mrqcof_fma(double** x1, double** x2, double x3[], double y[],
+		double sig[], double a[], int ia[], int ma,
+		double** alpha, double beta[], int mfit, int lastone, int lastma);
+
+	double conv_fma(int nc, double dres[], int ma);
+	double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+	int gauss_errc_fma(double** aa, int n, double b[]);
+	void curv(double cg[]);
+#else // defined AVX
+	double mrqcof(double** x1, double** x2, double x3[], double y[],
+		double sig[], double a[], int ia[], int ma,
+		double** alpha, double beta[], int mfit, int lastone, int lastma);
+
+	double conv(int nc, double dres[], int ma);
+	double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+	int gauss_errc(double** aa, int n, double b[]);
+	void curv(double cg[]);
 #endif
 
 void blmatrix(double bet, double lam);
@@ -56,3 +61,9 @@ void deallocate_matrix_double(double** p_x, int rows);
 void aligned_deallocate_matrix_double(double** p_x, int rows);
 void deallocate_matrix_int(int** p_x, int rows);
 double dot_product(double a[], double b[]);
+
+#if !defined __GNUC__ && defined _WIN32
+	bool GetVersionInfo(LPCTSTR filename, int& major, int& minor, int& build, int& revision);
+#elif defined __GNUC__
+	bool GetVersionInfo(int& major, int& minor, int& build, int& revision);
+#endif

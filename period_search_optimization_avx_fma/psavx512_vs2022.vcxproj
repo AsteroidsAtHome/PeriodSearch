@@ -328,7 +328,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_DEBUG;WINDOWS;CONSOLE;AVX512%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_DEBUG;WINDOWS;CONSOLE;AVX512;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CompileAs>CompileAsCpp</CompileAs>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/arch:AVX512%(AdditionalOptions)</AdditionalOptions>
@@ -494,7 +494,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;NDEBUG;_WINDOWS;CONSOLE;AVX512%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;NDEBUG;_WINDOWS;CONSOLE;AVX512;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -554,18 +554,18 @@
     <ClCompile Include="period_search\areanorm.c" />
     <ClCompile Include="period_search\arrayHelpers.cpp" />
     <ClCompile Include="period_search\blmatrix.c" />
-    <ClCompile Include="period_search\bright.c" />
-    <ClCompile Include="period_search\conv.c" />
+    <ClCompile Include="period_search\bright_avx512.c" />
+    <ClCompile Include="period_search\conv_avx512.c" />
     <ClCompile Include="period_search\covsrt.c" />
-    <ClCompile Include="period_search\curv.c" />
+    <ClCompile Include="period_search\curv_avx512.c" />
     <ClCompile Include="period_search\dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
-    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\gauss_errc_avx512.c" />
     <ClCompile Include="period_search\lubksb.c" />
     <ClCompile Include="period_search\ludcmp.c" />
     <ClCompile Include="period_search\matrix.c" />
     <ClCompile Include="period_search\memory.c" />
-    <ClCompile Include="period_search\mrqcof.c" />
+    <ClCompile Include="period_search\mrqcof_avx512.c" />
     <ClCompile Include="period_search\mrqmin.c" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\phasec.c" />
@@ -579,7 +579,7 @@
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\resource.h" />
-    <ClInclude Include="period_search\VersionInfo.h" />
+    <ClInclude Include="period_search\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="period_search\psavx512.rc" />

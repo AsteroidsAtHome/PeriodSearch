@@ -391,9 +391,9 @@ int main(int argc, char **argv) {
 		if (Inrel[i] == 0)
 			onlyrel = 0;
 
-		if (Lpoints[i] > MAX_LC_PONTS)
+		if (Lpoints[i] > MAX_LC_POINTS)
 		{
-			fprintf(stderr, "\nError: Number of lc points is greater than MAX_LC_PONTS = %d\n", MAX_LC_PONTS); fflush(stderr); exit(2);
+			fprintf(stderr, "\nError: Number of lc points is greater than MAX_LC_POINTS = %d\n", MAX_LC_POINTS); fflush(stderr); exit(2);
 		}
 
 		/* loop over one lightcurve */
@@ -559,13 +559,17 @@ int main(int argc, char **argv) {
 
 #if !defined __GNUC__ && defined _WIN32
 		int major, minor, build, revision;
-		TCHAR filepath[MAX_PATH]; // = getenv("_");
+		TCHAR filepath[MAX_PATH]; //NOTE: Equal to 'getenv("_")';
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);
 		GetVersionInfo(filename, major, minor, build, revision);
 		fprintf(stderr, "Application: %s\n", filename);
-		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+#elif defined __GNUC__
+		GetVersionInfo(major, minor, build, revision);
+		auto path = std::filesystem::current_path();
+		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
+		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 	}
 
 	while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))

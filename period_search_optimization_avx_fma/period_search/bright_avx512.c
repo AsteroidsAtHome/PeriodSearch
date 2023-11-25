@@ -19,12 +19,16 @@ inline __m512d hadd_pd(__m512d a, __m512d b) {
 }
 
 inline __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
-	return (__m512d) _mm512_ternarylogic_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(b), _mm512_srai_epi64(_mm512_castpd_si512(c), 63), 0xd8);
+	__m512i result = _mm512_ternarylogic_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(b), _mm512_srai_epi64(_mm512_castpd_si512(c), 63), 0xd8);
+
+	return _mm512_castsi512_pd(result);
 }
 
 // -mavx512dq
 inline __m512d cmp_pd(__m512d a, __m512d b) {
-	return (__m512d) _mm512_movm_epi64(_mm512_cmp_pd_mask(a, b, _CMP_GT_OS));
+	__m512i result = _mm512_movm_epi64(_mm512_cmp_pd_mask(a, b, _CMP_GT_OS));
+
+	return _mm512_castsi512_pd(result);
 }
 
 inline int movemask_pd(__m512d a) {

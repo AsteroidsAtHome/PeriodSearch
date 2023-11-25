@@ -23,7 +23,7 @@ __declspec(align(64)) double dyda[MAX_N_PAR + 16]; //is zero indexed for aligned
 #endif
 
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-ytemp[POINTS_MAX + 1], dytemp[POINTS_MAX + 1][MAX_N_PAR + 1 + 4],
+ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
 dave[MAX_N_PAR + 1 + 4],
 dave2[MAX_N_PAR + 1 + 4],
 coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
@@ -42,9 +42,9 @@ double mrqcof_avx512(double **x1, double **x2, double x3[], double y[],
 
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-      // #else      
+      // #else
     blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
-    //   #endif      
+    //   #endif
 
     for (j = 0; j < mfit; j++)
     {
@@ -78,7 +78,7 @@ double mrqcof_avx512(double **x1, double **x2, double x3[], double y[],
                 ymod = bright_avx512(xx1, xx2, x3[np], a, dyda, ma);
             else
                 ymod = conv_avx512(jp, dyda, ma);
-            
+
             ytemp[jp] = ymod;
 
             if (Inrel[i]/* == 1*/)
