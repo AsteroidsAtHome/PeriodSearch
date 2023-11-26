@@ -4,7 +4,7 @@ BOINC_DIR = ../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-CXXFLAGS = -march=corei7-avx -g \
+CXXFLAGS = -march=corei7-avx -DFMA -g \
 	-DAPP_GRAPHICS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
