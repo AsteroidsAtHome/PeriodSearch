@@ -10,13 +10,28 @@
     <ClCompile Include="period_search\blmatrix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\bright.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\conv.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="period_search\covsrt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\CpuInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\curv.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\dot_product.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\ellfit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\gauss_errc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\lubksb.c">
@@ -31,6 +46,9 @@
     <ClCompile Include="period_search\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\mrqcof.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="period_search\mrqmin.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -43,31 +61,13 @@
     <ClCompile Include="period_search\sphfunc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\TargetInstructionSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\VersionInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\mrqcof_avx512.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\gauss_errc_avx512.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\curv_avx512.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\conv_avx512.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\bright_avx512.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\CpuInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\TargetInstructionSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -87,30 +87,22 @@
     <ClInclude Include="period_search\resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\Makefile" />
-    <None Include="period_search\Makefile_avx" />
-    <None Include="period_search\Makefile_avx512" />
-    <None Include="period_search\Makefile_mac" />
-    <None Include="period_search\Makefile_mac2" />
-    <None Include="period_search\MakeMacExample.sh" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{2bcf9451-e3dd-4bd2-a5cd-3db7800c59e2}</UniqueIdentifier>
+      <UniqueIdentifier>{629381c9-a55d-4b6a-af8a-a607984ccaef}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{a2302e92-7bc6-4463-acad-93576d9a476d}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++a;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
-      <UniqueIdentifier>{38e175cd-f3b2-49a9-abd1-1c1421307bc4}</UniqueIdentifier>
+      <UniqueIdentifier>{13b1d8ca-144f-42fa-83a0-b05b1f8d4aee}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{58ffb1da-9c42-4b14-845f-81525a088298}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++a;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -119,7 +111,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="period_search\psavx512.rc">
+    <ResourceCompile Include="period_search\psavx_vs2019.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

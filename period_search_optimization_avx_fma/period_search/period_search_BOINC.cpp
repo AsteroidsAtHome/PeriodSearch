@@ -567,14 +567,17 @@ int major, minor, build, revision;
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);
 		GetVersionInfo(filename, major, minor, build, revision);
-		fprintf(stderr, "Application: %s\n", filename);
+		std::cerr << "Application: " << filename << std::endl;
 #elif defined __GNUC__
 		GetVersionInfo(major, minor, build, revision);
 		auto path = std::filesystem::current_path();
 		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
-		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+		std::cerr << "Version: " << major << "." << minor << "." << build << "." << revision << std::endl;
 	}
+
+	std::cerr << "CPU: " << GetCpuInfo() << std::endl;
+	std::cerr << "Target instruction set: " << GetTargetInstructionSet() << std::endl;
 
 	while ((new_conw != 1) && ((conw_r * escl * escl) < 10.0))
 	{

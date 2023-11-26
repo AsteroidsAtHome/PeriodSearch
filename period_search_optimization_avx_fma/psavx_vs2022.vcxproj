@@ -555,6 +555,7 @@
     <ClCompile Include="period_search\bright.c" />
     <ClCompile Include="period_search\conv.c" />
     <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\CpuInfo.cpp" />
     <ClCompile Include="period_search\curv.c" />
     <ClCompile Include="period_search\dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
@@ -568,6 +569,7 @@
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\phasec.c" />
     <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\TargetInstructionSet.cpp" />
     <ClCompile Include="period_search\trifac.c" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
@@ -577,7 +579,6 @@
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\resource.h" />
-    <ClInclude Include="period_search\VersionInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="period_search\psavx_vs2019.rc" />

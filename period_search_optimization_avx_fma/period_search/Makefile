@@ -19,7 +19,7 @@ CFLAGS=$(OPTFLAGS) -Wall -DFMA
 LDFLAGS=-lm
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof_fma.o\
 		curv.o blmatrix.o conv_fma.o covsrt.o phasec.o matrix.o bright_fma.o memory.o\
-	dot_product.o gauss_errc_fma.o VersionInfo.o
+	dot_product.o gauss_errc_fma.o VersionInfo.o CpuInfo.o TargetInstructuonSet.o
 
 # the following should be freeglut; use nm to check
 # you may have to change the paths for your system
@@ -34,7 +34,7 @@ else
 	LIBJPEG = /usr/local/lib/libjpeg.a
 endif
 
-PROGS = period_search_BOINC 
+PROGS = period_search_BOINC
 # uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
 
@@ -62,7 +62,7 @@ install: period_search_BOINC
 period_search_BOINC: period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a \
-	$(BOINC_LIB_DIR)/libboinc.a -lm 
+	$(BOINC_LIB_DIR)/libboinc.a -lm
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<

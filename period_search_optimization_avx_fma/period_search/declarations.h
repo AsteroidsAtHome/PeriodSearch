@@ -4,6 +4,9 @@
 #include "Windows.h"
 #endif
 
+//#include <cstdio>
+#include <string>
+
 void trifac(int nrows, int** ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int** ifp,
 	double at[], double af[]);
@@ -67,3 +70,6 @@ double dot_product(double a[], double b[]);
 #elif defined __GNUC__
 	bool GetVersionInfo(int& major, int& minor, int& build, int& revision);
 #endif
+
+std::string GetCpuInfo();
+std::string GetTargetInstructionSet();

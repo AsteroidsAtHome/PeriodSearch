@@ -186,9 +186,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_avx_$(Configuration)</TargetName>
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_AVX512_$(Configuration)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_AVX512\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)_AVX512\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Nvidia|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -219,7 +219,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Release;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_avx512_$(Configuration)</TargetName>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_AVX512_$(Configuration)</TargetName>
     <OutDir>$(SolutionDir)$(Platform)_AVX512\$(Configuration)\</OutDir>
     <IntDir>$(Platform)_AVX512\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -346,7 +346,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;libboincapi.lib;libboinc.lib;psapi.lib;ShLwApi.lib;Version.Lib;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.18362.0\um\x64\Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;libboincapi.lib;libboinc.lib;psapi.lib;ShLwApi.lib;Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
@@ -557,6 +557,7 @@
     <ClCompile Include="period_search\bright_avx512.c" />
     <ClCompile Include="period_search\conv_avx512.c" />
     <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\CpuInfo.cpp" />
     <ClCompile Include="period_search\curv_avx512.c" />
     <ClCompile Include="period_search\dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
@@ -570,6 +571,7 @@
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\phasec.c" />
     <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\TargetInstructionSet.cpp" />
     <ClCompile Include="period_search\trifac.c" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
