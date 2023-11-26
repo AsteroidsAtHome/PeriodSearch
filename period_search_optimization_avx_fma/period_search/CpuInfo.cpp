@@ -5,6 +5,7 @@
 #endif
 
 #include <string>
+#include <cstring>
 #include <array>
 
 #if !defined __GNUC__ && defined _WIN32
