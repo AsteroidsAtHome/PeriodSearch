@@ -4,22 +4,16 @@
     <ClCompile Include="period_search\areanorm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\arrayHelpers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\blmatrix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\bright.c">
+    <ClCompile Include="period_search\bright_fma.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\conv.c">
+    <ClCompile Include="period_search\conv_fma.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\covsrt.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="period_search\CpuInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\curv.c">
@@ -31,7 +25,7 @@
     <ClCompile Include="period_search\ellfit.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\gauss_errc.c">
+    <ClCompile Include="period_search\gauss_errc_fma.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\lubksb.c">
@@ -46,7 +40,7 @@
     <ClCompile Include="period_search\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\mrqcof.c">
+    <ClCompile Include="period_search\mrqcof_fma.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\mrqmin.c">
@@ -61,20 +55,20 @@
     <ClCompile Include="period_search\sphfunc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\TargetInstructionSet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\VersionInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\CpuInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\TargetInstructionSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="period_search\arrayHelpers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="period_search\constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -84,8 +78,11 @@
     <ClInclude Include="period_search\globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\resource.h">
+    <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\resource.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -93,15 +90,15 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{629381c9-a55d-4b6a-af8a-a607984ccaef}</UniqueIdentifier>
+      <UniqueIdentifier>{3a629f8e-4435-4076-b5d6-8fa61063de25}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
     <Filter Include="Resource Files">
-      <UniqueIdentifier>{13b1d8ca-144f-42fa-83a0-b05b1f8d4aee}</UniqueIdentifier>
+      <UniqueIdentifier>{f7b3ba72-fd55-4c36-9db4-1481bdfbcc38}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{58ffb1da-9c42-4b14-845f-81525a088298}</UniqueIdentifier>
+      <UniqueIdentifier>{6a11c84c-efc9-4bf6-a1fa-dc3ada080c32}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++a;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
   </ItemGroup>
@@ -111,7 +108,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="period_search\psavx.rc">
+    <ResourceCompile Include="period_search\psfma.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

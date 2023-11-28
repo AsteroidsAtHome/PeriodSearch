@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by psavx512.rc
+// Used by psfma.rc
 //
 #define IDI_ICON1                       101
 

@@ -13,11 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (English) resources
+// English (United States) resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_BGR)
-LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
-#pragma code_page(1251)
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,7 @@ BEGIN
             VALUE "FileDescription", "Period search application AVX512"
             VALUE "FileVersion", "102.15.0.1"
             VALUE "InternalName", "Period_search_Windows_10.0_x64_avx512.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2020 Astronomical Institute at Charles University in Prague"
+            VALUE "LegalCopyright", "Copyright (C) 2023 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_Windows_10.0_x64_avx512.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
             VALUE "ProductVersion", "102.15.0.1"
@@ -93,7 +93,7 @@ END
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "logo_Nta_icon.ico"
 
-#endif    // English (English) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
