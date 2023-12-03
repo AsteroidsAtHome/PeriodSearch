@@ -527,6 +527,7 @@
     <ClCompile Include="period_search\phasec.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\Start_OpenCl.cpp" />
+    <ClCompile Include="period_search\Start_OpenCl_c++.cpp" />
     <ClCompile Include="period_search\stdafx.cpp" />
     <ClCompile Include="period_search\trifac.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
