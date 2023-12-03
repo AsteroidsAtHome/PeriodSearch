@@ -5,7 +5,7 @@ VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psavx_vs2022", "psavx_vs2022.vcxproj", "{2933B6B4-03EE-49F0-AC8B-C8853FC50F15}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psavx_vs2022", "psavx512_vs2022.vcxproj", "{5FD40339-0F97-48AE-8970-9A170BC7AADA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psavx512_vs2022", "psavx512_vs2022.vcxproj", "{5FD40339-0F97-48AE-8970-9A170BC7AADA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

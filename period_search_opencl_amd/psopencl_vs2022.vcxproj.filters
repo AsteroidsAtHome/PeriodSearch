@@ -73,6 +73,9 @@
     <ClCompile Include="period_search\binaries.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\Start_OpenCl_c++.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\cpp.hint" />
