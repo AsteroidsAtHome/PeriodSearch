@@ -578,11 +578,16 @@ int main(int argc, char** argv) {
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);
 		GetVersionInfo(filename, major, minor, build, revision);
-		fprintf(stderr, "Application: %s\n", filename);
-		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
-		getSystemInfo();
+		std::cerr << "Application: " << filename << std::endl;
 #else
 		std::cerr << "Application: " << argv[0] << std::endl;
+#endif
+		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
+
+#if defined(ARM) || defined(ARM32) || defined(ARM64)
+		getSystemInfo();
+#else
+		std::cerr << "CPU: " << GetCpuInfo() << std::endl;
 #endif
 	}
 

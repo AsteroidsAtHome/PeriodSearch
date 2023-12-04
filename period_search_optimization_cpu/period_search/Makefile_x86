@@ -5,7 +5,7 @@ BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-CXXFLAGS = -m64 -O3 -w -s \
+CXXFLAGS = -m32 -O3 -w -s \
     -DAPP_GRAPHICS \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
@@ -15,7 +15,7 @@ CXXFLAGS = -m64 -O3 -w -s \
 
 CC=g++
 CXX=g++
-OPTFLAGS= -m64 -O3
+OPTFLAGS= -m32 -O3
 CFLAGS=$(OPTFLAGS) -w -s
 LDFLAGS=-lm
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
@@ -35,7 +35,7 @@ else
 	LIBJPEG = /usr/local/lib/libjpeg.a
 endif
 
-PROGS = Period_search_BOINC_linux_10215_x64_cpu_Release
+PROGS = Period_search_BOINC_linux_10215_x86_cpu_Release
 # uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
 
@@ -50,7 +50,7 @@ clean:
 distclean:
 	/bin/rm -f $(PROGS) *.o libstdc++.a
 
-install: Period_search_BOINC_linux_10215_x64_cpu_Release
+install: Period_search_BOINC_linux_10215_x86_cpu_Release
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
@@ -60,7 +60,7 @@ install: Period_search_BOINC_linux_10215_x64_cpu_Release
 #	$(BOINC_API_DIR)/libboinc_api.a \
 #	$(BOINC_LIB_DIR)/libboinc.a
 
-Period_search_BOINC_linux_10215_x64_cpu_Release: period_search_BOINC.cpp $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+Period_search_BOINC_linux_10215_x86_cpu_Release: period_search_BOINC.cpp $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a -lm 
