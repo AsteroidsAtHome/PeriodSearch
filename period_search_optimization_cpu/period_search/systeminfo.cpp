@@ -5,12 +5,11 @@
 #include <fstream>
 #include <thread>
 #include "systeminfo.h"
-#include <unistd.h>
 #include <bitset>
 
 #ifdef _WIN32
 #include <windows.h>
-#elseif
+#else
 #include <unistd.h>
 #endif
 
