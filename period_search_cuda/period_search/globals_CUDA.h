@@ -1,5 +1,5 @@
 #pragma once
-//#define NEWDYTEMP
+
 #include <cuda_runtime_api.h>
 
 //  NOTE Fake declaration to satisfy intellisense. See https://stackoverflow.com/questions/39980645/enable-code-indexing-of-cuda-in-clion/39990500
@@ -50,7 +50,7 @@ __device__ __device_builtin__ double __hiloint2double(int hi, int lo);
 #include "constants.h"
 //NOTE: https://devtalk.nvidia.com/default/topic/517801/-34-texture-is-not-a-template-34-error-mvs-2010/
 
-#define N_BLOCKS 768
+#define N_BLOCKS 2048
 
 //global to all freq
 __constant__ extern int CUDA_Ncoef, CUDA_Numfac, CUDA_Numfac1, CUDA_Dg_block;
@@ -60,15 +60,12 @@ __constant__ extern int CUDA_n_iter_max, CUDA_n_iter_min, CUDA_ndata;
 __constant__ extern double CUDA_iter_diff_max;
 __constant__ extern double CUDA_conw_r;
 __constant__ extern int CUDA_Lmax, CUDA_Mmax;
-__constant__ extern double CUDA_lcl, CUDA_Alamda_start, CUDA_Alamda_incr;
+__constant__ extern double CUDA_lcl, CUDA_Alamda_start, CUDA_Alamda_incr, CUDA_Alamda_incrr;
 __constant__ extern double CUDA_Phi_0;
 __constant__ extern double CUDA_beta_pole[N_POLES + 1];
 __constant__ extern double CUDA_lambda_pole[N_POLES + 1];
 
 __device__ extern double CUDA_par[4];
-__device__ extern double CUDA_ee[3][MAX_N_OBS+1]; 
-__device__ extern double CUDA_ee0[3][MAX_N_OBS+1]; 
-__device__ extern double CUDA_tim[MAX_N_OBS + 1];
 __device__ extern int CUDA_ia[MAX_N_PAR + 1];
 __device__ extern double CUDA_Nor[3][MAX_N_FAC + 1];
 __device__ extern double CUDA_Fc[MAX_LM + 1][MAX_N_FAC + 1];
@@ -77,44 +74,34 @@ __device__ extern double CUDA_Fs[MAX_LM + 1][MAX_N_FAC + 1];
 __device__ extern double CUDA_Pleg[MAX_LM + 1][MAX_LM + 1][MAX_N_FAC + 1];
 __device__ extern double CUDA_Darea[MAX_N_FAC + 1]; 
 __device__ extern double CUDA_Dsph[MAX_N_PAR + 1][MAX_N_FAC + 1];
-__device__ extern double *CUDA_brightness/*[MAX_N_OBS+1]*/;
-__device__ extern double *CUDA_sig/*[MAX_N_OBS+1]*/;
-__device__ extern double *CUDA_Weight/*[MAX_N_OBS+1]*/;
+
 __device__ extern int CUDA_End;
 __device__ extern int CUDA_Is_Precalc;
 
-
-#ifdef NEWDYTEMP
-__device__ extern double dytemp[POINTS_MAX + 1][40][N_BLOCKS];
-#endif
+__device__ extern double CUDA_tim[MAX_N_OBS + 1];
+__device__ extern double CUDA_brightness[MAX_N_OBS+1];
+__device__ extern double CUDA_sig[MAX_N_OBS+1];
+__device__ extern double CUDA_sigr2[MAX_N_OBS+1]; // (1/CUDA_sig^2) /*[MAX_N_OBS+1]*/;
+__device__ extern double CUDA_Weight[MAX_N_OBS+1];
+__device__ extern double CUDA_ee[3][MAX_N_OBS+1]; 
+__device__ extern double CUDA_ee0[3][MAX_N_OBS+1]; 
 
 
 //global to one thread
 struct freq_context
 {
-  //	double Area[MAX_N_FAC+1];
-  //double *Area;
-  //	double Dg[(MAX_N_FAC+1)*(MAX_N_PAR+1)];
   double *Dg;
-  //	double alpha[MAX_N_PAR+1][MAX_N_PAR+1];
-  double *alpha;
-  //	double covar[MAX_N_PAR+1][MAX_N_PAR+1];
+  //double *alpha;
   double *covar;
-  //
-#ifndef NEWDYTEMP
   double *dytemp;
-#endif
-  //	double ytemp[POINTS_MAX+1],
   double *ytemp;
-  double cg[MAX_N_PAR + 1];
-  double beta[MAX_N_PAR + 1];
+  
+  //double cg[MAX_N_PAR + 1];
+  //double beta[MAX_N_PAR + 1];
   double da[MAX_N_PAR + 1];
 };
 
-//extern __device__ double *CUDA_Area;
 extern __device__ double *CUDA_Dg;
-//extern texture<int2, 1> texArea;
-//extern texture<int2, 1> texDg;
 
 __device__ extern freq_context *CUDA_CC;
 

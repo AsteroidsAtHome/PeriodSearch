@@ -197,7 +197,7 @@ int main(int argc, char** argv)
 	double jd0, jd00, conw, conwR, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, cAxis,
 		cl, al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl,
 		ee[3][MAX_N_OBS + 1], // e[4], e0[4],
-		ee0[3][MAX_N_OBS + 1], *cg, *cgFirst, *sig, *al, // *tim, *brightness,
+		ee0[3][MAX_N_OBS + 1], *cg, *cgFirst, *sig, *sigr2, *al, // *tim, *brightness,
 		betaPole[N_POLES + 1], lambdaPole[N_POLES + 1], par[4], *weightLc;
 
 	char* stringTemp;
@@ -213,6 +213,7 @@ int main(int argc, char** argv)
 	tim = vector_double(MAX_N_OBS);
 	brightness = vector_double(MAX_N_OBS);
 	sig = vector_double(MAX_N_OBS);
+	sigr2 = vector_double(MAX_N_OBS);
 	cg = vector_double(MAX_N_PAR);
 	cgFirst = vector_double(MAX_N_PAR);
 	t = vector_double(MAX_N_FAC);
@@ -370,7 +371,7 @@ int main(int argc, char** argv)
 	fscanf(infile, "%lf", &a_lamda_incr);                       fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	if (a_lamda_incr != 0.0)
-	  a_lamda_incrr = 1.0 / a_lamda_incr;
+	  a_lamda_incrr = 1.0d / (double)a_lamda_incr;
 	else
 	  a_lamda_incrr = std::numeric_limits<double>::max();
 
@@ -505,6 +506,7 @@ int main(int argc, char** argv)
 		{
 			k2++;
 			sig[k2] = ave;
+			sigr2[k2] = 1.0d/(ave*ave);
 		}
 
 	} /* i, all lightcurves */
@@ -661,6 +663,7 @@ int main(int argc, char** argv)
 			ndata++;
 			brightness[ndata] = 0;
 			sig[ndata] = 1 / conwR;
+			sigr2[ndata] = conwR * conwR;
 		}
 
 		/* the ordering of the coeffs. of the Laplace series */
@@ -747,7 +750,7 @@ int main(int argc, char** argv)
 		}
 		// printf("Num_fac %d\n", num_fac); fflush(stdout);
 
-		CUDAPrecalc(cuda_device, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness);
+		CUDAPrecalc(cuda_device, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, sigr2, num_fac, brightness);
 
 		ndata = ndata - 3;
 
@@ -769,6 +772,7 @@ int main(int argc, char** argv)
 		ndata++;
 		brightness[ndata] = 0;
 		sig[ndata] = 1 / conwR;
+		sigr2[ndata] = conwR * conwR;
 	}
 
 	/* the ordering of the coeffs. of the Laplace series */
@@ -856,7 +860,7 @@ int main(int argc, char** argv)
 
 	// printf("Num_fac %d\n", num_fac); fflush(stdout);
 
-	CUDAStart(cuda_device, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+	CUDAStart(cuda_device, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, sigr2, num_fac, brightness);
 
 	out.close();
 
@@ -872,6 +876,7 @@ int main(int argc, char** argv)
 	deallocate_vector(tim);
 	deallocate_vector(brightness);
 	deallocate_vector(sig);
+	deallocate_vector(sigr2);
 	deallocate_vector(cg);
 	deallocate_vector(cgFirst);
 	deallocate_vector(t);

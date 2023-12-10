@@ -34,7 +34,7 @@ CXXFLAGS = -g -O3 \
 # CUDA 11.1 - CC: NVCCFLAGS = compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86
 # CUDA 11.8 - CC: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=80 -rdc=tru
 # CUDA 12.0 - CC:
-NVCCFLAGS = --forward-unknown-opts -mcmodel=medium --split-compile-extended 25 -O3 -lineinfo --use_fast_math --extra-device-vectorization --ptxas-options=-v -t0 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52  --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61  --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_89,code=sm_89 --maxrregcount=128 -rdc=true
+NVCCFLAGS = --forward-unknown-opts -mcmodel=medium --split-compile-extended 25 -O3 -lineinfo --use_fast_math --extra-device-vectorization --ptxas-options=-v -t0 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52  --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61  --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_89,code=sm_89 --maxrregcount=32 -rdc=true
 
 CC=g++
 CXX=g++
