@@ -62,6 +62,10 @@ typedef unsigned int uint;
 #include "Globals_OpenCl.h"
 #include <cstddef>
 #include <numeric>
+#include "ClStrategy.h"
+#include "ClStrategy.h"
+#include "Start_OpenCl_amd_apu.h"
+#include "Start_OpenCl_amd_gpu.h"
 
 //using namespace std;
 using std::cout;
@@ -107,6 +111,10 @@ cl_kernel kernelCalculateFinishPole;
 
 size_t CUDA_grid_dim;
 //int CUDA_grid_dim_precalc;
+
+// NOTE: Initially we'll go with the default GPU strategy.
+clStrategyContext clSCtx(std::make_unique<clAmdGpuStrategy>());
+bool isAmdApu = false;
 
 // NOTE: global to one thread
 #if !defined _WIN32
@@ -184,7 +192,6 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 
 #endif
 #endif
-
     //try {
     cl_int err_num;
     cl_uint num_platforms_available;
@@ -272,6 +279,12 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
 
 
     // cl_device_id device = devices[1]; // RX 550
+
+    if(numDevices - 1 < deviceId)
+    {
+        cerr << "There is no device with Id '" << deviceId << "'. Will use deviceId '" << (numDevices - 1) << "' instead." << endl;
+        deviceId = numDevices - 1;
+    }
 
     cl_device_id device = devices[deviceId];
     // Create an OpenCL context for the choosen device
@@ -363,6 +376,14 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
     cl_uint minDataTypeAlignSize;
     err_num = clGetDeviceInfo(device, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, sizeof(cl_uint), &minDataTypeAlignSize, NULL);
 
+    cl_bool isDeviceHostUnifiedMemory;
+    err_num = clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), &isDeviceHostUnifiedMemory, NULL);
+    if (isDeviceHostUnifiedMemory)
+    {
+        isAmdApu = true;
+        clSCtx.SetClStrategy(std::make_unique<clAmdApuStrategy>());
+    }
+
     size_t extSize;
     clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, NULL, &extSize);
     auto deviceExtensions = new char[extSize];
@@ -388,7 +409,9 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         globalMemory /= 1024;
         sufix = "GB";
     }
-    cerr << "OpenCL device name: " << deviceName << " " << globalMemory << sufix << endl;
+    cerr << "OpenCL device name: " << deviceName << " " << globalMemory << sufix;
+    string deviceType = isAmdApu ? "APU" : "";
+    cerr << " " << deviceType << endl;
     cerr << "Device driver version: " << driverVersion << endl;
     cerr << "Multiprocessors: " << msCount << endl;
     cerr << "Max Samplers: " << block << endl;
@@ -1003,7 +1026,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // cl_uint pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
     // auto memPcc = (mfreq_context *)aligned_alloc(128, pccSize);
     // auto CUDA_MCC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, pccSize, pcc, err);
-    
+
     // cl_uint pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     // auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
     auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
@@ -1105,7 +1128,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // cl_uint faSize = ((sizeof(freq_context) - 1) / 64 + 1) * 64;
     // auto CUDA_CC = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, err);
     // auto pFa = queue.enqueueMapBuffer(CUDA_CC, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, faSize);
-    
+
     // auto memFa = (freq_context*)aligned_alloc(128, faSize);
     // cl_mem CUDA_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
     // void* pFa = clEnqueueMapBuffer(queue, CUDA_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
@@ -1215,7 +1238,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #else // WIN
 #if defined INTEL
     cl_uint frOptimizedSize = ((sizeof(freq_result) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
-    auto pfr = (mfreq_context*)_aligned_malloc(optimizedSize, 4096);
+    auto pfr = (freq_context*)_aligned_malloc(optimizedSize, 4096);
     auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frOptimizedSize, pfr, err);
 #elif defined AMD
     //int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
@@ -1223,11 +1246,16 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
     //void* pfr;
 
-    //size_t frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
+    ////size_t frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
+    ////auto pfr = new freq_result[CUDA_grid_dim_precalc];
     int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
-    auto pfr = (freq_result*)_aligned_malloc(frSize, 128);
-    //auto pfr = new freq_result[CUDA_grid_dim_precalc];
-    cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
+    // ____
+    //auto pfr = (freq_result*)_aligned_malloc(frSize, 128);
+    //cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
+    void* vpfr = nullptr;
+    auto tpfr = clSCtx.CallCreateFreqResult(frSize);
+    auto pfr = !isAmdApu ? tpfr: vpfr;
+    cl_mem CUDA_FR = clSCtx.CallCreateBufferCl_FR(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
     void* memIn = (void*)_aligned_malloc(frSize, 256);
@@ -1328,9 +1356,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         queue.flush();
 #elif defined AMD
-        // pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
-        // pfr = clEnqueueMapBuffer(queue, CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, 0, NULL, NULL, &err);
+         //pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
+         //pfr = clEnqueueMapBuffer(queue, CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, 0, NULL, NULL, &err);
         // queue.flush();
+        //_____
+        clSCtx.CallEnqueueMapCL_FR(queue, CUDA_FR, frSize, pfr);
 #endif
         for (m = 0; m < CUDA_grid_dim_precalc; m++)
         {
@@ -1348,7 +1378,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #if defined INTEL
         queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frOptimizedSize, pfr);
 #elif AMD
-        clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        //________
+        //clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        err = clSCtx.CallEnqueueUnmapWriteCL_FR(queue, CUDA_FR, frSize, pfr);
 #elif NVIDIA
         queue.enqueueUnmapMemObject(CUDA_FR, pfr);
         queue.flush();
@@ -1535,7 +1567,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         fres = (freq_result*)queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ, 0, frOptimizedSize, NULL, NULL, err);
         queue.finish();
 #elif AMD
-        clEnqueueReadBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        //_____
+        //clEnqueueReadBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        clSCtx.CallEnqueueMapReadCL_FR(queue, CUDA_FR, frSize, pfr); // TODO: Test this
 #elif NVIDIA
         pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         queue.flush();
@@ -1560,6 +1594,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 sum_dark_facet = sum_dark_facet + res[m - 1].dark_best;
 #if defined _DEBUG
                 printf("[%3d] res[%3d].dark_best: %10.16f, sum_dark_facet: %10.16f\n", m, m - 1, res[m - 1].dark_best, sum_dark_facet);
+                fprintf(stderr, "[%3d] res[%3d].dark_best: %10.16f, sum_dark_facet: %10.16f\n", m, m - 1, res[m - 1].dark_best, sum_dark_facet);
 #endif
             }
         }
@@ -1586,6 +1621,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #elif AMD
         //queue.enqueueUnmapMemObject(CUDA_FR, pfr);
         //queue.flush();
+        //_____
+        clSCtx.CallEnqueueUnmapCL_FR(queue, CUDA_FR, frSize, pfr);
 #elif NVIDIA
         queue.enqueueUnmapMemObject(CUDA_FR, pfr);
         queue.flush();
@@ -1952,8 +1989,13 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, memIn, err);
     //void* pfr;
     size_t frSize = sizeof(freq_result) * CUDA_grid_dim;
-    auto pfr = new freq_result[CUDA_grid_dim];
-    cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
+    //_____
+    //auto pfr = new freq_result[CUDA_grid_dim];
+    //cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
+    void* vpfr = nullptr;
+    auto tpfr = clSCtx.CallCreateFreqResult(frSize);
+    auto pfr = isAmdApu ? tpfr : vpfr;
+    cl_mem CUDA_FR = clSCtx.CallCreateBufferCl_FR(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CUDA_grid_dim * sizeof(freq_result);
     void* memIn = (void*)_aligned_malloc(frSize, 256);
@@ -2087,6 +2129,8 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #ifndef INTEL
         // pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         // queue.flush();
+        //_____
+        clSCtx.CallEnqueueMapCL_FR(queue, CUDA_FR, frSize, pfr);
 #endif
         for (int j = 0; j < CUDA_grid_dim; j++)
         {
@@ -2103,9 +2147,11 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #if defined (INTEL)
         queue.enqueueWriteBuffer(CUDA_FR, CL_BLOCKING, 0, frOptimizedSize, pfr);
 #else
-        // queue.enqueueUnmapMemObject(CUDA_FR, pfr);
-        // queue.flush();
-        clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        //// queue.enqueueUnmapMemObject(CUDA_FR, pfr);
+        //// queue.flush();
+        //____
+        //clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        clSCtx.CallEnqueueUnmapWriteCL_FR(queue, CUDA_FR, frSize, pfr);
 #endif
         err = clSetKernelArg(kernelCalculatePrepare, 6, sizeof(n), &n);
         err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
@@ -2258,7 +2304,9 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #else
         // pfr = queue.enqueueMapBuffer(CUDA_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         // queue.flush();
-        clEnqueueReadBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        //____
+        //clEnqueueReadBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+        clSCtx.CallEnqueueMapReadCL_FR(queue, CUDA_FR, frSize, pfr);
 #endif
         //err=cudaThreadSynchronize(); memcpy is synchro itself
 
@@ -2305,6 +2353,8 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #else
         // queue.enqueueUnmapMemObject(CUDA_FR, pfr);
         // queue.flush();
+        //____
+        clSCtx.CallEnqueueUnmapCL_FR(queue, CUDA_FR, frSize, pfr);
 #endif
 
         if (boinc_time_to_checkpoint() || boinc_is_standalone())

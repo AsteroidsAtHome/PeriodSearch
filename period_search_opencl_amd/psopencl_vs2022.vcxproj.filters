@@ -73,7 +73,13 @@
     <ClCompile Include="period_search\binaries.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\Start_OpenCl_c++.cpp">
+    <ClCompile Include="period_search\Start_OpenCl_amd_apu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ClStrategy.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\Start_OpenCl_amd_gpu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -154,6 +160,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="period_search\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Start_OpenCl_amd_apu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Start_OpenCl_amd_gpu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

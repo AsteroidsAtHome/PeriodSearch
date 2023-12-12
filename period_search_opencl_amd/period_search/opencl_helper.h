@@ -1,3 +1,4 @@
+#pragma once
 /* helper.h - OpenCL helper macros
  * Copyright 2010 (c) Adrian Sai-wah Tam <adrian.sw.tam@gmail.com>
  * Released under GNU LGPL.

@@ -130,6 +130,7 @@
 UC_SHMEM* shmem;
 
 #endif
+//#include "Start_OpenCl_amd_apu.cpp"
 
 using std::string;
 
@@ -669,6 +670,7 @@ int main(int argc, char** argv)
 		//fprintf(stderr, "WU cpu time: %f\n", aid.wu_cpu_time);
 #endif
 	}
+
 	while ((newConw != 1) && ((conwR * escl * escl) < 10.0))
 	{
 
@@ -881,7 +883,7 @@ int main(int argc, char** argv)
 
 	//CUDAStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
     //        ClPrecalc(startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, &conwR, ndata, ia, ia_par, &newConw, cgFirst, sig, num_fac, brightness, cl, n_coef);
-	ClStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
+    ClStart(nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, num_fac, brightness);
 
 	out.close();
 
