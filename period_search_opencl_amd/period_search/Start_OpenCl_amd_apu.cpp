@@ -9,14 +9,17 @@ freq_result* clAmdApuStrategy::CreateFreqResult(size_t frSize) const
     return pfr;
 }
 
+mfreq_context* clAmdApuStrategy::CreateFreqContext(size_t pccSize) const
+{
+    mfreq_context* pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+
+    return pcc;
+}
+
 cl_mem clAmdApuStrategy::CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const
 {
     cl_int error = 0;
-    //APU
-    //cl_mem CLFR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, pfr, &error);
-
-    //GPU
-    cl_mem CL_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &error);
+    cl_mem CL_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, frSize, pfr, &error);
 
     return CL_FR;
 }

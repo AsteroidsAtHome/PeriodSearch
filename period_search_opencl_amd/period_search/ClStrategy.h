@@ -44,6 +44,7 @@ public:
     //clStrategy() {};
 
     virtual freq_result* CreateFreqResult(size_t frSize) const = 0;
+    virtual mfreq_context* CreateFreqContext(size_t pccSize) const = 0;
     virtual cl_mem CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const = 0;
     virtual void EnqueueMapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
     virtual void EnqueueMapReadCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
@@ -103,6 +104,22 @@ public:
             freq_result* pfr = clStrategy_->CreateFreqResult(frSize);
 
             return pfr;
+        }
+        else
+        {
+            ReportError(__FUNCTION__);
+            return nullptr;
+        }
+
+    }
+
+    mfreq_context* CallCreateFreqContext(size_t pccSize)
+    {
+        if (clStrategy_)
+        {
+            mfreq_context* pcc = clStrategy_->CreateFreqContext(pccSize);
+
+            return pcc;
         }
         else
         {

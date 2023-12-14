@@ -8,6 +8,13 @@ freq_result* clAmdGpuStrategy::CreateFreqResult(size_t frSize) const
     return pfr;
 }
 
+mfreq_context* clAmdGpuStrategy::CreateFreqContext(size_t pccSize) const
+{
+    mfreq_context* pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+
+    return pcc;
+}
+
 cl_mem clAmdGpuStrategy::CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const
 {
     cl_int error = 0;

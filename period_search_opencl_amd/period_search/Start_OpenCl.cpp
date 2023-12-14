@@ -997,13 +997,14 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #if defined (INTEL)
     auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
 #else
+    //cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
     //auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
      //queue.enqueueWriteBuffer(cgFirst, CL_TRUE, 0, sizeof(double) * (MAX_N_PAR + 1), cg_first);
-
-    cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
-    clEnqueueWriteBuffer(queue, cgFirst, CL_BLOCKING, 0, sizeof(cl_double)* (MAX_N_PAR + 1), cg_first, 0, NULL, NULL);
-
-    //cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+    //_____
+    /*cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+    clEnqueueWriteBuffer(queue, cgFirst, CL_BLOCKING, 0, sizeof(cl_double)* (MAX_N_PAR + 1), cg_first, 0, NULL, NULL);*/
+    cl_uint cgSize = sizeof(cl_double) * (MAX_N_PAR + 1);
+    cl_mem cgFirst = clSCtx.CallCreateBufferCl_FR(context, cgSize, cg_first);
 #endif
 
 #if !defined _WIN32
@@ -1055,8 +1056,14 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // 18-SEP-2023
     //size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     //auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
+    //_____
     auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
-    auto pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+    //auto pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+    void* apuPcc = nullptr;
+    auto memPcc = clSCtx.CallCreateFreqContext(pccSize);
+    auto pcc = isAmdApu ? apuPcc : memPcc;
+    cl_mem CUDA_MCC2 = clSCtx.CallCreateBufferCl_FR(context, pccSize, pcc);
+    clSCtx.CallEnqueueMapCL_FR(queue, CUDA_MCC2, pccSize, pcc);
 #elif NVIDIA
     int pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     auto alignas(8) pcc = new mfreq_context[CUDA_grid_dim_precalc];
@@ -1110,8 +1117,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
      //clFlush(queue);
 
     // 18-SEP-2023
-    cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
-    clEnqueueWriteBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+    //_____
+    //cl_mem CUDA_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
+    //clEnqueueWriteBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+    clSCtx.CallEnqueueUnmapWriteCL_FR(queue, CUDA_MCC2, pccSize, pcc);
+
 #elif defined NVIDIA
     queue.enqueueWriteBuffer(CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc);
 #endif
@@ -1252,9 +1262,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // ____
     //auto pfr = (freq_result*)_aligned_malloc(frSize, 128);
     //cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
-    void* vpfr = nullptr;
-    auto tpfr = clSCtx.CallCreateFreqResult(frSize);
-    auto pfr = !isAmdApu ? tpfr: vpfr;
+    void* apfr = nullptr;
+    auto gpfr = clSCtx.CallCreateFreqResult(frSize);
+    auto pfr = isAmdApu ? apfr : gpfr;
     cl_mem CUDA_FR = clSCtx.CallCreateBufferCl_FR(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CUDA_grid_dim_precalc * sizeof(freq_result);
@@ -1399,6 +1409,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             if (getError(err)) return err;
             //clFinish(queue);
 
+            // TODO: This is used for DEBUG purposes. Make proper changes to exclude this piece of code in the RELEASE code.
+            // >>>>>>>>  Test Start >>>>>>>>
             //void* pFb = clEnqueueMapBuffer(queue, CUDA_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
             //clFlush(queue);
             clEnqueueReadBuffer(queue, CUDA_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
@@ -1408,8 +1420,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                     error++;
                 }
             }
-
-            clEnqueueReadBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+            //____
+            //clEnqueueReadBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+            clSCtx.CallEnqueueMapReadCL_FR(queue, CUDA_MCC2, pccSize, pcc);
             //pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_READ, 0, pccSize, 0, NULL, NULL, &err);
             //clFlush(queue);
             int errCnt = 0;
@@ -1429,6 +1442,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
             clEnqueueUnmapMemObject(queue, CUDA_CC2, pFb, 0, NULL, NULL);
             clFlush(queue);
+            // <<<<<<<<  Test End  <<<<<<<<
 #ifdef _DEBUG
             // printf(".");
             cout << ".";
@@ -1793,7 +1807,10 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #else
     // auto cgFirst = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * (MAX_N_PAR + 1), cg_first, err);
     // queue.enqueueWriteBuffer(cgFirst, CL_TRUE, 0, sizeof(double) * (MAX_N_PAR + 1), cg_first);
-    cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+    //_____
+    //cl_mem cgFirst = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_double) * (MAX_N_PAR + 1), cg_first, &err);
+    cl_uint cgSize = sizeof(cl_double) * (MAX_N_PAR + 1);
+    cl_mem cgFirst = clSCtx.CallCreateBufferCl_FR(context, cgSize, cg_first);
 #endif
 
 #if !defined _WIN32
@@ -1992,9 +2009,9 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //_____
     //auto pfr = new freq_result[CUDA_grid_dim];
     //cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
-    void* vpfr = nullptr;
-    auto tpfr = clSCtx.CallCreateFreqResult(frSize);
-    auto pfr = isAmdApu ? tpfr : vpfr;
+    void* apfr = nullptr;
+    auto gpfr = clSCtx.CallCreateFreqResult(frSize);
+    auto pfr = isAmdApu ?  apfr : gpfr;
     cl_mem CUDA_FR = clSCtx.CallCreateBufferCl_FR(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CUDA_grid_dim * sizeof(freq_result);

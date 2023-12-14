@@ -71,6 +71,9 @@ public:
 
     //virtual
     freq_result* CreateFreqResult(size_t frSize) const;
+
+    mfreq_context* CreateFreqContext(size_t pccSize) const;
+
     cl_mem CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const;
 
     // TODO: Test if reflection wil do the trick here with 'pfr'
