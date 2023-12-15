@@ -12,13 +12,13 @@
 
 // vars
 
-__device__ double Dblm[2][3][3][N_BLOCKS]; // OK, set by [tid], read by [bid]
+//__device__ double Dblm[2][3][3][N_BLOCKS]; // OK, set by [tid], read by [bid]
 __device__ double Blmat[3][3][N_BLOCKS];   // OK, set by [tid], read by [bid]
 
-__device__ double CUDA_scale[N_BLOCKS][POINTS_MAX + 1];   // OK [bid][tid]
-__device__ double ge[2][3][N_BLOCKS][POINTS_MAX + 1];     // OK [bid][tid]
-__device__ double gde[2][3][3][N_BLOCKS][POINTS_MAX + 1]; // OK [bid][tid]
-__device__ double jp_dphp[3][N_BLOCKS][POINTS_MAX + 1];   // OK [bid][tid]
+//__device__ double CUDA_scale[N_BLOCKS][POINTS_MAX + 1];   // OK [bid][tid]
+//__device__ double ge[2][3][N_BLOCKS][POINTS_MAX + 1];     // OK [bid][tid]
+//__device__ double gde[2][3][3][N_BLOCKS][POINTS_MAX + 1]; // OK [bid][tid]
+//__device__ double jp_dphp[3][N_BLOCKS][POINTS_MAX + 1];   // OK [bid][tid]
 
 __device__ double dave[N_BLOCKS][MAX_N_PAR + 1];
 __device__ double atry[N_BLOCKS][MAX_N_PAR + 1];
@@ -322,571 +322,30 @@ __device__ void __forceinline__ mrqmin_2_end(freq_context * __restrict__ CUDA_LC
 //MRQMIN ENDS
 
 
-// BRIGHT
-__device__ void __forceinline__ matrix_neo(freq_context * __restrict__ CUDA_LCC, double const * __restrict__ cg, int lnp1, int Lpoints, int bid)
-{
-  __shared__ double nc00s[4];
-  __shared__ double nc01s[4];
-  __shared__ double nc02s[4];
-  __shared__ double nc03s[4];
-  __shared__ double nc02rs[4];
-  __shared__ double phi0s[4];
-  __shared__ double nc02r2s[4];
-
-  int lnp, jp;
-  int blockidx = bid;
-
-  jp = threadIdx.x + 1;
-  double nc02r, phi0, nc02r2;
-  double nc00, nc01, nc03;
-  if(threadIdx.x == 0)
-    {
-      nc02s[threadIdx.y] = cg[CUDA_ncoef0 + 2];
-      nc03s[threadIdx.y] = cg[CUDA_ncoef0 + 3];
-      nc00s[threadIdx.y] = cg[CUDA_ncoef0 + 0];
-      nc01s[threadIdx.y] = cg[CUDA_ncoef0 + 1];
-      
-      nc02r = nc02rs[threadIdx.y]  = __drcp_rn(nc02s[threadIdx.y]);
-      phi0s[threadIdx.y]   = CUDA_Phi_0;
-      nc02r2s[threadIdx.y] = nc02r * nc02r;
-    }
-  __syncwarp();
-
-#pragma unroll 1
-  while(jp <= Lpoints)
-    {
-      double f, cf, sf, pom, pom0, alpha;
-      double ee_1, ee_2, ee_3, ee0_1, ee0_2, ee0_3, t, tmat1, tmat2, tmat3;
-
-      lnp = lnp1 + jp;
-  
-      ee_1  = CUDA_ee[0][lnp];// position vectors
-      ee0_1 = CUDA_ee0[0][lnp];
-      ee_2  = CUDA_ee[1][lnp];
-      ee0_2 = CUDA_ee0[1][lnp];
-      ee_3  = CUDA_ee[2][lnp];
-      ee0_3 = CUDA_ee0[2][lnp];
-      t = CUDA_tim[lnp];
-      
-      alpha = acos(((ee_1 * ee0_1) + ee_2 * ee0_2) + ee_3 * ee0_3);
-      nc00 = nc00s[threadIdx.y];
-      phi0 = phi0s[threadIdx.y];
-      f = nc00 * t + phi0;
-       
-      /* Exp-lin model (const.term=1.) */
-      nc02r = nc02rs[threadIdx.y];
-      double ff = exp2(-1.44269504088896 * (alpha * nc02r));
-
-      /* fmod may give little different results than Mikko's */
-      f = f - 2.0 * PI * round(f * (1.0 / (2.0 * PI))); //3:41.9
-
-      nc01 = nc01s[threadIdx.y];
-      nc03 = nc03s[threadIdx.y];
-      nc02r2 = nc02r2s[threadIdx.y];
-
-      double scale = 1.0 + nc01 * ff + nc03 * alpha;
-      double d2 =  nc01 * ff * alpha * nc02r2;
-      
-      //  matrix start
-
-      __builtin_assume(f > (-2.0 * PI) && f < (2.0 * PI));
-      sincos(f, &sf, &cf);
-      
-      CUDA_scale[blockidx][jp] = scale;
-      
-      jp_dphp[0][blockidx][jp] = ff;
-      jp_dphp[1][blockidx][jp] = d2;
-      jp_dphp[2][blockidx][jp] = alpha;
-      
-      /* rotation matrix, Z axis, angle f */
-      
-      double Blmat00 = __ldg(&Blmat[0][0][blockidx]);
-      double Blmat10 = __ldg(&Blmat[1][0][blockidx]);
-      double Blmat01 = __ldg(&Blmat[0][1][blockidx]);
-      double Blmat11 = __ldg(&Blmat[1][1][blockidx]);
-      double Blmat02 = __ldg(&Blmat[0][2][blockidx]);
-
-      tmat1 = cf * Blmat00;
-      tmat2 = cf * Blmat01;
-      tmat3 = cf * Blmat02;
-      tmat1 += sf * Blmat10;
-      tmat2 += sf * Blmat11; 
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      double pom1 = pom;
-      double pom1_0 = pom0;
-      double pom1_t = -t * pom;
-      double pom1_t0 = -t * pom0;
-      ge[0][0][blockidx][jp] = pom1;
-      ge[1][0][blockidx][jp] = pom1_0;
-      gde[0][1][2][blockidx][jp] = pom1_t;
-      gde[1][1][2][blockidx][jp] = pom1_t0;
-
-      double msf = -sf;
-      
-      tmat1 = msf * Blmat00;
-      tmat2 = msf * Blmat01;
-      tmat3 = msf * Blmat02;
-      tmat1 += cf * Blmat10;
-      tmat2 += cf * Blmat11;
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      double pom2 = pom;
-      double pom2_0 = pom0;
-      double pom2_t = t * pom;
-      double pom2_t0 = t * pom0;
-      ge[0][1][blockidx][jp] = pom2;
-      ge[1][1][blockidx][jp] = pom2_0;
-      gde[0][0][2][blockidx][jp] = pom2_t; 
-      gde[1][0][2][blockidx][jp] = pom2_t0;
-      
-      tmat1 = __ldg(&Blmat[2][0][blockidx]);
-      tmat2 = __ldg(&Blmat[2][1][blockidx]);
-      tmat3 = __ldg(&Blmat[2][2][blockidx]);
-      
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      
-      double Dblm000 = __ldg(&Dblm[0][0][0][blockidx]);
-      double Dblm001 = __ldg(&Dblm[0][0][1][blockidx]);
-      double Dblm002 = __ldg(&Dblm[0][0][2][blockidx]);
-      
-      ge[0][2][blockidx][jp] = pom;
-      ge[1][2][blockidx][jp] = pom0;
-
-      tmat1 = cf * Dblm000; 
-      tmat2 = cf * Dblm001; 
-      tmat3 = cf * Dblm002;
-      
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      gde[0][0][0][blockidx][jp] = pom;
-      gde[1][0][0][blockidx][jp] = pom0;
-
-      tmat1 = msf * Dblm000; 
-      tmat2 = msf * Dblm001; 
-      tmat3 = msf * Dblm002; 
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      
-      double Dblm100 = __ldg(&Dblm[1][0][0][blockidx]);
-      double Dblm101 = __ldg(&Dblm[1][0][1][blockidx]);
-      double Dblm110 = __ldg(&Dblm[1][1][0][blockidx]);
-      double Dblm111 = __ldg(&Dblm[1][1][1][blockidx]); 
-      
-      gde[0][1][0][blockidx][jp] = pom;
-      gde[1][1][0][blockidx][jp] = pom0;
-      
-      tmat1 = cf * Dblm100;
-      tmat2 = cf * Dblm101;
-      tmat1 += sf * Dblm110; 
-      tmat2 += sf * Dblm111;
-      
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      
-      tmat1 = msf * Dblm100 + cf * Dblm110; 
-      tmat2 = msf * Dblm101 + cf * Dblm111;
-      
-      gde[0][0][1][blockidx][jp] = pom; 
-      gde[1][0][1][blockidx][jp] = pom0; 
-
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-
-      double Dblm020 = __ldg(&Dblm[0][2][0][blockidx]);
-      double Dblm021 = __ldg(&Dblm[0][2][1][blockidx]);
-      double Dblm022 = __ldg(&Dblm[0][2][2][blockidx]);
-
-      gde[0][1][1][blockidx][jp] = pom; 
-      gde[1][1][1][blockidx][jp] = pom0; 
-      
-      tmat1 = Dblm020;
-      tmat2 = Dblm021;
-      tmat3 = Dblm022;
-      
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      pom  += tmat3 * ee_3;
-      pom0 += tmat3 * ee0_3;
-      
-      double Dblm120 = __ldg(&Dblm[1][2][0][blockidx]); 
-      double Dblm121 = __ldg(&Dblm[1][2][1][blockidx]);
-      
-      gde[0][2][0][blockidx][jp] = pom;
-      gde[1][2][0][blockidx][jp] = pom0;
-
-      tmat1 = Dblm120;
-      tmat2 = Dblm121;
-
-      pom  = tmat1 * ee_1;
-      pom0 = tmat1 * ee0_1;
-      pom  += tmat2 * ee_2;
-      pom0 += tmat2 * ee0_2;
-      
-      //gde[0][2][2][blockidx][jp] = 0; 
-      //gde[1][2][2][blockidx][jp] = 0;
-      
-      gde[0][2][1][blockidx][jp] = pom; 
-      gde[1][2][1][blockidx][jp] = pom0; 
-
-      jp += CUDA_BLOCK_DIM;
-    }
-  __syncwarp();
-}
-
-
-
-__device__ double __forceinline__ bright(freq_context * __restrict__ CUDA_LCC,
-					 double * __restrict__ cg,
-					 int jp /*threadIdx, ok!*/, int Lpoints1, int Inrel)
-{
-  int ncoef0, ncoef, incl_count = 0;
-  int i, j, blockidx = blockIdx();
-  double cl, cls, dnom, s, Scale;
-  double e_1, e_2, e_3, e0_1, e0_2, e0_3;
-  double de[3][3], de0[3][3];
-  
-  ncoef0 = CUDA_ncoef0;//ncoef - 2 - CUDA_Nphpar;
-  ncoef = CUDA_ma;
-  cl = exp(cg[ncoef-1]); /* Lambert */
-  cls = cg[ncoef];       /* Lommel-Seeliger */
-
-  /* matrix from neo */
-  /* derivatives */
-
-  e_1 = __ldg(&ge[0][0][blockidx][jp]);
-  e_2 = __ldg(&ge[0][1][blockidx][jp]);
-  e_3 = __ldg(&ge[0][2][blockidx][jp]);
-  e0_1 = __ldg(&ge[1][0][blockidx][jp]);
-  e0_2 = __ldg(&ge[1][1][blockidx][jp]);
-  e0_3 = __ldg(&ge[1][2][blockidx][jp]);
-  
-  de[0][0] = __ldg(&gde[0][0][0][blockidx][jp]);
-  de[0][1] = __ldg(&gde[0][0][1][blockidx][jp]);
-  de[0][2] = __ldg(&gde[0][0][2][blockidx][jp]);
-  de[1][0] = __ldg(&gde[0][1][0][blockidx][jp]);
-  de[1][1] = __ldg(&gde[0][1][1][blockidx][jp]);
-  de[1][2] = __ldg(&gde[0][1][2][blockidx][jp]);
-  de[2][0] = __ldg(&gde[0][2][0][blockidx][jp]);
-  de[2][1] = __ldg(&gde[0][2][1][blockidx][jp]);
-  de[2][2] = 0; //CUDA_LCC->de[2][2][jp];
-  
-  de0[0][0] = __ldg(&gde[1][0][0][blockidx][jp]);
-  de0[0][1] = __ldg(&gde[1][0][1][blockidx][jp]);
-  de0[0][2] = __ldg(&gde[1][0][2][blockidx][jp]);
-  de0[1][0] = __ldg(&gde[1][1][0][blockidx][jp]);
-  de0[1][1] = __ldg(&gde[1][1][1][blockidx][jp]);
-  de0[1][2] = __ldg(&gde[1][1][2][blockidx][jp]);
-  de0[2][0] = __ldg(&gde[1][2][0][blockidx][jp]);
-  de0[2][1] = __ldg(&gde[1][2][1][blockidx][jp]);
-  de0[2][2] = 0; //CUDA_LCC->de0[2][2][jp];
-
-  /* Directions (and ders.) in the rotating system */
-
-  //
-  /*Integrated brightness (phase coeff. used later) */
-  double lmu, lmu0, dsmu, dsmu0, sum1, sum10, sum2, sum20, sum3, sum30;
-  double br, ar, tmp1, tmp2, tmp3, tmp4, tmp5;
-  //   short int *incl=&CUDA_LCC->incl[threadIdx.x*MAX_N_FAC];
-  //   double *dbr=&CUDA_LCC->dbr[threadIdx.x*MAX_N_FAC];
-  
-  short int incl[MAX_N_FAC];
-  double dbr[MAX_N_FAC];
-  //int2 bfr;
-  int nf = CUDA_Numfac, nf1 = CUDA_Numfac1;
-  
-  int bid = blockidx;
-  br   = 0;
-  tmp1 = 0;
-  tmp2 = 0;
-  tmp3 = 0;
-  tmp4 = 0;
-  tmp5 = 0;
-  j = bid * nf1 + 1;
-  double const * __restrict__ norp0;
-  double const * __restrict__ norp1;
-  double const * __restrict__ norp2;
-  double const * __restrict__ areap;
-  double const * __restrict__ dareap; 
-  norp0 = CUDA_Nor[0];
-  norp1 = CUDA_Nor[1];
-  norp2 = CUDA_Nor[2];
-  //areap = CUDA_Area;
-  areap = &(Areag[bid][0]);
-  dareap = CUDA_Darea;
-  
-#pragma unroll 1
-  for(i = 1; i <= nf && i <= MAX_N_FAC; i++, j++)
-    {
-      double n0 = norp0[i], n1 = norp1[i], n2 = norp2[i];
-      lmu  = e_1  * n0 + e_2  * n1 + e_3  * n2;
-      lmu0 = e0_1 * n0 + e0_2 * n1 + e0_3 * n2;
-      //if((lmu > TINY) && (lmu0 > TINY))
-      //{	
-      if((lmu <= TINY) || (lmu0 <= TINY))
-	continue;     
-      dnom = lmu + lmu0;
-      ar = __ldca(&areap[i]);
-
-      double dnom_1 = __drcp_rn(dnom);
-
-      s = lmu * lmu0 * (cl + cls * dnom_1);
-      double lmu0_dnom = lmu0 * dnom_1;
-      
-      br += ar * s;
-      //
-      dbr[incl_count] = __ldca(&dareap[i]) * s;
-      incl[incl_count] = i;
-      incl_count++;
-      
-      double lmu_dnom = lmu * dnom_1;
-      dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-      dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
-      //	  double n0 = CUDA_Nor[0][i], n1 = CUDA_Nor[1][i], n2 = CUDA_Nor[2][i]; 
-      
-      sum1  = n0 * de[0][0]  + n1 * de[1][0]  + n2 * de[2][0];
-      sum10 = n0 * de0[0][0] + n1 * de0[1][0] + n2 * de0[2][0];
-      sum2  = n0 * de[0][1]  + n1 * de[1][1]  + n2 * de[2][1];
-      sum20 = n0 * de0[0][1] + n1 * de0[1][1] + n2 * de0[2][1];
-      sum3  = n0 * de[0][2]  + n1 * de[1][2]; // + n2 * de[2][2];
-      sum30 = n0 * de0[0][2] + n1 * de0[1][2]; // + n2 * de0[2][2];
-      
-      tmp1 += ar * (dsmu * sum1 + dsmu0 * sum10);
-      tmp2 += ar * (dsmu * sum2 + dsmu0 * sum20);
-      tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
-      
-      tmp4 += ar * lmu * lmu0;
-      tmp5 += ar * lmu * lmu0 * dnom_1; //lmu0 * __drcp_rn(lmu + lmu0);
-      //}
-    }
-  
-  //Scale = CUDA_LCC->jp_Scale[jp];
-  Scale = __ldg(&CUDA_scale[bid][jp]); 
-  i = jp + (ncoef0 - 3 + 1) * Lpoints1;
-
-  double * __restrict__ dytempp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
-
-  /* Ders. of brightness w.r.t. rotation parameters */
-  dytempp[i] = Scale * tmp1;
-  i += Lpoints1;
-  dytempp[i] = Scale * tmp2;
-  i += Lpoints1;
-  dytempp[i] = Scale * tmp3;
-  i += Lpoints1;
-  
-  /* Ders. of br. w.r.t. phase function params. */
-  dytempp[i] = br * __ldg(&jp_dphp[0][bid][jp]); 
-  i += Lpoints1;
-  dytempp[i] = br * __ldg(&jp_dphp[1][bid][jp]); 
-  i += Lpoints1;
-  dytempp[i] = br * __ldg(&jp_dphp[2][bid][jp]); 
-
-  /* Ders. of br. w.r.t. cl, cls */
-  dytempp[jp + (ncoef) * (Lpoints1) - Lpoints1] = Scale * tmp4 * cl;
-  dytempp[jp + (ncoef) * (Lpoints1)] = Scale * tmp5;
-  
-  /* Scaled brightness */
-  ytemp[jp] = br * Scale;
-
-  ncoef0 -= 3;
-  int m, m1, mr, iStart;
-  int d, d1, dr;
-  
-  iStart = Inrel + 1;
-  m = bid * CUDA_Dg_block + iStart * nf1;
-  d = jp + (Lpoints1 << Inrel);
-  
-  m1 = m + nf1;
-  mr = 2 * nf1;
-  d1 = d + Lpoints1;
-  dr = 2 * Lpoints1;
-  
-  /* Derivatives of brightness w.r.t. g-coeffs */
-  if(incl_count)
-    {
-      double const *__restrict__ pCUDA_Dg  = CUDA_Dg + m;
-      double const *__restrict__ pCUDA_Dg1 = CUDA_Dg + m1;
-
-#pragma unroll 1
-      for(i = iStart; i <= ncoef0; i += 2, /*m += mr, m1 += mr,*/ d += dr, d1 += dr)
-	{
-	  double tmp = 0, tmp1 = 0;
-
-	  if((i + 1) <= ncoef0)
-	    {
-#pragma unroll 2
-	      for(j = 0; j < incl_count - (UNRL - 1); j += UNRL)
-		{
-		  double l_dbr[UNRL], l_tmp[UNRL], l_tmp1[UNRL];
-		  int l_incl[UNRL], ii;
-		  
-		  for(ii = 0; ii < UNRL; ii++)
-		    {
-		      l_incl[ii] = incl[j + ii];
-		      l_dbr[ii]  = dbr[j + ii];
-		    }
-		  for(ii = 0; ii < UNRL; ii++)
-		    { 
-		      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
-		      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
-		    }
-		  for(ii = 0; ii < UNRL; ii++)
-		    {
-		      double qq = l_dbr[ii];
-		      tmp  += qq * l_tmp[ii];
-		      tmp1 += qq * l_tmp1[ii];
-		    }
-		}
-#pragma unroll 3
-	      for(; j < incl_count; j++)
-		{
-		  int l_incl = incl[j];
-		  double l_dbr = dbr[j];
-		  double v1 = pCUDA_Dg[l_incl];
-		  double v2 = pCUDA_Dg1[l_incl];
-		  
-		  tmp  += l_dbr * v1;
-		  tmp1 += l_dbr * v2;
-		}
-	      __stwb(&dytempp[d], Scale * tmp);
-	      __stwb(&dytempp[d1], Scale * tmp1);
-	    }
-	  else
-	    {
-#pragma unroll 2
-	      for(j = 0; j < incl_count - (UNRL - 1); j += UNRL)
-		{
-		  double l_dbr[UNRL], l_tmp[UNRL];
-		  int l_incl[UNRL], ii;
-		  
-		  for(ii = 0; ii < UNRL; ii++)
-		    {
-		      l_incl[ii] = incl[j + ii];
-		    }
-		  
-		  for(ii = 0; ii < UNRL; ii++)
-		    {
-		      l_dbr[ii]  = dbr[j + ii];
-		      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]];
-		    }
-		  
-		  for(ii = 0; ii < UNRL; ii++)
-		    tmp += l_dbr[ii] * l_tmp[ii];
-		}
-#pragma unroll 3
-	      for( ; j < incl_count; j++)
-		{
-		  int l_incl = incl[j];
-		  double l_dbr = dbr[j];
-		  
-		  tmp += l_dbr * pCUDA_Dg[l_incl];
-		}
-	      __stwb(&dytempp[d], Scale * tmp);
-	    }
-	  pCUDA_Dg  += mr;
-	  pCUDA_Dg1 += mr;
-	}
-    }
-  else
-    {
-      double * __restrict__ p = dytempp + d;
-#pragma unroll 
-      for(i = 1; i <= ncoef0 - (UNRL - 1); i += UNRL)
-	for(int t = 0; t < UNRL; t++, p += Lpoints1)
-	  __stwb(p, 0.0);
-#pragma unroll       
-      for(; i <= ncoef0; i++, p += Lpoints1)
-	__stwb(p, 0.0);
-    }
-
-  return(0);
-}
-
-
-
-// BRIGHT ends
 
 // COF
 __device__ void __forceinline__ blmatrix(double bet, double lam, int tid)
 {
-  double cb, sb, cl, sl, cbcl, cbsl, sbcl, sbsl, nsb, ncb, nsl, ncl;
+  double cb, sb, cl, sl, cbcl, cbsl, sbcl, sbsl;
   //__builtin_assume(bet > (-2.0 * PI) && bet < (2.0 * PI));
   sincos(bet, &sb, &cb);
 
   //__builtin_assume(lam > (-2.0 * PI) && lam < (2.0 * PI));
   sincos(lam, &sl, &cl);
 
-  nsb  = -sb;
-  ncb  = -cb;
   cbcl = cb * cl;
   cbsl = cb * sl;
-  nsl  = -sl;
+  sbcl = sb * cl;
+  sbsl = sb * sl;
 
   Blmat[1][1][tid]   = cl;
   Blmat[2][2][tid]   = cb;
   Blmat[0][0][tid]   = cbcl; 
-  Dblm[0][2][0][tid] = cbcl;
-  Dblm[1][0][1][tid] = cbcl;
   Blmat[0][1][tid]   = cbsl;
-  Dblm[0][2][1][tid] = cbsl;
-  Dblm[1][0][0][tid] = -cbsl;
-  Blmat[0][2][tid]   = nsb;
-  Dblm[0][2][2][tid] = nsb;
-  Blmat[1][0][tid]   = nsl;
-  Dblm[1][1][1][tid] = nsl;
-  Blmat[1][2][tid] = 0;
-
-  sbcl = sb * cl;
-  sbsl = sb * sl;
-  ncl  = -cl;
-  double nsbcl = -sbcl;
-  double nsbsl = -sbsl;
-  
+  Blmat[0][2][tid]   = -sb;
+  Blmat[1][0][tid]   = -sl;
   Blmat[2][0][tid]   = sbcl;
-  Dblm[1][2][1][tid] = sbcl;
-  Dblm[0][0][0][tid] = nsbcl;
   Blmat[2][1][tid]   = sbsl;
-  Dblm[0][0][1][tid] = nsbsl;
-  Dblm[1][2][0][tid] = nsbsl;
-  Dblm[1][1][0][tid] = ncl;
-  Dblm[0][0][2][tid] = ncb;
-  
-  // Ders. of Blmat w.r.t. bet 
-  Dblm[0][1][0][tid] = 0;
-  Dblm[0][1][1][tid] = 0;
-  Dblm[0][1][2][tid] = 0;
-  
-  // Ders. w.r.t. lam 
-  Dblm[1][0][2][tid] = 0;
-  Dblm[1][1][2][tid] = 0;
-  Dblm[1][2][2][tid] = 0;
 }
 
 
@@ -1049,41 +508,670 @@ __device__ double __forceinline__ mrqcof_end(freq_context * __restrict__ CUDA_LC
 
 
 
-__device__ void __forceinline__ mrqcof_matrix(freq_context * __restrict__ CUDA_LCC,
-					      double * __restrict__ a,
-					      int Lpoints, int bid)
-{
-  matrix_neo(CUDA_LCC, a, npg[bid], Lpoints, bid);
-}
-
-
 
 // 47%
 __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_LCC,
 					      double * __restrict__ a,
 					      int Inrel, int Lpoints, int bid)
 {
+  __shared__ double nc00s[4];
+  __shared__ double nc01s[4];
+  __shared__ double nc02s[4];
+  __shared__ double nc03s[4];
+  __shared__ double nc02rs[4];
+  __shared__ double phi0s[4];
+  __shared__ double nc02r2s[4];
+  double nc02r, phi0, nc02r2;
+  double nc00, nc01, nc03;
+
   int lnp, Lpoints1 = Lpoints + 1;
   double lave = 0;
 
   int n = threadIdx.x;
   if(Inrel == 1)
     {
+      int lnp, lnp1, jp;
+      int blockidx = bid;
+      lnp1 = npg[bid];
+      if(threadIdx.x == 0)
+	{
+	  nc02s[threadIdx.y] = a[CUDA_ncoef0 + 2];
+	  nc03s[threadIdx.y] = a[CUDA_ncoef0 + 3];
+	  nc00s[threadIdx.y] = a[CUDA_ncoef0 + 0];
+	  nc01s[threadIdx.y] = a[CUDA_ncoef0 + 1];
+
+	  nc02r = nc02rs[threadIdx.y]  = __drcp_rn(nc02s[threadIdx.y]);
+	  phi0s[threadIdx.y]   = CUDA_Phi_0;
+	  nc02r2s[threadIdx.y] = nc02r * nc02r;
+	}
+      __syncwarp();
+
+      double Blmat00 = __ldg(&Blmat[0][0][blockidx]);
+      double Blmat01 = __ldg(&Blmat[0][1][blockidx]);
+      double Blmat02 = __ldg(&Blmat[0][2][blockidx]);
+      double Blmat10 = __ldg(&Blmat[1][0][blockidx]);
+      double Blmat11 = __ldg(&Blmat[1][1][blockidx]);
+
+      double Blmat20 = __ldg(&Blmat[2][0][blockidx]);
+ 
 #pragma unroll 1
       while(n <= Lpoints) 
 	{
-	  bright(CUDA_LCC, a, n, Lpoints1, 1); // jp <-- n, OK, consecutive
+	  jp = n;
+	  double f, cf, sf, alpha;
+	  double ee_1, ee_2, ee_3, ee0_1, ee0_2, ee0_3, t; //, tmat1, tmat2, tmat3;
+
+	  lnp = lnp1 + jp;
+
+	  ee_1  = CUDA_ee[0][lnp];// position vectors
+	  ee0_1 = CUDA_ee0[0][lnp];
+	  ee_2  = CUDA_ee[1][lnp];
+	  ee0_2 = CUDA_ee0[1][lnp];
+	  ee_3  = CUDA_ee[2][lnp];
+	  ee0_3 = CUDA_ee0[2][lnp];
+	  t = CUDA_tim[lnp];
+
+	  alpha = acos(((ee_1 * ee0_1) + ee_2 * ee0_2) + ee_3 * ee0_3);
+	  nc00 = nc00s[threadIdx.y];
+	  phi0 = phi0s[threadIdx.y];
+	  f = nc00 * t + phi0;
+
+	  /* Exp-lin model (const.term=1.) */
+	  nc02r = nc02rs[threadIdx.y];
+	  double ff = exp2(-1.44269504088896 * (alpha * nc02r));
+
+	  /* fmod may give little different results than Mikko's */
+	  f = f - 2.0 * PI * round(f * (1.0 / (2.0 * PI))); //3:41.9
+
+	  nc01 = nc01s[threadIdx.y];
+	  nc03 = nc03s[threadIdx.y];
+	  nc02r2 = nc02r2s[threadIdx.y];
+
+	  double scale = 1.0 + nc01 * ff + nc03 * alpha;
+	  double d2 =  nc01 * ff * alpha * nc02r2;
+
+	  //  matrix start
+
+	  __builtin_assume(f > (-2.0 * PI) && f < (2.0 * PI));
+	  sincos(f, &sf, &cf);
+
+	  double msf = -sf;
+	  double cbl00 = cf * Blmat00;
+	  double sbl10 = sf * Blmat10;
+	  double cbl10 = cf * Blmat10;
+	  double sbl11 = sf * Blmat11;
+	  double cbl11 = cf * Blmat11;
+	  double cbl01 = cf * Blmat01;
+	  double sbl00 = msf * Blmat00;
+	  double sbl01 = msf * Blmat01;
+
+	  double gde020 = Blmat00 * ee_1;
+	  double gde120 = Blmat00 * ee0_1;
+
+	  double tmat41 = -cbl01 - sbl11;
+	  double tmat51 = -sbl01 - cbl11;
+	  double tmat42 = cbl00 + sbl10;
+	  double tmat52 = sbl00 + cbl10;
+
+	  gde020 += Blmat01 * ee_2;
+	  gde120 += Blmat01 * ee0_2;
+
+	  double gde001 = tmat41 * ee_1;
+	  double gde101 = tmat41 * ee0_1;
+	  double gde011 = tmat51 * ee_1;
+	  double gde111 = tmat51 * ee0_1;
+
+	  gde001 += tmat42 * ee_2;
+	  gde101 += tmat42 * ee0_2;
+	  gde011 += tmat52 * ee_2;
+	  gde111 += tmat52 * ee0_2;
+
+	  gde020 += Blmat02 * ee_3;
+	  gde120 += Blmat02 * ee0_3;
+
+	  double tmat01 = cbl00 + sbl10;
+	  double tmat11 = sbl00 + cbl10;
+	  double tmat02 = cbl01 + sbl11;
+	  double tmat12 = sbl01 + cbl11;
+	  double tmat03 = cf  * Blmat02;
+	  double tmat13 = msf * Blmat02;
+
+	  double ge00 = tmat01 * ee_1;
+	  double ge10 = tmat01 * ee0_1;
+	  double ge01 = tmat11 * ee_1;
+	  double ge11 = tmat11 * ee0_1;
+
+	  ge00 += tmat02 * ee_2;
+	  ge10 += tmat02 * ee0_2;
+	  ge01 += tmat12 * ee_2;
+	  ge11 += tmat12 * ee0_2;
+
+	  ge00 += tmat03 * ee_3;
+	  ge10 += tmat03 * ee0_3;
+	  ge01 += tmat13 * ee_3;
+	  ge11 += tmat13 * ee0_3;
+
+	  double Blmat21 = __ldg(&Blmat[2][1][blockidx]);
+	  double gde002 = t * ge01;
+	  double gde102 = t * ge11;
+	  double gde012 = -t * ge00;
+	  double gde112 = -t * ge10;
+
+	  double Blmat22 = __ldg(&Blmat[2][2][blockidx]);
+	  double ge02 = Blmat20 * ee_1;
+	  double ge12 = Blmat20 * ee0_1;
+	  double gde021 = -Blmat21 * ee_1;
+	  double gde121 = -Blmat21 * ee0_1;
+
+	  double tmat31 = sf * Blmat20; 
+	  double tmat32 = sf * Blmat21; 
+	  double tmat33 = sf * Blmat22; 
+	  double tmat21 = cf * -Blmat20; 
+	  double tmat22 = cf * -Blmat21;  
+	  double tmat23 = cf * -Blmat22;
+
+	  ge02 += Blmat21 * ee_2;
+	  ge12 += Blmat21 * ee0_2;
+	  gde021 += Blmat20 * ee_2;
+	  gde121 += Blmat20 * ee0_2;
+
+	  double gde000 = tmat21 * ee_1;
+	  double gde100 = tmat21 * ee0_1;
+	  double gde010 = tmat31 * ee_1;
+	  double gde110 = tmat31 * ee0_1;
+
+	  ge02 += Blmat22 * ee_3;
+	  ge12 += Blmat22 * ee0_3;
+
+	  gde000 += tmat22 * ee_2;
+	  gde100 += tmat22 * ee0_2;
+	  gde010 += tmat32 * ee_2;
+	  gde110 += tmat32 * ee0_2;
+
+	  gde000 += tmat23 * ee_3;
+	  gde100 += tmat23 * ee0_3;
+	  gde010 += tmat33 * ee_3;
+	  gde110 += tmat33 * ee0_3;
+      
+	  //bright(CUDA_LCC, a, n, Lpoints1, 1); // jp <-- n, OK, consecutive
+	  int ncoef0, ncoef, incl_count = 0;
+	  int i, j; //, blockidx = blockIdx();
+	  double cl, cls, dnom, s; //, Scale;
+	  //double e_3, e0_1, e0_2, e0_3;
+	  //double de[3][3], de0[3][3];
+
+	  ncoef0 = CUDA_ncoef0;//ncoef - 2 - CUDA_Nphpar;
+	  ncoef = CUDA_ma;
+	  cl = exp(a[ncoef-1]); /* Lambert */
+	  cls = a[ncoef];       /* Lommel-Seeliger */
+
+
+	  /*Integrated brightness (phase coeff. used later) */
+	  double lmu, lmu0, dsmu, dsmu0, sum1, sum10, sum2, sum20, sum3, sum30;
+	  double br, ar, tmp1, tmp2, tmp3, tmp4, tmp5;
+
+	  short int incl[MAX_N_FAC];
+	  double dbr[MAX_N_FAC];
+
+	  //int2 bfr;
+	  int nf = CUDA_Numfac, nf1 = CUDA_Numfac1;
+
+	  int bid = blockidx;
+	  br   = 0;
+	  tmp1 = 0;
+	  tmp2 = 0;
+	  tmp3 = 0;
+	  tmp4 = 0;
+	  tmp5 = 0;
+	  j = bid * nf1 + 1;
+	  double const * __restrict__ norp0;
+	  double const * __restrict__ norp1;
+	  double const * __restrict__ norp2;
+	  double const * __restrict__ areap;
+	  double const * __restrict__ dareap; 
+	  norp0 = CUDA_Nor[0];
+	  norp1 = CUDA_Nor[1];
+	  norp2 = CUDA_Nor[2];
+	  //areap = CUDA_Area;
+	  areap = &(Areag[bid][0]);
+	  dareap = CUDA_Darea;
+
+#pragma unroll 1
+	  for(i = 1; i <= nf && i <= MAX_N_FAC; i++, j++)
+	    {
+	      double n0 = norp0[i], n1 = norp1[i], n2 = norp2[i];
+	      lmu  = ge00 * n0 + ge01 * n1 + ge02 * n2;
+	      lmu0 = ge10 * n0 + ge11 * n1 + ge12 * n2;
+	      //if((lmu > TINY) && (lmu0 > TINY))
+	      //{	
+	      if((lmu <= TINY) || (lmu0 <= TINY))
+		continue;     
+	      dnom = lmu + lmu0;
+	      ar = __ldca(&areap[i]);
+
+	      double dnom_1 = __drcp_rn(dnom);
+
+	      s = lmu * lmu0 * (cl + cls * dnom_1);
+	      double lmu0_dnom = lmu0 * dnom_1;
+
+	      br += ar * s;
+	      //
+	      dbr[incl_count] = __ldca(&dareap[i]) * s;
+	      incl[incl_count] = i;
+	      incl_count++;
+
+	      double lmu_dnom = lmu * dnom_1;
+	      dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
+	      dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
+	      //	  double n0 = CUDA_Nor[0][i], n1 = CUDA_Nor[1][i], n2 = CUDA_Nor[2][i]; 
+
+	      sum1  = n0 * gde000 + n1 * gde010 + n2 * gde020;
+	      sum10 = n0 * gde100 + n1 * gde110 + n2 * gde120;
+	      sum2  = n0 * gde001 + n1 * gde011 + n2 * gde021;
+	      sum20 = n0 * gde101 + n1 * gde111 + n2 * gde121;
+	      sum3  = n0 * gde002 + n1 * gde012; // + n2 * de[2][2];
+	      sum30 = n0 * gde102 + n1 * gde112; // + n2 * de0[2][2];
+
+	      tmp1 += ar * (dsmu * sum1 + dsmu0 * sum10);
+	      tmp2 += ar * (dsmu * sum2 + dsmu0 * sum20);
+	      tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
+
+	      tmp4 += ar * lmu * lmu0;
+	      tmp5 += ar * lmu * lmu0 * dnom_1; //lmu0 * __drcp_rn(lmu + lmu0);
+	      //}
+	    }
+
+	  //Scale = CUDA_LCC->jp_Scale[jp];
+	  //Scale = scale; //__ldg(&CUDA_scale[bid][jp]); 
+	  i = jp + (ncoef0 - 3 + 1) * Lpoints1;
+
+	  double * __restrict__ dytempp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
+
+	  /* Ders. of brightness w.r.t. rotation parameters */
+	  dytempp[i] = scale * tmp1;
+	  i += Lpoints1;
+	  dytempp[i] = scale * tmp2;
+	  i += Lpoints1;
+	  dytempp[i] = scale * tmp3;
+	  i += Lpoints1;
+
+	  /* Ders. of br. w.r.t. phase function params. */
+	  dytempp[i] = br * ff; //jp_dphp0; //__ldg(&jp_dphp[0][bid][jp]); 
+	  i += Lpoints1;
+	  dytempp[i] = br * d2; //jp_dphp1; //__ldg(&jp_dphp[1][bid][jp]); 
+	  i += Lpoints1;
+	  dytempp[i] = br * alpha; //jp_dphp2; //__ldg(&jp_dphp[2][bid][jp]); 
+
+	  /* Ders. of br. w.r.t. cl, cls */
+	  dytempp[jp + (ncoef) * (Lpoints1) - Lpoints1] = scale * tmp4 * cl;
+	  dytempp[jp + (ncoef) * (Lpoints1)] = scale * tmp5;
+
+	  /* Scaled brightness */
+	  ytemp[jp] = br * scale;
+
+	  ncoef0 -= 3;
+	  int m, m1, iStart;
+	  int d, d1, dr;
+
+	  //if(Inrel)
+	  //  {
+	  iStart = 2;
+	  m = bid * CUDA_Dg_block + 2 * nf1;
+	  d = jp + 2 * (Lpoints1);
+	  //  }
+	  //else
+	  //{
+	  //iStart = 1;
+	  //m = bid * CUDA_Dg_block + nf1;
+	  //d = jp + (Lpoints1);
+	  //}
+
+	  m1 = m + nf1;
+
+	  d1 = d + Lpoints1;
+	  dr = 4 * Lpoints1;
+
+	  /* Derivatives of brightness w.r.t. g-coeffs */
+	  if(incl_count)
+	    {
+	      double const *__restrict__ pCUDA_Dg  = CUDA_Dg + m;
+	      double const *__restrict__ pCUDA_Dg1 = CUDA_Dg + m1;
+	      double const *__restrict__ pCUDA_Dg2 = CUDA_Dg + m1 + nf1;
+	      double const *__restrict__ pCUDA_Dg3 = CUDA_Dg + m1 + 2 * nf1;
+
+#pragma unroll 1
+	      for(i = iStart; i <= ncoef0;)// i += 4, /*m += mr, m1 += mr,*/ d += dr, d1 += dr)
+		{
+		  double tmp = 0, tmp1 = 0, tmp2 = 0, tmp3 = 0;
+
+		  if((i + 3) <= ncoef0)
+		    {
+		      j = 0;
+
+#define UNRL16 16
+#pragma unroll 2
+		      for( ; j < incl_count - (UNRL16 - 1); j += UNRL16)
+			{
+			  double l_dbr[UNRL16], l_tmp[UNRL16], l_tmp1[UNRL16], l_tmp2[UNRL16], l_tmp3[UNRL16];
+			  int l_incl[UNRL16], ii;
+
+			  for(ii = 0; ii < UNRL16; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL16; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			      l_tmp2[ii] = pCUDA_Dg2[l_incl[ii]];
+			      l_tmp3[ii] = pCUDA_Dg3[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL16; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			      tmp2 += qq * l_tmp2[ii];
+			      tmp3 += qq * l_tmp3[ii];
+			    }
+			}
+
+#pragma unroll 2
+		      for( ; j < incl_count - (UNRL - 1); j += UNRL)
+			{
+			  double l_dbr[UNRL], l_tmp[UNRL], l_tmp1[UNRL], l_tmp2[UNRL], l_tmp3[UNRL];
+			  int l_incl[UNRL], ii;
+
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			      l_tmp2[ii] = pCUDA_Dg2[l_incl[ii]];
+			      l_tmp3[ii] = pCUDA_Dg3[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			      tmp2 += qq * l_tmp2[ii];
+			      tmp3 += qq * l_tmp3[ii];
+			    }
+			}
+#pragma unroll 3
+		      for( ; j < incl_count; j++)
+			{
+			  int l_incl = incl[j];
+			  double l_dbr = dbr[j];
+			  double v1 = pCUDA_Dg[l_incl];
+			  double v2 = pCUDA_Dg1[l_incl];
+			  double v3 = pCUDA_Dg2[l_incl];
+			  double v4 = pCUDA_Dg3[l_incl];
+
+			  tmp  += l_dbr * v1;
+			  tmp1 += l_dbr * v2;
+			  tmp2 += l_dbr * v3;
+			  tmp3 += l_dbr * v4;
+			}
+		      __stwb(&dytempp[d], scale * tmp);
+		      __stwb(&dytempp[d1], scale * tmp1);
+		      __stwb(&dytempp[d1 + Lpoints1], scale * tmp2);
+		      __stwb(&dytempp[d1 + 2 * Lpoints1], scale * tmp3);
+		      i += 4;
+		      d += dr;
+		      d1 += dr;
+		      pCUDA_Dg  += 4 * nf1;
+		      pCUDA_Dg1 += 4 * nf1;
+		      pCUDA_Dg2 += 4 * nf1;
+		      pCUDA_Dg3 += 4 * nf1;
+		    }
+		  else if((i + 2) <= ncoef0)
+		    {
+#define UNRL8 8
+#pragma unroll 2
+		      for(j = 0 ; j < incl_count - (UNRL8 - 1); j += UNRL8)
+			{
+			  double l_dbr[UNRL8], l_tmp[UNRL8], l_tmp1[UNRL8], l_tmp2[UNRL8];
+			  int l_incl[UNRL8], ii;
+
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL8; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			      l_tmp2[ii] = pCUDA_Dg2[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			      tmp2 += qq * l_tmp2[ii];
+			    }
+			}
+#pragma unroll 1
+		      for( ; j < incl_count - (UNRL - 1); j += UNRL)
+			{
+			  double l_dbr[UNRL], l_tmp[UNRL], l_tmp1[UNRL], l_tmp2[UNRL];
+			  int l_incl[UNRL], ii;
+
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			      l_tmp2[ii] = pCUDA_Dg2[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			      tmp2 += qq * l_tmp2[ii];
+			    }
+			}
+#pragma unroll 3
+		      for( ; j < incl_count; j++)
+			{
+			  int l_incl = incl[j];
+			  double l_dbr = dbr[j];
+			  double v1 = pCUDA_Dg[l_incl];
+			  double v2 = pCUDA_Dg1[l_incl];
+			  double v3 = pCUDA_Dg2[l_incl];
+
+			  tmp  += l_dbr * v1;
+			  tmp1 += l_dbr * v2;
+			  tmp2 += l_dbr * v3;
+			}
+		      __stwb(&dytempp[d], scale * tmp);
+		      __stwb(&dytempp[d1], scale * tmp1);
+		      __stwb(&dytempp[d1 + Lpoints1], scale * tmp2);
+		      i += 3;
+		      d += 3 * Lpoints1;
+		      d1 += 3 * Lpoints1;
+		      pCUDA_Dg  += 3 * nf1;
+		      pCUDA_Dg1 += 3 * nf1;
+		      pCUDA_Dg2 += 3 * nf1;
+		    }
+		  else if((i + 1) <= ncoef0)
+		    {
+#define UNRL8 8
+#pragma unroll 2
+		      for(j = 0 ; j < incl_count - (UNRL8 - 1); j += UNRL8)
+			{
+			  double l_dbr[UNRL8], l_tmp[UNRL8], l_tmp1[UNRL8];
+			  int l_incl[UNRL8], ii;
+
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL8; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			    }
+			}
+#pragma unroll 1
+		      for( ; j < incl_count - (UNRL - 1); j += UNRL)
+			{
+			  double l_dbr[UNRL], l_tmp[UNRL], l_tmp1[UNRL];
+			  int l_incl[UNRL], ii;
+
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    { 
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]]; 
+			      l_tmp1[ii] = pCUDA_Dg1[l_incl[ii]];
+			    }
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      double qq = l_dbr[ii];
+			      tmp  += qq * l_tmp[ii];
+			      tmp1 += qq * l_tmp1[ii];
+			    }
+			}
+#pragma unroll 3
+		      for( ; j < incl_count; j++)
+			{
+			  int l_incl = incl[j];
+			  double l_dbr = dbr[j];
+			  double v1 = pCUDA_Dg[l_incl];
+			  double v2 = pCUDA_Dg1[l_incl];
+
+			  tmp  += l_dbr * v1;
+			  tmp1 += l_dbr * v2;
+			}
+		      __stwb(&dytempp[d], scale * tmp);
+		      __stwb(&dytempp[d1], scale * tmp1);
+		      i += 2;
+		      d += 2 * Lpoints1;
+		      d1 += 2 * Lpoints1;
+		      pCUDA_Dg  += 2 * nf1;
+		      pCUDA_Dg1 += 2 * nf1;
+		    }
+		  else
+		    {
+#define UNRL8 8
+#pragma unroll 1
+		      for(j = 0; j < incl_count - (UNRL8 - 1); j += UNRL8)
+			{
+			  double l_dbr[UNRL8], l_tmp[UNRL8];
+			  int l_incl[UNRL8], ii;
+
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+
+			  for(ii = 0; ii < UNRL8; ii++)
+			    {
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]];
+			    }
+
+			  //for(ii = 0; ii < UNRL8; ii++)
+			  tmp  += l_dbr[0] * l_tmp[0];
+			  tmp1 += l_dbr[1] * l_tmp[1];
+			  tmp2 += l_dbr[2] * l_tmp[2];
+			  tmp3 += l_dbr[3] * l_tmp[3];
+			  tmp  += l_dbr[4] * l_tmp[4];
+			  tmp1 += l_dbr[5] * l_tmp[5];
+			  tmp2 += l_dbr[6] * l_tmp[6];
+			  tmp3 += l_dbr[7] * l_tmp[7];
+			}
+#pragma unroll 1
+		      for( ; j < incl_count - (UNRL - 1); j += UNRL)
+			{
+			  double l_dbr[UNRL], l_tmp[UNRL];
+			  int l_incl[UNRL], ii;
+
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      l_incl[ii] = incl[j + ii];
+			    }
+
+			  for(ii = 0; ii < UNRL; ii++)
+			    {
+			      l_dbr[ii]  = dbr[j + ii];
+			      l_tmp[ii]  = pCUDA_Dg[l_incl[ii]];
+			    }
+
+			  //for(ii = 0; ii < UNRL; ii++)
+			  //  tmp += l_dbr[ii] * l_tmp[ii];
+			  tmp  += l_dbr[0] * l_tmp[0];
+			  tmp1 += l_dbr[1] * l_tmp[1];
+			  tmp2 += l_dbr[2] * l_tmp[2];
+			  tmp3 += l_dbr[3] * l_tmp[3];
+			}
+		      tmp  += tmp1;
+		      tmp2 += tmp3;
+#pragma unroll 3
+		      for( ; j < incl_count; j++)
+			{
+			  int l_incl = incl[j];
+			  double l_dbr = dbr[j];
+
+			  tmp += l_dbr * pCUDA_Dg[l_incl];
+			}
+		      tmp += tmp2;
+		      __stwb(&dytempp[d], scale * tmp);
+		      i += 1;
+		      d += 1 * Lpoints1;
+		      //d1 += 1 * Lpoints1;
+		      pCUDA_Dg  += nf1;
+		      //pCUDA_Dg1 += nf1;
+		    }
+		}
+	    }
+	  else
+	    {
+	      double * __restrict__ p = dytempp + d;
+#pragma unroll 
+	      for(i = 1; i <= ncoef0 - (UNRL - 1); i += UNRL)
+		for(int t = 0; t < UNRL; t++, p += Lpoints1)
+		  __stwb(p, 0.0);
+#pragma unroll       
+	      for(; i <= ncoef0; i++, p += Lpoints1)
+		__stwb(p, 0.0);
+	    }
+
+
+
 	  n += CUDA_BLOCK_DIM;
 	}
     }
-  
-  int ma = CUDA_ma;
-  
-  __syncwarp();
-  double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
-  
+  //__syncwarp();
+
   if(Inrel == 1)
     {
+      int ma = CUDA_ma;
+      double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
       double const * __restrict__ pp = &(dytemp[2 * Lpoints1 + threadIdx.x + 1]); // good, consecutive
       int bid = blockIdx();
 #pragma unroll 1
@@ -1743,7 +1831,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CU
   
   __shared__ double dydat[4][N80];
   
-  __syncwarp(); // remove sync ?
+  //__syncwarp(); // remove sync ?
 
   if(threadIdx.x == 0)
     {
@@ -2102,7 +2190,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
   int mf1 = CUDA_mfit1;
   __shared__ double dyda[N80];
   
-  __syncwarp(); // remove
+  //__syncwarp(); // remove
 
   if(threadIdx.x == 0)
     {
@@ -3417,7 +3505,6 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA0(const int lpoints)
   if(!__ldg(&isAlamda[bid])) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
-  mrqcof_matrix(CUDA_LCC, cg, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, cg, 0, lpoints, bid);
   MrqcofCurve2I0IA0(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
 }
@@ -3439,7 +3526,6 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA1(const int lpoints)
   if(!__ldg(&isAlamda[bid])) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
-  mrqcof_matrix(CUDA_LCC, cg, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, cg, 0, lpoints, bid);
   MrqcofCurve2I0IA1(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
 }
@@ -3462,7 +3548,6 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA0(const int lpoints)
   if(!__ldg(&isAlamda[bid])) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
-  mrqcof_matrix(CUDA_LCC, cg, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, cg, 1, lpoints, bid);
   MrqcofCurve2I1IA0(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
 }
@@ -3484,7 +3569,6 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA1(const int lpoints)
   if(!__ldg(&isAlamda[bid])) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
-  mrqcof_matrix(CUDA_LCC, cg, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, cg, 1, lpoints, bid);
   MrqcofCurve2I1IA1(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
 }
@@ -3599,7 +3683,6 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA1(const int lpoints)
   if(!__ldg(&isNiter[bid])) return;
 
   double *atryp = atry[bid]; //CUDA_LCC->atry;
-  mrqcof_matrix(CUDA_LCC, atryp, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, atryp, 0, lpoints, bid);
   MrqcofCurve2I0IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3621,7 +3704,6 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA0(const int lpoints)
   if(!__ldg(&isNiter[bid])) return;
 
   double *atryp = atry[bid]; //CUDA_LCC->atry;
-  mrqcof_matrix(CUDA_LCC, atryp, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, atryp, 0, lpoints, bid);
   MrqcofCurve2I0IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3643,7 +3725,6 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA1(const int lpoints)
   if(!__ldg(&isNiter[bid])) return;
 
   double *atryp = atry[bid]; //CUDA_LCC->atry;
-  mrqcof_matrix(CUDA_LCC, atryp, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, atryp, 1, lpoints, bid);
   MrqcofCurve2I1IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3665,7 +3746,6 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA0(const int lpoints)
   if(!__ldg(&isNiter[bid])) return;
 
   double *atryp = atry[bid]; //CUDA_LCC->atry;
-  mrqcof_matrix(CUDA_LCC, atryp, lpoints, bid);
   mrqcof_curve1(CUDA_LCC, atryp, 1, lpoints, bid);
   MrqcofCurve2I1IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
