@@ -407,9 +407,9 @@ int main(int argc, char** argv) {
 		if (Inrel[i] == 0)
 			onlyrel = 0;
 
-		if (Lpoints[i] > POINTS_MAX)
+		if (Lpoints[i] > MAX_LC_POINTS)
 		{
-			fprintf(stderr, "\nError: Number of lc points is greater than POINTS_MAX = %d\n", POINTS_MAX); fflush(stderr); exit(2);
+			fprintf(stderr, "\nError: Number of lc points is greater than MAX_LC_POINTS = %d\n", MAX_LC_POINTS); fflush(stderr); exit(2);
 		}
 
 		/* loop over one lightcurve */
@@ -572,8 +572,8 @@ int main(int argc, char** argv) {
 
 		fprintf(stderr, "BOINC client version %d.%d.%d\n", aid.major_version, aid.minor_version, aid.release);
 
+int major, minor, build, revision;
 #if !defined __GNUC__ && defined _WIN32
-		int major, minor, build, revision;
 		TCHAR filepath[MAX_PATH]; // = getenv("_");
 		GetModuleFileName(nullptr, filepath, MAX_PATH);
 		auto filename = PathFindFileName(filepath);

@@ -13,7 +13,7 @@
 /* comment the following line if no YORP */
 /*#define YORP*/
 double xx1[4], xx2[4], dy, sig2i, wt, dyda[MAX_N_PAR + 1], ymod,
-ytemp[POINTS_MAX + 1], dytemp[POINTS_MAX + 1][MAX_N_PAR + 1],
+ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1],
 dave[MAX_N_PAR + 1],
 coef, ave = 0, trial_chisq, wght;
 
