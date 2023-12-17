@@ -1,33 +1,11 @@
-
-//#if !defined _WIN32
-//#define CL_TARGET_OPENCL_VERSION 110
-//#define CL_HPP_MINIMUM_OPENCL_VERSION 110
-//#define CL_HPP_TARGET_OPENCL_VERSION 110
-//#define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
-//#define CL_HPP_CL_1_1_DEFAULT_BUILD
-//// #define CL_API_SUFFIX__VERSION_1_0 CL_API_SUFFIX_COMMON
-//#define CL_BLOCKING 	CL_TRUE
-//#else // WIN32
-//#define CL_TARGET_OPENCL_VERSION 120
-//// #define CL_HPP_ENABLE_EXCEPTIONS
-//#define CL_HPP_MINIMUM_OPENCL_VERSION 120
-//#define CL_HPP_TARGET_OPENCL_VERSION 120
-//#define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
-//#define CL_HPP_CL_1_2_DEFAULT_BUILD
-//#define CL_HPP_ENABLE_EXCEPTIONS
-//typedef unsigned int uint;
-//#endif
-
 #include <string>
 #include <memory>
 #include <iostream>
 #include <string>
 
 #include <CL/cl.h>
-//#include "opencl_helper.h"
 #include "boinc_api.h"
 #include "Globals_OpenCl.h"
-//#include "ClStrategy.h"
 
 #ifndef STRATEGY
 #define STRATEGY
@@ -40,17 +18,21 @@
  */
 class clStrategy
 {
-public:
-    //clStrategy() {};
+protected:
 
-    virtual freq_result* CreateFreqResult(size_t frSize) const = 0;
-    virtual mfreq_context* CreateFreqContext(size_t pccSize) const = 0;
-    virtual cl_mem CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const = 0;
-    virtual void EnqueueMapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
-    virtual void EnqueueMapReadCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
-    virtual cl_int EnqueueMapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
-    virtual cl_int EnqueueUnmapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
-    virtual cl_int EnqueueUnmapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const = 0;
+public:
+    //template <typename T>
+    //T* CreateStruct(size_t size);
+
+    virtual freq_result* CreateFreqResult(size_t size) const = 0;
+    virtual freq_context* CreateFreqContext(size_t size) const = 0;
+    virtual mfreq_context* CreateMFreqContext(size_t size) const = 0;
+    virtual cl_mem CreateBufferCL(cl_context context, size_t size, void* ptr) const = 0;
+    virtual void EnqueueMapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const = 0;
+    virtual void EnqueueMapReadCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const = 0;
+    virtual cl_int EnqueueMapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const = 0;
+    virtual cl_int EnqueueUnmapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const = 0;
+    virtual cl_int EnqueueUnmapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const = 0;
 
     virtual ~clStrategy() = default;
 };
@@ -62,7 +44,6 @@ public:
 /**
  * The Context defines the interface of interest to clients.
  */
-
 class clStrategyContext
 {
     /**
@@ -86,6 +67,7 @@ public:
     explicit clStrategyContext(std::unique_ptr<clStrategy>&& clStrategy = {}) : clStrategy_(std::move(clStrategy))
     {
     }
+
     /**
      * Usually, the Context allows replacing a Strategy object at runtime.
      */
@@ -93,49 +75,35 @@ public:
     {
         clStrategy_ = std::move(clStrategy);
     }
+
     /**
      * The Context delegates some work to the Strategy object instead of
      * implementing +multiple versions of the algorithm on its own.
      */
-    freq_result* CallCreateFreqResult(size_t frSize)
+
+    //template <typename T>
+    //T* CallCreateStruct(size_t size)
+    //{
+    //    if (clStrategy_)
+    //    {
+    //        T* ptr = clStrategy_->CreateStruct<T>(size);
+
+    //        return ptr;
+    //    }
+    //    else
+    //    {
+    //        ReportError(__FUNCTION__);
+    //        return nullptr;
+    //    }
+    //};
+
+    freq_result* CallCreateFreqResult(size_t size)
     {
         if (clStrategy_)
         {
-            freq_result* pfr = clStrategy_->CreateFreqResult(frSize);
+            freq_result* ptr = clStrategy_->CreateFreqResult(size);
 
-            return pfr;
-        }
-        else
-        {
-            ReportError(__FUNCTION__);
-            return nullptr;
-        }
-
-    }
-
-    mfreq_context* CallCreateFreqContext(size_t pccSize)
-    {
-        if (clStrategy_)
-        {
-            mfreq_context* pcc = clStrategy_->CreateFreqContext(pccSize);
-
-            return pcc;
-        }
-        else
-        {
-            ReportError(__FUNCTION__);
-            return nullptr;
-        }
-
-    }
-
-    cl_mem CallCreateBufferCl_FR(cl_context context, size_t frSize, void* pfr)
-    {
-        if (clStrategy_)
-        {
-            cl_mem resutl = clStrategy_->CreateBufferCL_FR(context, frSize, pfr);
-
-            return resutl;
+            return ptr;
         }
         else
         {
@@ -144,11 +112,56 @@ public:
         }
     }
 
-    void CallEnqueueMapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr)
+    freq_context* CallCreateFreqContext(size_t size)
     {
         if (clStrategy_)
         {
-            clStrategy_->EnqueueMapCL_FR(queue, CL_FR, frSize, pfr);
+            freq_context* ptr = clStrategy_->CreateFreqContext(size);
+
+            return ptr;
+        }
+        else
+        {
+            ReportError(__FUNCTION__);
+            return nullptr;
+        }
+    }
+
+    mfreq_context* CallCreateMFreqContext(size_t size)
+    {
+        if (clStrategy_)
+        {
+            mfreq_context* ptr = clStrategy_->CreateMFreqContext(size);
+
+            return ptr;
+        }
+        else
+        {
+            ReportError(__FUNCTION__);
+            return nullptr;
+        }
+    }
+
+    cl_mem CallCreateBufferCl(cl_context context, size_t size, void* ptr)
+    {
+        if (clStrategy_)
+        {
+            cl_mem clMem = clStrategy_->CreateBufferCL(context, size, ptr);
+
+            return clMem;
+        }
+        else
+        {
+            ReportError(__FUNCTION__);
+            return nullptr;
+        }
+    }
+
+    void CallEnqueueMapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr)
+    {
+        if (clStrategy_)
+        {
+            clStrategy_->EnqueueMapCL(queue, clMem, size, ptr);
         }
         else
         {
@@ -156,11 +169,11 @@ public:
         }
     }
 
-    void CallEnqueueMapReadCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr)
+    void CallEnqueueMapReadCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr)
     {
         if (clStrategy_)
         {
-            clStrategy_->EnqueueMapReadCL_FR(queue, CL_FR, frSize, pfr);
+            clStrategy_->EnqueueMapReadCL(queue, clMem, size, ptr);
         }
         else
         {
@@ -168,51 +181,51 @@ public:
         }
     }
 
-    cl_int CallEnqueueMapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr)
+    cl_int CallEnqueueMapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr)
     {
         if (clStrategy_)
         {
             cl_int result = 0;
-            result = clStrategy_->EnqueueMapWriteCL_FR(queue, CL_FR, frSize, pfr);
+            result = clStrategy_->EnqueueMapWriteCL(queue, clMem, size, ptr);
 
             return result;
         }
         else
         {
             ReportError(__FUNCTION__);
-            return 1;
+            return -999;
         }
     }
 
-    cl_int CallEnqueueUnmapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr)
+    cl_int CallEnqueueUnmapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr)
     {
         if (clStrategy_)
         {
             cl_int result = 0;
-            result = clStrategy_->EnqueueUnmapCL_FR(queue, CL_FR, frSize, pfr);
+            result = clStrategy_->EnqueueUnmapCL(queue, clMem, size, ptr);
 
             return result;
         }
         else
         {
             ReportError(__FUNCTION__);
-            return 1;
+            return -999;
         }
 
     }
 
-    cl_int CallEnqueueUnmapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr)
+    cl_int CallEnqueueUnmapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr)
     {
         if (clStrategy_)
         {
-            cl_int result = clStrategy_->EnqueueUnmapWriteCL_FR(queue, CL_FR, frSize, pfr);
+            cl_int result = clStrategy_->EnqueueUnmapWriteCL(queue, clMem, size, ptr);
 
             return result;
         }
         else
         {
             ReportError(__FUNCTION__);
-            return 1;
+            return -999;
         }
     }
 };

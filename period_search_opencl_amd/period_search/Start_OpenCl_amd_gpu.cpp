@@ -1,30 +1,52 @@
 #include "Start_OpenCl_amd_gpu.h"
 
-freq_result* clAmdGpuStrategy::CreateFreqResult(size_t frSize) const
-{
-    // TODO: Use different allign function depending on compiler (GNUC/MSVC)
-    freq_result* pfr = (freq_result*)_aligned_malloc(frSize, 128);
+// TODO: Use different allign function depending on compiler (GNUC/MSVC). Add proper deallocator functions.
+//
+// TODO: Use single Template function.
 
-    return pfr;
+freq_result* clAmdGpuStrategy::CreateFreqResult(size_t size) const
+{
+#if !defined __GNUC__ && defined _WIN32
+    freq_result* ptr = (freq_result*)_aligned_malloc(size, 128);
+#elif defined __GNUC__
+    freq_result* ptr = (mfreq_context*)aligned_alloc(128, size);
+#endif
+
+    return ptr;
 }
 
-mfreq_context* clAmdGpuStrategy::CreateFreqContext(size_t pccSize) const
+freq_context* clAmdGpuStrategy::CreateFreqContext(size_t size) const
 {
-    mfreq_context* pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
+#if !defined __GNUC__ && defined _WIN32
+    freq_context* ptr = (freq_context*)_aligned_malloc(size, 128);
+#elif defined __GNUC__
+    freq_context* ptr = (freq_context*)aligned_alloc(128, size);
+#endif
 
-    return pcc;
+    return ptr;
 }
 
-cl_mem clAmdGpuStrategy::CreateBufferCL_FR(cl_context context, size_t frSize, void* pfr) const
+mfreq_context* clAmdGpuStrategy::CreateMFreqContext(size_t size) const
+{
+#if !defined __GNUC__ && defined _WIN32
+    mfreq_context* ptr = (mfreq_context*)_aligned_malloc(size, 128);
+#elif defined __GNUC__
+    mfreq_context* ptr = (mfreq_context*)aligned_alloc(128, size);
+#endif
+
+    return ptr;
+}
+
+cl_mem clAmdGpuStrategy::CreateBufferCL(cl_context context, size_t size, void* ptr) const
 {
     cl_int error = 0;
-    cl_mem CL_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &error);
+    cl_mem clMem = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, size, ptr, &error);
 
-    return CL_FR;
+    return clMem;
 }
 
 // TODO: Test if reflection wil do the trick here with 'pfr'
-void clAmdGpuStrategy::EnqueueMapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const
+void clAmdGpuStrategy::EnqueueMapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const
 {
     cl_int error = 0;
     // GPU
@@ -32,21 +54,21 @@ void clAmdGpuStrategy::EnqueueMapCL_FR(cl_command_queue queue, cl_mem CL_FR, siz
 }
 
 // TODO: Test if reflection wil do the trick here with 'pfr'
-void clAmdGpuStrategy::EnqueueMapReadCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const
+void clAmdGpuStrategy::EnqueueMapReadCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const
 {
     cl_int error = 0;
-    error = clEnqueueReadBuffer(queue, CL_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+    error = clEnqueueReadBuffer(queue, clMem, CL_BLOCKING, 0, size, ptr, 0, NULL, NULL);
 }
 
-cl_int clAmdGpuStrategy::EnqueueMapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const
+cl_int clAmdGpuStrategy::EnqueueMapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const
 {
     cl_int error = 0;
-    error = clEnqueueWriteBuffer(queue, CL_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+    error = clEnqueueWriteBuffer(queue, clMem, CL_BLOCKING, 0, size, ptr, 0, NULL, NULL);
 
     return error;
 }
 
-cl_int clAmdGpuStrategy::EnqueueUnmapCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const
+cl_int clAmdGpuStrategy::EnqueueUnmapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const
 {
     cl_int result = 0;
     //GPU
@@ -55,10 +77,10 @@ cl_int clAmdGpuStrategy::EnqueueUnmapCL_FR(cl_command_queue queue, cl_mem CL_FR,
     return result;
 }
 
-cl_int clAmdGpuStrategy::EnqueueUnmapWriteCL_FR(cl_command_queue queue, cl_mem CL_FR, size_t frSize, void* pfr) const
+cl_int clAmdGpuStrategy::EnqueueUnmapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const
 {
     cl_int result = 0;
-    result = clEnqueueWriteBuffer(queue, CL_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
+    result = clEnqueueWriteBuffer(queue, clMem, CL_BLOCKING, 0, size, ptr, 0, NULL, NULL);
 
     return result;
 }

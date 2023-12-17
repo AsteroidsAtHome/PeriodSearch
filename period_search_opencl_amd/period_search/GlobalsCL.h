@@ -27,8 +27,8 @@ typedef struct mfreq_context
 	double Dg[(MAX_N_FAC + 1) * (MAX_N_PAR + 1)];
 	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
 	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	double ytemp[POINTS_MAX + 1];
+	double dytemp[(MAX_LC_POINTS + 1) * (MAX_N_PAR + 1)];
+	double ytemp[MAX_LC_POINTS + 1];
 
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
@@ -36,18 +36,18 @@ typedef struct mfreq_context
 	double cg[MAX_N_PAR + 1];
 	double Blmat[4][4];
 	double Dblm[3][4][4];
-	double jp_Scale[POINTS_MAX + 1];
-	double jp_dphp_1[POINTS_MAX + 1];
-	double jp_dphp_2[POINTS_MAX + 1];
-	double jp_dphp_3[POINTS_MAX + 1];
-	double e_1[POINTS_MAX + 1];
-	double e_2[POINTS_MAX + 1];
-	double e_3[POINTS_MAX + 1];
-	double e0_1[POINTS_MAX + 1];
-	double e0_2[POINTS_MAX + 1];
-	double e0_3[POINTS_MAX + 1];
-	double de[POINTS_MAX + 1][4][4];
-	double de0[POINTS_MAX + 1][4][4];
+	double jp_Scale[MAX_LC_POINTS + 1];
+	double jp_dphp_1[MAX_LC_POINTS + 1];
+	double jp_dphp_2[MAX_LC_POINTS + 1];
+	double jp_dphp_3[MAX_LC_POINTS + 1];
+	double e_1[MAX_LC_POINTS + 1];
+	double e_2[MAX_LC_POINTS + 1];
+	double e_3[MAX_LC_POINTS + 1];
+	double e0_1[MAX_LC_POINTS + 1];
+	double e0_2[MAX_LC_POINTS + 1];
+	double e0_3[MAX_LC_POINTS + 1];
+	double de[MAX_LC_POINTS + 1][4][4];
+	double de0[MAX_LC_POINTS + 1][4][4];
 	double dave[MAX_N_PAR + 1];
 	double dyda[MAX_N_PAR + 1];
 

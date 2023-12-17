@@ -1,21 +1,21 @@
-#define POINTS_MAX         2000             /* max number of data points in one lc. */
-#define MAX_N_OBS         20000             /* max number of data points */
-#define MAX_LC              200             /* max number of lightcurves */
-#define MAX_LINE_LENGTH    1000             /* max length of line in an input file */
-#define MAX_N_FAC          1000             /* max number of facets */
-#define MAX_N_ITER          100             /* maximum number of iterations */
-#define MAX_N_PAR           200             /* maximum number of parameters */
-#define MAX_LM               10             /* maximum degree and order of sph. harm. */
-#define N_PHOT_PAR            5             /* maximum number of parameters in scattering  law */
-#define TINY                  1e-8          /* precision parameter for mu, mu0*/
-#define N_POLES              10             /* number of initial poles */
+#define MAX_LC_POINTS             2000             /* max number of data points in one lc. */
+#define MAX_N_OBS                20000             /* max number of data points */
+#define MAX_LC                     200             /* max number of lightcurves */
+#define MAX_LINE_LENGTH           1000             /* max length of line in an input file */
+#define MAX_N_FAC                 1000             /* max number of facets */
+#define MAX_N_ITER                 100             /* maximum number of iterations */
+#define MAX_N_PAR                  200             /* maximum number of parameters */
+#define MAX_LM                      10             /* maximum degree and order of sph. harm. */
+#define N_PHOT_PAR                   5             /* maximum number of parameters in scattering  law */
+#define TINY                      1e-8             /* precision parameter for mu, mu0*/
+#define N_POLES                     10             /* number of initial poles */
 
-#define PI                 M_PI             /* 3.14159265358979323846 */
-#define AU            149597870.691         /* Astronomical Unit [km] */
-#define C_SPEED       299792458             /* speed of light [m/s]*/
+#define PI                        M_PI             /* 3.14159265358979323846 */
+#define AU               149597870.691             /* Astronomical Unit [km] */
+#define C_SPEED              299792458             /* speed of light [m/s]*/
 
-#define DEG2RAD      (PI / 180)
-#define RAD2DEG      (180 / PI)
+#define DEG2RAD             (PI / 180)
+#define RAD2DEG             (180 / PI)
 
 #if defined INTEL
 #define BLOCK_DIM 64
@@ -51,8 +51,8 @@ typedef struct mfreq_context
 	double Dg[(MAX_N_FAC + 1) * (MAX_N_PAR + 1)];
 	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
 	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	double ytemp[POINTS_MAX + 1];
+	double dytemp[(MAX_LC_POINTS + 1) * (MAX_N_PAR + 1)];
+	double ytemp[MAX_LC_POINTS + 1];
 
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
@@ -60,18 +60,18 @@ typedef struct mfreq_context
 	double cg[MAX_N_PAR + 1];
 	double Blmat[4][4];
 	double Dblm[3][4][4];
-	double jp_Scale[POINTS_MAX + 1];
-	double jp_dphp_1[POINTS_MAX + 1];
-	double jp_dphp_2[POINTS_MAX + 1];
-	double jp_dphp_3[POINTS_MAX + 1];
-	double e_1[POINTS_MAX + 1];
-	double e_2[POINTS_MAX + 1];
-	double e_3[POINTS_MAX + 1];
-	double e0_1[POINTS_MAX + 1];
-	double e0_2[POINTS_MAX + 1];
-	double e0_3[POINTS_MAX + 1];
-	double de[POINTS_MAX + 1][4][4];
-	double de0[POINTS_MAX + 1][4][4];
+	double jp_Scale[MAX_LC_POINTS + 1];
+	double jp_dphp_1[MAX_LC_POINTS + 1];
+	double jp_dphp_2[MAX_LC_POINTS + 1];
+	double jp_dphp_3[MAX_LC_POINTS + 1];
+	double e_1[MAX_LC_POINTS + 1];
+	double e_2[MAX_LC_POINTS + 1];
+	double e_3[MAX_LC_POINTS + 1];
+	double e0_1[MAX_LC_POINTS + 1];
+	double e0_2[MAX_LC_POINTS + 1];
+	double e0_3[MAX_LC_POINTS + 1];
+	double de[MAX_LC_POINTS + 1][4][4];
+	double de0[MAX_LC_POINTS + 1][4][4];
 	double dave[MAX_N_PAR + 1];
 	double dyda[MAX_N_PAR + 1];
 
@@ -1089,20 +1089,10 @@ void bright(
 	ncoef0 -= 3;
 	int m, m1, mr, iStart;
 	int d, d1, dr;
-	if (Inrel)
-	{
-		iStart = 2;
-		//m = blockIdx.x * CUDA_Dg_block + 2 * (CUDA_Numfac1);
-		m = 2 * (*CUDA_CC).Numfac1;
-		d = jp + 2 * (Lpoints1);
-	}
-	else
-	{
-		iStart = 1;
-		//m = blockIdx.x * CUDA_Dg_block + (CUDA_Numfac1);
-		m = (*CUDA_CC).Numfac1;
-		d = jp + (Lpoints1);
-	}
+
+	iStart = Inrel + 1;
+	m = iStart * (*CUDA_CC).Numfac1;
+	d = jp + (Lpoints1 << Inrel);
 
 	m1 = m + (*CUDA_CC).Numfac1;
 	mr = 2 * (*CUDA_CC).Numfac1;

@@ -38,7 +38,7 @@ d_bl_matrix[3][4][4];
 //weight[MAX_N_OBS + 1];
 
 // OpenCL
-extern size_t CUDA_grid_dim;
+extern size_t CL_grid_dim;
 extern cl_program program;
 
 //extern std::vector<cl_int2, int> texture;
@@ -77,9 +77,9 @@ extern const char *ocl_src_kernelSource;
 //	double* alpha;
 //	//	double covar[MAX_N_PAR+1][MAX_N_PAR+1];
 //	double* covar;
-//	//	double dytemp[(POINTS_MAX+1)*(MAX_N_PAR+1)]
+//	//	double dytemp[(MAX_LC_POINTS+1)*(MAX_N_PAR+1)]
 //	double* dytemp;
-//	//	double ytemp[POINTS_MAX+1],
+//	//	double ytemp[MAX_LC_POINTS+1],
 //	double* ytemp;
 //	double cg[MAX_N_PAR + 1];
 //	double Ochisq, Chisq, Alamda;
@@ -91,9 +91,9 @@ extern const char *ocl_src_kernelSource;
 //	double trial_chisq, ave;
 //	int np, np1, np2;
 //	//bright
-//	double e_1[POINTS_MAX + 1], e_2[POINTS_MAX + 1], e_3[POINTS_MAX + 1], e0_1[POINTS_MAX + 1], e0_2[POINTS_MAX + 1], e0_3[POINTS_MAX + 1], de[POINTS_MAX + 1][4][4], de0[POINTS_MAX + 1][4][4];
-//	double jp_Scale[POINTS_MAX + 1];
-//	double jp_dphp_1[POINTS_MAX + 1], jp_dphp_2[POINTS_MAX + 1], jp_dphp_3[POINTS_MAX + 1];
+//	double e_1[MAX_LC_POINTS + 1], e_2[MAX_LC_POINTS + 1], e_3[MAX_LC_POINTS + 1], e0_1[MAX_LC_POINTS + 1], e0_2[MAX_LC_POINTS + 1], e0_3[MAX_LC_POINTS + 1], de[MAX_LC_POINTS + 1][4][4], de0[MAX_LC_POINTS + 1][4][4];
+//	double jp_Scale[MAX_LC_POINTS + 1];
+//	double jp_dphp_1[MAX_LC_POINTS + 1], jp_dphp_2[MAX_LC_POINTS + 1], jp_dphp_3[MAX_LC_POINTS + 1];
 //	// gaus
 //	int indxc[MAX_N_PAR + 1], indxr[MAX_N_PAR + 1], ipiv[MAX_N_PAR + 1];
 //	//global
