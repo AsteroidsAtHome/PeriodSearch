@@ -1,5 +1,6 @@
 #pragma once
-#include <boinc_win.h>
+
+#include <string>
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
@@ -77,8 +78,8 @@ void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[
 
 #if !defined __GNUC__ && defined _WIN32
 bool GetVersionInfo(LPCTSTR filename, int& major, int& minor, int& build, int& revision);
-std::string GetCpuInfo();
-#elif defined __GNUC__
+#elif defined __GNUC__ && !defined _WIN32
 bool GetVersionInfo(int& major, int& minor, int& build, int& revision);
 #endif
+std::string GetCpuInfo();
 

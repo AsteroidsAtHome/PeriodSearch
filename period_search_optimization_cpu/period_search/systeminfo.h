@@ -6,6 +6,5 @@
 #if defined(ARM) || defined(ARM32) || defined(ARM64)
 void getSystemInfo();
 void getCpuInfoByArch(std::ifstream &cpuinfo);
-#else
-float getTotalSystemMemory();
 #endif
+float getTotalSystemMemory();
