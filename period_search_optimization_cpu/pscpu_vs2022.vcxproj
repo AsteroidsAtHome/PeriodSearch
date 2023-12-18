@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <CharacterSet>NotSet</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
@@ -106,9 +106,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(LibraryPath)</LibraryPath>
-    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_cpu_Debug</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>Period_search_$(SDKIdentifier)_$(WindowsTargetPlatformVersion)_$(PlatformTarget)_cpu_$(Configuration)</TargetName>
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Nvidia|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -280,7 +280,6 @@
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\systeminfo.h" />
     <ClInclude Include="period_search\uc2.h" />
-    <ClInclude Include="period_search\Version.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -289,6 +288,7 @@
     <ClCompile Include="period_search\bright.c" />
     <ClCompile Include="period_search\conv.c" />
     <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\CpuInfo.cpp" />
     <ClCompile Include="period_search\curv.c" />
     <ClCompile Include="period_search\dot_product.c" />
     <ClCompile Include="period_search\ellfit.c" />
