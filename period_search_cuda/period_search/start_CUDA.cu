@@ -772,7 +772,6 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
   // dim3 block16(CUDA_BLOCK_DIM, BLOCKX16, 1);
   // dim3 block32(CUDA_BLOCK_DIM, BLOCKX32, 1);
 
-  int sleepTime = 0;  
   while(n <= n_max)
     {
       double fractionDone = (double)n / (double)n_max;
