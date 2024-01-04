@@ -697,7 +697,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 
 	  ge02 += Blmat21 * ee_2;
 	  ge12 += Blmat21 * ee0_2;
-      gde021 += Blmat20 * ee_2;
+	  gde021 += Blmat20 * ee_2;
 	  gde121 += Blmat20 * ee0_2;
 
 	  double gde000 = tmat21 * ee_1;

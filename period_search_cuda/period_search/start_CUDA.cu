@@ -572,7 +572,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 	      cudaStreamQuery(stream1);
 	      // usleep(1);
-	      
+
 	      if (copyReady == false)
 		{
 		  cudaStreamSynchronize(stream2);;
