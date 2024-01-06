@@ -23,25 +23,25 @@ public:
     clAmdApuStrategy() {};
     ~clAmdApuStrategy() = default;
 
-    freq_result* clAmdApuStrategy::CreateFreqResult(size_t size) const;
+    freq_result* CreateFreqResult(size_t size) const;
 
-    freq_context* clAmdApuStrategy::CreateFreqContext(size_t size) const;
+    freq_context* CreateFreqContext(size_t size) const;
 
-    mfreq_context* clAmdApuStrategy::CreateMFreqContext(size_t size) const;
+    mfreq_context* CreateMFreqContext(size_t size) const;
 
-    cl_mem clAmdApuStrategy::CreateBufferCL(cl_context context, size_t size, void* ptr) const;
-
-    // TODO: Test if reflection wil do the trick here with 'ptr'
-    void clAmdApuStrategy::EnqueueMapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+    cl_mem CreateBufferCL(cl_context context, size_t size, void* ptr) const;
 
     // TODO: Test if reflection wil do the trick here with 'ptr'
-    void clAmdApuStrategy::EnqueueMapReadCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+    void EnqueueMapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
 
-    cl_int clAmdApuStrategy::EnqueueMapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+    // TODO: Test if reflection wil do the trick here with 'ptr'
+    void EnqueueMapReadCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
 
-    cl_int clAmdApuStrategy::EnqueueUnmapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+    cl_int EnqueueMapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
 
-    cl_int clAmdApuStrategy::EnqueueUnmapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+    cl_int EnqueueUnmapCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
+
+    cl_int EnqueueUnmapWriteCL(cl_command_queue queue, cl_mem clMem, size_t size, void* ptr) const;
 
 //    template<typename T>
 //    T* CreateStruct(size_t size) const

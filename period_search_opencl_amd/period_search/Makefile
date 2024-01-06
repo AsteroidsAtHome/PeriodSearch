@@ -24,7 +24,7 @@ OBJ_DIR =build/Release
 # END DO-NOT-CHANGE
 
 # CXXFLAGS = -g -O3 .
-CXXFLAGS = -O2 -w -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protection -ffunction-sections \
+CXXFLAGS = -O3 -w -s -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protection -ffunction-sections \
 	-DNDEBUG \
 	-DAMD \
 	-DCL_HPP_ENABLE_EXCEPTIONS \
@@ -39,8 +39,9 @@ CXXFLAGS = -O2 -w -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protect
 CC=g++
 CXX=g++
 # OPTFLAGS=
-OPTFLAGS= -O2 -w -m64
+OPTFLAGS= -O3 -w -m64
 CFLAGS=$(OPTFLAGS) \
+	-s \
 	-DNDEBUG \
 	-DAMD \
 	-DCL_HPP_ENABLE_EXCEPTIONS \
@@ -55,11 +56,13 @@ LDFLAGS=-lm -lrt -Xlinker -rpath -m64 .
 
 MY_LIBS=$(OBJ_DIR)/trifac.o $(OBJ_DIR)/areanorm.o $(OBJ_DIR)/sphfunc.o $(OBJ_DIR)/ellfit.o $(OBJ_DIR)/ludcmp.o $(OBJ_DIR)/lubksb.o\
 	$(OBJ_DIR)/covsrt.o $(OBJ_DIR)/memory.o $(OBJ_DIR)/host_dot_product.o\
-	$(OBJ_DIR)/compareResult.o $(OBJ_DIR)/Start_OpenCl.o $(OBJ_DIR)/VersionInfo.o 
+	$(OBJ_DIR)/compareResult.o $(OBJ_DIR)/Start_OpenCl.o $(OBJ_DIR)/VersionInfo.o\
+	$(OBJ_DIR)/Start_OpenCl_amd_apu.o $(OBJ_DIR)/Start_OpenCl_amd_gpu.o
 
 SOURCE_FILES = trifac.cpp areanorm.cpp sphfunc.cpp ellfit.cpp ludcmp.cpp lubksb.cpp\
 	covsrt.cpp memory.cpp host_dot_product.cpp\
-	compareResult.cpp Start_OpenCl.cpp VersionInfo.cpp
+	compareResult.cpp Start_OpenCl.cpp VersionInfo.cpp\
+	Start_OpenCl_amd_apu.cpp Start_OpenCl_amd_gpu.cpp
 
 OBJECT_FILES     = $(SOURCE_FILES:%.cpp=$(OBJ_DIR)/%.o)
 
@@ -85,7 +88,7 @@ install: period_search_BOINC_linux_amd_opencl_110_x64_Release
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
 
-$(EXECUTABLE_FILES): period_search_BOINC.cpp  $(OBJECT_FILES) $(OBJ_DIR)/libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a $(OBJ_DIR)/libOpenCL.so
+$(EXECUTABLE_FILES): period_search_BOINC.cpp  $(OBJECT_FILES) $(OBJ_DIR)/libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a $(OBJ_DIR)/opencl.dll
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJECT_FILES) $< $(OBJ_DIR)/libstdc++.a -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a $(OBJ_DIR)/libOpenCL.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)

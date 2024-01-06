@@ -6,7 +6,7 @@
 
 freq_result* clAmdApuStrategy::CreateFreqResult(size_t size) const
 {
-#if !defined __GNUC__ && defined _WIN32
+#if defined _WIN32
     freq_result* ptr = (freq_result*)_aligned_malloc(size, 4096);
 #elif defined __GNUC__
     freq_result* ptr = (mfreq_context*)aligned_alloc(4096, size);
@@ -17,7 +17,7 @@ freq_result* clAmdApuStrategy::CreateFreqResult(size_t size) const
 
 freq_context* clAmdApuStrategy::CreateFreqContext(size_t size) const
 {
-#if !defined __GNUC__ && defined _WIN32
+#if defined _WIN32
     freq_context* ptr = (freq_context*)_aligned_malloc(size, 4096);
 #elif defined __GNUC__
     freq_context* ptr = (freq_context*)aligned_alloc(4096, size);
@@ -28,7 +28,7 @@ freq_context* clAmdApuStrategy::CreateFreqContext(size_t size) const
 
 mfreq_context* clAmdApuStrategy::CreateMFreqContext(size_t size) const
 {
-#if !defined __GNUC__ && defined _WIN32
+#if defined _WIN32
     mfreq_context* ptr = (mfreq_context*)_aligned_malloc(size, 4096);
 #elif defined __GNUC__
     mfreq_context* ptr = (mfreq_context*)aligned_alloc(4096, size);

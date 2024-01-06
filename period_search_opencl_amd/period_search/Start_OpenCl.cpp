@@ -1025,10 +1025,13 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #endif
 #if defined AMD
     auto pccSize = ((sizeof(mfreq_context) * CL_grid_dim_precalc - 1) / 64 + 1) * 64;
-    void* apuPcc = nullptr;
-    auto memPcc = clSCtx.CallCreateFreqContext(pccSize);
+
+    //void* apuPcc = nullptr;
+    //auto memPcc = clSCtx.CallCreateFreqContext(pccSize);
     //auto memPcc = clSCtx.CallCreateStruct<freq_context>(pccSize);
-    auto pcc = isAmdApu ? apuPcc : memPcc;
+    //auto pcc = isAmdApu ? apuPcc : memPcc;
+    auto pcc = clSCtx.CallCreateFreqContext(pccSize);
+
     cl_mem CL_MCC2 = clSCtx.CallCreateBufferCl(context, pccSize, pcc);
     clSCtx.CallEnqueueMapCL(queue, CL_MCC2, pccSize, pcc);
 #endif
@@ -1235,10 +1238,13 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // ____
     //auto pfr = (freq_result*)_aligned_malloc(frSize, 128);
     //cl_mem CL_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
-    void* apfr = nullptr;
-    auto gpfr = clSCtx.CallCreateFreqResult(frSize);
+
+    //void* apfr = nullptr;
+    //auto gpfr = clSCtx.CallCreateFreqResult(frSize);
     //auto gpfr = clSCtx.CallCreateStruct<freq_result>(frSize);
-    auto pfr = isAmdApu ? apfr : gpfr;
+    //auto pfr = isAmdApu ? apfr : gpfr;
+    auto pfr = clSCtx.CallCreateFreqResult(frSize);
+
     cl_mem CL_FR = clSCtx.CallCreateBufferCl(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CL_grid_dim_precalc * sizeof(freq_result);
@@ -1986,10 +1992,13 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     //_____
     //auto pfr = new freq_result[CL_grid_dim];
     //cl_mem CL_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
-    void* apfr = nullptr;
-    auto gpfr = clSCtx.CallCreateFreqResult(frSize);
+
+    //void* apfr = nullptr;
+    //auto gpfr = clSCtx.CallCreateFreqResult(frSize);
     //auto gpfr = clSCtx.CallCreateStruct<freq_result>(frSize);
-    auto pfr = isAmdApu ?  apfr : gpfr;
+    //auto pfr = isAmdApu ? apfr : gpfr;
+    auto pfr = clSCtx.CallCreateFreqResult(frSize);
+
     cl_mem CL_FR = clSCtx.CallCreateBufferCl(context, frSize, pfr);
 #elif NVIDIA
     int frSize = CL_grid_dim * sizeof(freq_result);
