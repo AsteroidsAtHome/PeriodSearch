@@ -9,7 +9,7 @@ freq_result* clAmdGpuStrategy::CreateFreqResult(size_t size) const
 #if defined _WIN32
     freq_result* ptr = (freq_result*)_aligned_malloc(size, 128);
 #elif defined __GNUC__
-    freq_result* ptr = (mfreq_context*)aligned_alloc(128, size);
+    freq_result* ptr = (freq_result*)aligned_alloc(128, size);
 #endif
 
     return ptr;
