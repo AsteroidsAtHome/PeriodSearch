@@ -1111,16 +1111,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // memcpy(pFa, Fa, faSize);
     // clEnqueueUnmapMemObject(queue, CL_CC, pFa, 0, NULL, NULL);
     // clFlush(queue);
+    auto pFa = (freq_context*)aligned_alloc(128, faSize);
+    cl_mem CL_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFa, &err);
+    clEnqueueWriteBuffer(queue, CL_CC, CL_BLOCKING, 0, faSize, Fa, 0, NULL, NULL);
 
-    //auto pFa = (freq_context*)aligned_alloc(128, faSize);
-    //cl_mem CL_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFa, &err);
-    //clEnqueueWriteBuffer(queue, CL_CC, CL_BLOCKING, 0, faSize, Fa, 0, NULL, NULL);
-
-    auto memFa = clSCtx.CallCreateFreqContext(faSize);
-    cl_mem CL_CC = clSCtx.CallCreateBufferCl(context, faSize, memFa);
-    void* pFa = clEnqueueMapBuffer(queue, CL_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
-    memcpy(pFa, Fa, faSize);
-    clSCtx.CallEnqueueUnmapCL(queue, CL_CC, 0, pFa);
 #endif
 #else // WIN32
 #if defined (INTEL)
@@ -1141,18 +1135,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     //auto memFa = (freq_context*)_aligned_malloc(faSize, 128);
     auto memFa = clSCtx.CallCreateFreqContext(faSize);
     //auto memFa = clSCtx.CallCreateStruct<freq_context>(faSize);
-
-    cl_mem CL_CC = clSCtx.CallCreateBufferCl(context, faSize, memFa);
-    //void* pFa = clSCtx.CallEnqueueMapCL(queue, CL_CC, faSize, 0);
-
-    //cl_mem CL_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
+    cl_mem CL_CC = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFa, &err);
     void* pFa = clEnqueueMapBuffer(queue, CL_CC, CL_BLOCKING, CL_MAP_WRITE, 0, faSize, 0, NULL, NULL, &err);
     memcpy(pFa, Fa, faSize);
-
-    clSCtx.CallEnqueueUnmapCL(queue, CL_CC, 0, pFa);
-
-    //clEnqueueUnmapMemObject(queue, CL_CC, pFa, 0, NULL, NULL);
-    //clFlush(queue);
+    clEnqueueUnmapMemObject(queue, CL_CC, pFa, 0, NULL, NULL);
+    clFlush(queue);
 #endif
 #endif
 
@@ -1184,11 +1171,9 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 #else
     // auto CL_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, err);
     // queue.enqueueWriteBuffer(CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd);
-    // cl_mem CL_End = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, &err);
-    // err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
+    cl_mem CL_End = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, &err);
+    err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
-    cl_mem CL_End = clSCtx.CallCreateBufferCl(context, sizeof(theEnd), &theEnd);
-    err = clSCtx.CallEnqueueMapWriteCL(queue, CL_End, sizeof(theEnd), &theEnd);
 #endif
     //__declspec(align(8)) void* pfr = reinterpret_cast<freq_result*>(malloc(frSize));
     //auto alignas(8) pfr = new freq_result[CL_grid_dim_precalc];
@@ -1398,9 +1383,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         for (m = 1; m <= N_POLES; m++)
         {
             theEnd = 0; //zero global End signal
-            //err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-            err = clSCtx.CallEnqueueMapWriteCL(queue, CL_End, sizeof(theEnd), &theEnd);
-
+            err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
             err = clSetKernelArg(kernelCalculatePreparePole, 6, sizeof(m), &m);
             err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CL_grid_dim_precalc, &sLocal, 0, NULL, NULL);
             if (getError(err)) return err;
@@ -1410,10 +1393,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             // >>>>>>>>  Test Start >>>>>>>>
             //void* pFb = clEnqueueMapBuffer(queue, CL_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
             //clFlush(queue);
-
-            //clEnqueueReadBuffer(queue, CL_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
-            clSCtx.CallEnqueueMapReadCL(queue, CL_CC2, faSize, pFb);
-
+            clEnqueueReadBuffer(queue, CL_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
             int error = 0;
             for (int j = 0; j < MAX_N_OBS + 1; j++) {
                 if ((*(freq_context*)pFb).Brightness[j] != (*Fa).Brightness[j]) {
@@ -1440,10 +1420,8 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 }
             }
             //clEnqueueUnmapMemObject(queue, CL_MCC2, pcc, 0, NULL, NULL);
-            //clEnqueueUnmapMemObject(queue, CL_CC2, pFb, 0, NULL, NULL);
-            //clFlush(queue);
-
-            clSCtx.CallEnqueueUnmapCL(queue, CL_CC2, 0, pFb);
+            clEnqueueUnmapMemObject(queue, CL_CC2, pFb, 0, NULL, NULL);
+            clFlush(queue);
             // <<<<<<<<  Test End  <<<<<<<<
 #ifdef _DEBUG
             // printf(".");
@@ -1549,8 +1527,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue); // ***
 
-                //err = clEnqueueReadBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-                clSCtx.CallEnqueueMapReadCL(queue, CL_End, sizeof(theEnd), &theEnd);
+                err = clEnqueueReadBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
                 // printf("[%d][%d][%d] %d\n", n, m, count, theEnd);
                 theEnd = theEnd == CL_grid_dim_precalc;
@@ -1574,8 +1551,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         // pfr = clEnqueueMapBuffer(queue, CL_FR, CL_BLOCKING, CL_MAP_READ, 0, frSize, 0, NULL, NULL, &err);
         //queue.flush(); // ***
         // queue.enqueueReadBuffer(CL_MCC2, CL_BLOCKING, 0, pccSize, pcc);
-        //clEnqueueReadBuffer(queue, CL_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
-        clSCtx.CallEnqueueMapReadCL(queue, CL_FR, frSize, pfr);
+        clEnqueueReadBuffer(queue, CL_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
 #elif NVIDIA
         pfr = queue.enqueueMapBuffer(CL_FR, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         queue.flush();
@@ -1916,21 +1892,15 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     queue.enqueueWriteBuffer(CL_MCC2, CL_BLOCKING, 0, optimizedSize, pcc);
 #else
     // queue.enqueueWriteBuffer(CL_MCC2, CL_BLOCKING, 0, optimizedSize, pcc);
-    //cl_mem CL_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
-    //clEnqueueWriteBuffer(queue, CL_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
-
-    cl_mem CL_MCC2 = clSCtx.CallCreateBufferCl(context, pccSize, pcc);
-    clSCtx.CallEnqueueMapWriteCL(queue, CL_MCC2, pccSize, pcc);
+    cl_mem CL_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
+    clEnqueueWriteBuffer(queue, CL_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
 #endif
 #else // WIN32
 #if defined (INTEL)
     queue.enqueueWriteBuffer(CL_MCC2, CL_BLOCKING, 0, optimizedSize, pcc);
 #else
-    //cl_mem CL_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
-    //clEnqueueWriteBuffer(queue, CL_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
-
-    cl_mem CL_MCC2 = clSCtx.CallCreateBufferCl(context, pccSize, pcc);
-    clSCtx.CallEnqueueMapWriteCL(queue, CL_MCC2, pccSize, pcc);
+    cl_mem CL_MCC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, pccSize, pcc, &err);
+    clEnqueueWriteBuffer(queue, CL_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
 
     //clEnqueueUnmapMemObject(queue, CL_MCC2, pcc, 0, NULL, NULL);
     //clFlush(queue);
@@ -1975,11 +1945,8 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #else
     // auto CL_End = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(int), &theEnd, err);
     // queue.enqueueWriteBuffer(CL_End, CL_BLOCKING, 0, sizeof(int), &theEnd);
-    //cl_mem CL_End = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, &err);
-    //err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-
-    cl_mem CL_End = clSCtx.CallCreateBufferCl(context, sizeof(theEnd), &theEnd);
-    err = clSCtx.CallEnqueueMapWriteCL(queue, CL_End, sizeof(theEnd), &theEnd);
+    cl_mem CL_End = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, &err);
+    err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 #endif
 
 #if !defined _WIN32
@@ -2214,9 +2181,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #endif
 
             theEnd = 0;  //zero global End signal
-            //err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-            err = clSCtx.CallEnqueueMapWriteCL(queue, CL_End, sizeof(theEnd), &theEnd);
-
+            err = clEnqueueWriteBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
             err = clSetKernelArg(kernelCalculatePreparePole, 6, sizeof(m), &m);
             err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CL_grid_dim, &sLocal, 0, NULL, NULL);
             if (getError(err)) return err;
@@ -2326,8 +2291,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 if (getError(err)) return err;
                 //clFinish(queue); // ***
 
-                //err = clEnqueueReadBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-                clSCtx.CallEnqueueMapReadCL(queue, CL_End, sizeof(theEnd), &theEnd);
+                err = clEnqueueReadBuffer(queue, CL_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
                 theEnd = theEnd == CL_grid_dim;
             }
