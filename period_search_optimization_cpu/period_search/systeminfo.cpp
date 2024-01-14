@@ -116,11 +116,11 @@ void getCpuFrequency(std::ifstream& cpufreqIfstream, string definition) {
 	}
 }
 
-#ifdef _WIN32
+#if defined _WIN32 || (defined __GNUC__ && defined __APPLE__)
 void getCpuInfoByArch(ifstream& cpuinfo) {
 
 }
-#endif // _WIN32
+#endif // _WIN32 || macOS
 
 void getSystemInfo() {
 	auto cpuinfo = getIfstream("/proc/cpuinfo");
