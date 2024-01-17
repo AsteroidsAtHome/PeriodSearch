@@ -1,6 +1,14 @@
-#include <Windows.h>
+#if defined __GNUC__
+const int _major = 102;
+const int _minor = 15;
+const int _build = 0;
+const int _revision = 1;
+#else
+#include <windows.h>
 #include <tchar.h>
+#endif
 
+#if !defined __GNUC__ && defined _WIN32
 bool GetVersionInfo(
     LPCTSTR filename,
     int& major,
@@ -40,3 +48,20 @@ bool GetVersionInfo(
 
     return false;
 }
+
+#elif defined __GNUC__
+bool GetVersionInfo(
+	int& major,
+	int& minor,
+	int& build,
+	int& revision)
+{
+	major = _major;
+	minor = _minor;
+	build = _build;
+	revision = _revision;
+
+	return true;
+}
+
+#endif

@@ -7,7 +7,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#if !defined __APPLE__
 #include <malloc.h>
+#endif
 
 #ifdef AVX512
   #define SIMD_WIDTH 64
@@ -60,10 +63,14 @@ double **aligned_matrix_double(int rows, int columns)
    double **p_x;
    int i;
   
-#if !defined _WIN32
+#if !defined _WIN32 && !defined __APPLE__
    p_x = (double **)memalign(SIMD_WIDTH,(rows + 1) * sizeof(double *));
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
       p_x[i] = (double *) memalign(SIMD_WIDTH,(columns + 1) * sizeof(double));
+#elif defined __APPLE__
+   posix_memalign((void **)&p_x, SIMD_WIDTH,(rows + 1) * sizeof(double *));
+   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
+      posix_memalign((void **)&p_x[i], SIMD_WIDTH,(columns + 1) * sizeof(double));
 #else
    p_x = (double **)_aligned_malloc((rows + 1) * sizeof(double *),SIMD_WIDTH);
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 

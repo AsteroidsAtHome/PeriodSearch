@@ -1,4 +1,12 @@
 #pragma once
+
+#if defined _WIN32
+#include "Windows.h"
+#endif
+
+//#include <cstdio>
+#include <string>
+
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
@@ -75,3 +83,12 @@ double bright_ell(double ee[], double ee0[], double t, double cg[],
 double bright_ell_YORP(double ee[], double ee0[], double t, double cg[],
             double dyda[], int ncoef);
 void matrix_ell_YORP(double omg, double fi0, double yorp, double t, double tmat[][4], double dtm[][4][4]);
+
+#if !defined __GNUC__ && defined _WIN32
+	bool GetVersionInfo(LPCTSTR filename, int& major, int& minor, int& build, int& revision);
+#elif defined __GNUC__
+	bool GetVersionInfo(int& major, int& minor, int& build, int& revision);
+#endif
+
+std::string GetCpuInfo();
+std::string GetTargetInstructionSet();

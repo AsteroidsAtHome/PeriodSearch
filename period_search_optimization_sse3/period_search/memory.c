@@ -7,7 +7,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#if !defined __APPLE__
 #include <malloc.h>
+#endif
 
 double *vector_double(int length)
 {
@@ -54,10 +57,14 @@ double **aligned_matrix_double(int rows, int columns)
    double **p_x;
    int i;
   
-#if !defined _WIN32
+#if !defined _WIN32 && !defined __APPLE__
    p_x = (double **)memalign(16,(rows + 1) * sizeof(double *));
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
       p_x[i] = (double *) memalign(16,(columns + 1) * sizeof(double));
+#elif defined __APPLE__
+   posix_memalign((void **)&p_x, 16,(rows + 1) * sizeof(double *));
+   for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
+      posix_memalign((void **)&p_x[i], 16,(columns + 1) * sizeof(double));
 #else
    p_x = (double **)_aligned_malloc((rows + 1) * sizeof(double *),16);
    for (i = 0; (i <= rows) && (!i || p_x[i-1]); i++) 
