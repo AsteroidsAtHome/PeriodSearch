@@ -580,14 +580,16 @@ int major, minor, build, revision;
 		GetVersionInfo(filename, major, minor, build, revision);
 		std::cerr << "Application: " << filename << std::endl;
 #else
+		GetVersionInfo(major, minor, build, revision);
 		std::cerr << "Application: " << argv[0] << std::endl;
 #endif
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 
-#if defined(ARM) || defined(ARM32) || defined(ARM64)
+#if defined(ARM) || defined(ARM32) || defined(ARM64) || defined __APPLE__
 		getSystemInfo();
 #else
 		std::cerr << "CPU: " << GetCpuInfo() << std::endl;
+		std::cerr << "RAM: " << getTotalSystemMemory() << "GB" << std::endl;
 #endif
 	}
 

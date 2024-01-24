@@ -1,11 +1,15 @@
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 
 #include <cmath>
-#include <malloc.h>
 #include <cstdio>
 #include <cstdlib>
 #include <string.h>
 #include "declarations.h"
+
+#if !defined __APPLE__
+#include <malloc.h>
+#endif
+
 #ifdef NO_SSE3
  #include <emmintrin.h>
 #else
@@ -16,7 +20,7 @@ const  __m128i avx_ones=_mm_set_epi16(1,1,1,1,1,1,1,1);
 
 int gauss_errc(double **a, int n, double b[])
 {
-	int *indxc,*indxr;
+	int *indxc, *indxr;
 	short *ipiv;
 	int i,icol=0,irow=0,j,k,l,ll,ipivsize;
 	double big,dum,pivinv,temp;
@@ -26,10 +30,12 @@ int gauss_errc(double **a, int n, double b[])
 
 		ipivsize=(n>>3)<<3;
 		if (n%8) ipivsize+=8;
-#if !defined _WIN32
-		ipiv=(short *)memalign(16,ipivsize*sizeof(short)); //is zero indexed
+#if !defined _WIN32 && !defined __APPLE__
+		ipiv = (short *)memalign(16, ipivsize * sizeof(short)); //is zero indexed
+#elif defined __APPLE__
+		posix_memalign((void **)&ipiv, 16, ipivsize * sizeof(short));
 #else
-		ipiv=(short *)_aligned_malloc(ipivsize*sizeof(short),16); //is zero indexed
+		ipiv = (short *)_aligned_malloc(ipivsize * sizeof(short), 16); //is zero indexed
 #endif
 
     __m128i avx_zeros=_mm_setzero_si128(); 

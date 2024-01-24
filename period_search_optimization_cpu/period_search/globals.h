@@ -1,5 +1,10 @@
 #pragma once
+#if defined __APPLE__ && defined ARM64
+#include <stdio.h>
+#else
 #include <cstdio>
+#endif
+
 #include "constants.h"
 
 extern int Lmax, Mmax, Niter, Lastcall,

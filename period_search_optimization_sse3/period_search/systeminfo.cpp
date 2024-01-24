@@ -6,16 +6,11 @@
 #include <thread>
 #include "systeminfo.h"
 #include <bitset>
-#include <iomanip>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
-#endif
-
-#if defined __APPLE__
-#include <sys/sysctl.h>
 #endif
 
 using namespace std;
@@ -24,7 +19,7 @@ constexpr auto MAXC = 2048;
 
 #if defined(ARM) || defined(ARM32) || defined(ARM64)
 
-// TODO: Obsolete
+//TODO: Obsolete
 void getRevisionCodes(std::string revisionCodes)
 {
 	cout << revisionCodes << endl;
@@ -39,11 +34,10 @@ void getRevisionCodes(std::string revisionCodes)
 	uint32_t revision = (uint32_t)std::stoi(revisionStr, NULL, 16);
 	// https://www.raspberrypi.org/documentation/hardware/raspberrypi/revision-codes/README.md
 	printf("\nHW revision: 0x%08x\n", revision);
-	// std::bitset<30> bits(revision);
+	//std::bitset<30> bits(revision);
 	cout << bitset<8 * sizeof(revision)>(revision) << endl;
 
-	if (revision & (1 << 23))
-	{ // new style revision
+	if (revision & (1 << 23)) { // new style revision
 		printf("  Type: %d\n", (revision >> 4) & 0xff);
 		printf("  Rev: %d\n", revision & 0xf);
 		printf("  Proc: %d\n", (revision >> 12) & 0xf);
@@ -52,10 +46,9 @@ void getRevisionCodes(std::string revisionCodes)
 	}
 }
 
-void getCpuInfoByArch(std::ifstream &cpuinfo)
+void getCpuInfoByArch(std::ifstream& cpuinfo)
 {
-	if (cpuinfo.fail())
-	{
+	if (cpuinfo.fail()) {
 		return;
 	}
 
@@ -64,7 +57,7 @@ void getCpuInfoByArch(std::ifstream &cpuinfo)
 	while (std::getline(cpuinfo, data))
 	{
 #ifdef _DEBUG
-		// cout << data << "\n";
+		//cout << data << "\n";
 #endif
 
 		model = data.find("Model") != string::npos ? data : model;
@@ -89,12 +82,11 @@ void getCpuInfoByArch(std::ifstream &cpuinfo)
 	cerr << part << endl;
 	cerr << cpuRevision << endl;
 
-	// getRevisionCodes(revision);
+	//getRevisionCodes(revision);
 }
 #endif // ARM / ARM32 / ARM64
 
-std::ifstream getIfstream(const char *fileName)
-{
+std::ifstream getIfstream(const char* fileName) {
 	std::ifstream ifstream(fileName);
 	if (ifstream.fail())
 	{
@@ -104,8 +96,7 @@ std::ifstream getIfstream(const char *fileName)
 	return ifstream;
 }
 
-void getCpuFrequency(std::ifstream &cpufreqIfstream, string definition)
-{
+void getCpuFrequency(std::ifstream& cpufreqIfstream, string definition) {
 	if (cpufreqIfstream.fail())
 	{
 		cpufreqIfstream.close();
@@ -125,15 +116,13 @@ void getCpuFrequency(std::ifstream &cpufreqIfstream, string definition)
 	}
 }
 
-#if defined _WIN32 || (defined __GNUC__ && defined __APPLE__ && !defined ARM64)
-void getCpuInfoByArch(ifstream &cpuinfo)
-{
+#if defined _WIN32 || (defined __GNUC__ && defined __APPLE__)
+void getCpuInfoByArch(ifstream& cpuinfo) {
+
 }
 #endif // _WIN32 || macOS
 
-#if defined ARM64 & !defined __APPLE__
-void getSystemInfo()
-{
+void getSystemInfo() {
 	auto cpuinfo = getIfstream("/proc/cpuinfo");
 	getCpuInfoByArch(cpuinfo);
 
@@ -153,36 +142,6 @@ void getSystemInfo()
 	cerr.precision(2);
 	cerr << "Available memory: " << totalMemory << " GB" << endl;
 }
-// #elif defined ARM64 && defined __APPLE__
-#elif defined __APPLE__
-void getSystemInfo()
-{
-	char cpuBrand[64];
-	size_t len = sizeof(cpuBrand);
-	int mib[2];
-    int64_t physical_memory;
-    size_t length;
-    length = sizeof(int64_t);
-	
-	cerr << "CPU: ";
-	if(sysctlbyname("machdep.cpu.brand_string", &cpuBrand[0], &len, 0, 0)==0)
-	{
-		cerr << cpuBrand << endl;
-	} else
-	{
-		cerr << "Unknown";
-	}
-
-    mib[0] = CTL_HW;
-    mib[1] = HW_MEMSIZE;
-    sysctl(mib, 2, &physical_memory, &length, NULL, 0);
-	if(physical_memory != NULL || physical_memory > 0)
-	{
-		float memSizeG =  physical_memory / 1024.0 / 1024.0 / 1024.0;
-		cerr << "RAM: " << memSizeG << "GB" << endl;
-	}
-}
-#endif
 
 #ifdef _WIN32
 float getTotalSystemMemory()
