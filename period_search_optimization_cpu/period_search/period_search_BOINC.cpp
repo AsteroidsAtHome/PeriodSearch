@@ -585,7 +585,7 @@ int major, minor, build, revision;
 #endif
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 
-#if defined(ARM) || defined(ARM32) || defined(ARM64)
+#if defined(ARM) || defined(ARM32) || defined(ARM64) || defined __APPLE__
 		getSystemInfo();
 #else
 		std::cerr << "CPU: " << GetCpuInfo() << std::endl;

@@ -1,5 +1,5 @@
 #pragma once
-#if defined __APPLE__
+#if defined __APPLE__ && defined ARM64
 #include <stdio.h>
 #else
 #include <cstdio>

@@ -1,6 +1,6 @@
 #if !defined __GNUC__ && defined _WIN32
 #include <intrin.h>
-#elif defined __GNUC__
+#elif defined __GNUC__ && !defined ARM64
 #include <cpuid.h>
 #endif
 

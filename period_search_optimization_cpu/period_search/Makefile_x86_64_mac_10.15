@@ -9,7 +9,7 @@ BOINC_BUILD_DIR = $(BOINC_DIR)/mac_build/build/Deployment
 BOINC_CONFIG_DIR =  $(BOINC_DIR)/clientgui/mac
 FRAMEWORKS_DIR = /System/Library/Frameworks
 
-CXXFLAGS_ALL = -O3 -w -target arm64-apple-macos11 -std=c++17 -s\
+CXXFLAGS_ALL = -O3 -w -s\
     -I$(BOINC_CONFIG_DIR) \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
@@ -19,12 +19,11 @@ CXXFLAGS_ALL = -O3 -w -target arm64-apple-macos11 -std=c++17 -s\
 
 CC = /Library/Developer/CommandLineTools/usr/bin/g++
 CXX = /Library/Developer/CommandLineTools/usr/bin/g++
-CXXFLAGS = -O3 -std=c++17 -target arm64-apple-macos11 \
-    -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.sdk \
+CXXFLAGS = -O3 -std=c++17 -arch x86_64 -mmacosx-version-min=10.15 \
+    -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk \
     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
 CFLAGS = $(CXXFLAGS) -w -s
-LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk,-arch,arm64
-
+LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk,-arch,x86_64
 
 # CC_PPC = /usr/bin/gcc-4.0
 # CXX_PPC = /usr/bin/g++-4.0
@@ -48,14 +47,23 @@ LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.s
 #     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
 # LDFLAGS_x86_64 = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.5.sdk,-arch,x86_64
 
+
 LIBJPEG = ../../../jpeg-6b/libjpeg.a
+
+OBJ = \
+    uc2_ppc.o \
+    uc2_graphics_ppc.o \
+    uc2_i386.o \
+    uc2_graphics_i386.o \
+    uc2_x86_64.o \
+    uc2_graphics_x86_64.o \
 
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
     curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
 	dot_product.o gauss_errc.o VersionInfo.o CpuInfo.o systeminfo.o
 
-
-PROGS = Period_search_BOINC_macos_10215_arm64_Release
+# PROGS = uc2_ppc uc2_graphics_ppc uc2_i386 uc2_graphics_i386 uc2_x86_64 uc2_graphics_x86_64 
+PROGS = Period_search_BOINC_macos_10215_x64_cpu_Release
 
 all: $(PROGS)
 
@@ -66,9 +74,9 @@ all: $(PROGS)
 # 	/bin/rm -f $(PROGS) $(OBJ)
 
 clean:
-	/bin/rm -f $(PROGS) *.o
+	/bin/rm -f $(PROGS) *.o libstdc++.a
 
-Period_search_BOINC_macos_10215_arm64_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+Period_search_BOINC_macos_10215_x64_cpu_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
 	$(BOINC_BUILD_DIR)/libboinc_api.a \
 	$(BOINC_BUILD_DIR)/libboinc.a -lm \
