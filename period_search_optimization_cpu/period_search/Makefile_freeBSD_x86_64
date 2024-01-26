@@ -1,0 +1,71 @@
+# Stand-alone Makefile for Period_search_BOINC Intel x86_64 application.
+# Updated 24-JAN-2024 for x86_64 OS FreeBSD 13.2 by Gerogi Vidinski
+# No SIMD optimisations. Just pure CPU.
+
+BOINC_DIR = ../../../boinc
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+
+CXXFLAGS = -m64 -O3 -std=c++17 -w -s \
+    -I$(BOINC_DIR) \
+    -I$(BOINC_LIB_DIR) \
+    -I$(BOINC_API_DIR) \
+    -lexecinfo \
+    -L /usr/lib \
+    -L.
+
+CC=g++
+CXX=g++
+OPTFLAGS= -m64 -O3 -std=c++17
+CFLAGS=$(OPTFLAGS) -w -s -lexecinfo
+LDFLAGS=-lm -lexecinfo
+MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
+        curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
+	dot_product.o gauss_errc.o VersionInfo.o CpuInfo.o systeminfo.o
+
+# the following should be freeglut; use nm to check
+# you may have to change the paths for your system
+
+#ifeq ($(wildcard /usr/local/lib/libglut.a),)
+#	LIBGLUT = /usr/lib/libglut.a
+#	LIBGLU = /usr/lib/libGLU.a
+#	LIBJPEG = /usr/lib/libjpeg.a
+#else
+#	LIBGLUT = /usr/local/lib/libglut.a
+#	LIBGLU = /usr/local/lib/libGLU.a
+#	LIBJPEG = /usr/local/lib/libjpeg.a
+#endif
+
+PROGS = Period_search_BOINC_freebsd_10215_x64_cpu_Release
+
+# uc2_graphics
+# make this optional so compile doesn't break on systems without OpenGL
+
+all: $(PROGS)
+
+libstdc++.a:
+	ln -s `g++ -print-file-name=libstdc++.a`
+
+clean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+distclean:
+	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+install: Period_search_BOINC_freebsd_10215_x64_cpu_Release
+
+# specify library paths explicitly (rather than -l)
+# because otherwise you might get a version in /usr/lib etc.
+
+#uc2: uc2.o libstdc++.a $(BOINC_API_DIR)/libboinc_api.a #$(BOINC_LIB_DIR)/libboinc.a
+#	$(CXX) $(CXXFLAGS) -o uc2 uc2.o libstdc++.a -pthread \
+#	$(BOINC_API_DIR)/libboinc_api.a \
+#	$(BOINC_LIB_DIR)/libboinc.a
+
+Period_search_BOINC_freebsd_10215_x64_cpu_Release: period_search_BOINC.cpp $(MY_LIBS) libstdc++.a  $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
+	$(BOINC_API_DIR)/libboinc_api.a \
+	$(BOINC_LIB_DIR)/libboinc.a -lm 
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<

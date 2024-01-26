@@ -61,7 +61,7 @@
 #include <Windows.h>
 //#include <Shlwapi.h>
 #else
-#include "config.h"
+#include "config.h" // <- freebsd
 #include <cstdio>
 #include <cctype>
 #include <ctime>
@@ -77,8 +77,8 @@
 #include <filesystem>
 #endif
 
-#include "str_util.h"
-#include "util.h"
+#include "str_util.h"  // <- freebsd
+#include "util.h"      // <- freebsd
 #include "filesys.h"
 #include "boinc_api.h"
 #include "mfile.h"

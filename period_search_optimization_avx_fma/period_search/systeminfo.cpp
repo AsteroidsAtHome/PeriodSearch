@@ -122,6 +122,7 @@ void getCpuInfoByArch(ifstream& cpuinfo) {
 }
 #endif // _WIN32 || macOS
 
+#if defined(ARM) || defined(ARM32) || defined(ARM64)
 void getSystemInfo() {
 	auto cpuinfo = getIfstream("/proc/cpuinfo");
 	getCpuInfoByArch(cpuinfo);
@@ -142,6 +143,7 @@ void getSystemInfo() {
 	cerr.precision(2);
 	cerr << "Available memory: " << totalMemory << " GB" << endl;
 }
+#endif
 
 #ifdef _WIN32
 float getTotalSystemMemory()
