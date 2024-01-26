@@ -837,7 +837,7 @@ int major, minor, build, revision;
 				}
 			} /* pole loop */
 
-			printf("\n");
+			//printf("\n");
 
 			if (la_best < 0)
 				la_best += 360;
