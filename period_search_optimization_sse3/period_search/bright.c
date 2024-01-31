@@ -121,7 +121,7 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
 
    /*Integrated brightness (phase coeff. used later) */
 
-#ifdef NO_SSE3
+#ifdef NO_SSE3 // SSE2
    __m128d avx_e1=_mm_load1_pd(&e[1]);
    __m128d avx_e2=_mm_load1_pd(&e[2]);
    __m128d avx_e3=_mm_load1_pd(&e[3]);
@@ -147,7 +147,7 @@ double bright(double ee[], double ee0[], double t, double cg[], double dyda[], i
    __m128d avx_de032=_mm_load1_pd(&de0[3][2]);
    __m128d avx_de033=_mm_load1_pd(&de0[3][3]);
    __m128d avx_Scale=_mm_load1_pd(&Scale);
-#else
+#else	//SSE3
    __m128d avx_e1=_mm_loaddup_pd(&e[1]);
    __m128d avx_e2=_mm_loaddup_pd(&e[2]);
    __m128d avx_e3=_mm_loaddup_pd(&e[3]);
