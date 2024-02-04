@@ -131,7 +131,7 @@ public:
 		}
 	}
 
-	int CalculateGaussErrrc(double** a, int n, double b[])
+	int CalculateGaussErrc(double** a, int n, double b[])
 	{
 		int result = 0;
 		if (strategy_)

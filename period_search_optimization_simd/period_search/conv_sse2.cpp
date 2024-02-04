@@ -24,6 +24,7 @@ double CalcStrategySse2::conv(int nc, double dres[], int ma)
 	res = 0;
 	for (j = 1; j <= ma; j++)
 		dres[j] = 0;
+
 	for (i = 0; i < Numfac; i++)
 	{
 		res += Area[i] * Nor[nc - 1][i];

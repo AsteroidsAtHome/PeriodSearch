@@ -9,26 +9,32 @@
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
-#include "CalcStrategyNone.hpp"
-#include "arrayHelpers.hpp"
 
 /* comment the following line if no YORP */
 /*#define YORP*/
 
-//double xx1[4], xx2[4], dy, sig2i, wt, dyda[MAX_N_PAR + 1], ymod,
-//ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1],
-//dave[MAX_N_PAR + 1],
-//coef, ave = 0, trial_chisq, wght;
+#ifdef __GNUC__
+double dyda[MAX_N_PAR + 4] __attribute__((aligned(16)));
+#else
+__declspec(align(16)) double dyda[MAX_N_PAR + 4]; //is zero indexed for aligned memory access
+#endif
 
-double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
-	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma)
+double xx1[4], xx2[4], dy, sig2i, wt, ymod,
+ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 1],
+dave[MAX_N_PAR + 1 + 1],
+coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
+
+double mrqcof(double** x1, double** x2, double x3[], double y[],
+			  double sig[], double a[], int ia[], int ma,
+		  double** alpha, double beta[], int mfit, int lastone, int lastma)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
+
+
 	/* N.B. curv and blmatrix called outside bright
 	   because output same for all points */
-	CalcStrategyNone::curv(a);
+	curv(a);
 
 	//   #ifdef YORP
 	//      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
@@ -36,17 +42,12 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
 	//   #endif
 
-	//for (j = 1; j <= mfit; j++)
 	for (j = 0; j < mfit; j++)
 	{
-		//for (k = 1; k <= j; k++)
 		for (k = 0; k <= j; k++)
-		{
 			alpha[j][k] = 0;
-		}
 		beta[j] = 0;
 	}
-
 	trial_chisq = 0;
 	np = 0;
 	np1 = 0;
@@ -54,7 +55,7 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 
 	for (i = 1; i <= Lcurves; i++)
 	{
-		if (Inrel[i] == 1) /* is the LC relative? */
+		if (Inrel[i]/* == 1*/) /* is the LC relative? */
 		{
 			ave = 0;
 			for (l = 1; l <= ma; l++)
@@ -70,48 +71,32 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 			}
 
 			if (i < Lcurves)
-				ymod = CalcStrategyNone::bright(xx1, xx2, x3[np], a, dyda, ma);
+				ymod = bright(xx1, xx2, x3[np], a, dyda, ma);
 			else
-				ymod = CalcStrategyNone::conv(jp, dyda, ma);
-
-			//printf("[%3d][%3d] % 0.6f\n", i, jp, ymod);
-			/*if(jp == 1)
-				printf("[%3d][%3d] % 0.6f\n", i, jp, dyda[1]);*/
-			//printArray(dyda, 208, "dyda");
+				ymod = conv(jp, dyda, ma);
 
 			ytemp[jp] = ymod;
 
-			//if (Inrel[i]/* == 1*/)
-			//{
-			//	ave = ave + ymod;
-			//	for (l = 1; l <= ma; l++)
-			//	{
-			//		dytemp[jp][l] = dyda[l - 1];
-			//		dave[l] += dyda[l - 1];
-			//	}
-			//}
-			//else
-			//{
-			//	for (l = 1; l <= ma; l++)
-			//	{
-			//		dytemp[jp][l] = dyda[l - 1];
-			//	}
-			//}
-			if (Inrel[i] == 1)
-				ave = ave + ymod;
-
-			for (l = 1; l <= ma; l++)
+			if (Inrel[i]/* == 1*/)
 			{
-				dytemp[jp][l] = dyda[l - 1];
-				if (Inrel[i] == 1)
-					dave[l] = dave[l] + dyda[l - 1];
+				ave = ave + ymod;
+				for (l = 1; l <= ma; l++)
+				{
+					dytemp[jp][l] = dyda[l - 1];
+					dave[l] += dyda[l - 1];
+				}
+			}
+			else
+			{
+				for (l = 1; l <= ma; l++)
+				{
+					dytemp[jp][l] = dyda[l - 1];
+				}
 			}
 			/* save lightcurves */
 
 			if (Lastcall == 1)
-			{
 				Yout[np] = ymod;
-			}
 		} /* jp, lpoints */
 
 		if (Lastcall != 1)
@@ -119,11 +104,10 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 			for (jp = 1; jp <= Lpoints[i]; jp++)
 			{
 				np1++;
-				if (Inrel[i] == 1)
+				if (Inrel[i] /*== 1*/)
 				{
 					coef = sig[np1] * Lpoints[i] / ave;
-					for (l = 1; l <= ma; l++)
-					{
+					for (l = 1; l <= ma; l++) {
 						dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave);
 					}
 
@@ -132,7 +116,6 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 					dytemp[jp][1] = 0;
 				}
 			}
-
 			if (ia[0]) //not relative
 			{
 				for (jp = 1; jp <= Lpoints[i]; jp++)
@@ -153,14 +136,14 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 					beta[j] = beta[j] + dy * wt;
 					j++;
 					//
-					for (l = 0; l <= lastone; l++)  //line of ones
+					for (l = 1; l <= lastone; l++)  //line of ones
 					{
 						wt = dyda[l] * sig2iwght;
 						k = 0;
 						//m=0
 						alpha[j][k] = alpha[j][k] + wt * dyda[0];
 						k++;
-						for (m = 0; m <= l; m++)
+						for (m = 1; m <= l; m++)
 						{
 							alpha[j][k] = alpha[j][k] + wt * dyda[m];
 							k++;
@@ -180,18 +163,16 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 							int kk = k;
 							for (m = 1; m <= lastone; m++)
 							{
-								alpha[j][kk] = alpha[j][kk] + wt * dyda[m];
+								alpha[j][k] = alpha[j][kk] + wt * dyda[m];
 								kk++;
 							} /* m */
 							k += lastone;
 							for (m = lastone + 1; m <= l; m++)
-							{
 								if (ia[m])
 								{
 									alpha[j][k] = alpha[j][k] + wt * dyda[m];
 									k++;
 								}
-							} /* m */
 							beta[j] = beta[j] + dy * wt;
 							j++;
 						}
@@ -213,7 +194,7 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 					j = 0;
 					//
 					double sig2iwght = sig2i * wght;
-					//l=0
+					// l=0
 					//
 					for (l = 1; l <= lastone; l++)  //line of ones
 					{
@@ -242,16 +223,13 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 								alpha[j][kk] = alpha[j][kk] + wt * dyda[m];
 								kk++;
 							} /* m */
-							// k += lastone;
 							k = lastone;
 							for (m = lastone + 1; m <= l; m++)
-							{
 								if (ia[m])
 								{
 									alpha[j][k] = alpha[j][k] + wt * dyda[m];
 									k++;
 								}
-							} /* m */
 							beta[j] = beta[j] + dy * wt;
 							j++;
 						}
@@ -266,7 +244,7 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 
 	} /* i,  lcurves */
 
-	for (j = 1; j <= mfit; j++)
+	for (j = 1; j < mfit; j++)
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
 

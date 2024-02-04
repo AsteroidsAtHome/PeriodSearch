@@ -36,7 +36,8 @@ extern double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 			  Darea[MAX_N_FAC+4] __attribute__ ((aligned (32))),
 			  Dg[MAX_N_FAC+8][MAX_N_PAR+4] __attribute__ ((aligned (32)));
   #else
-    extern __declspec(align(32)) double Nor[3][MAX_N_FAC+4], Area[MAX_N_FAC+4], Darea[MAX_N_FAC+4],Dg[MAX_N_FAC+8][MAX_N_PAR+4]; //All are zero indexed
+    //extern __declspec(align(32)) double Nor[3][MAX_N_FAC+4], Area[MAX_N_FAC+4], Darea[MAX_N_FAC+4],Dg[MAX_N_FAC+8][MAX_N_PAR+4]; //All are zero indexed
+	extern __declspec(align(64)) double Nor[3][MAX_N_FAC + 8], Area[MAX_N_FAC + 8], Darea[MAX_N_FAC + 8], Dg[MAX_N_FAC + 16][MAX_N_PAR + 8]; //All are zero indexed
   #endif
 #endif
 

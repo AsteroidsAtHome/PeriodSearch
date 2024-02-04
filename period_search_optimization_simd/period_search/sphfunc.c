@@ -7,7 +7,7 @@
 #include <cmath>
 #include "globals.h"
 #include "declarations.h"
-//#include "../period_search/arrayHelpers.hpp"
+#include "arrayHelpers.hpp"
 
 void sphfunc(int ndir, double at[], double af[])
 {
@@ -32,6 +32,9 @@ void sphfunc(int ndir, double at[], double af[])
         {
             Fs[i][j] = sin(j*af[i]);
             Fc[i][j] = cos(j*af[i]);
+
+			//printf("[%3d][%3d] % 0.6f\n", i, j, Fc[i][j]);
+			//printf("[%3d][%3d] % 0.6f\n", i, j, Fs[i][j]);
         }
     }
 
@@ -95,7 +98,7 @@ void sphfunc(int ndir, double at[], double af[])
         printf("_fc_%d[] = { ", q);
         for (int p = 0; p <= ndir; p++)
         {
-            printf("%.30f, ", Fc[p][q]);
+            printf("% 0.6f, ", Fc[p][q]);
             if (p % 9 == 0)
                 printf("\n");
         }
@@ -108,7 +111,7 @@ void sphfunc(int ndir, double at[], double af[])
         printf("_fs_%d[] = { ", q);
         for (int p = 0; p <= ndir; p++)
         {
-            printf("%.30f, ", Fs[p][q]);
+            printf("% 0.6f, ", Fs[p][q]);
             if (p % 9 == 0)
                 printf("\n");
         }
@@ -124,7 +127,7 @@ void sphfunc(int ndir, double at[], double af[])
             for (int p = 0; p <= i - 1; p++)
             {
 
-                printf("%.30f, ", Pleg[p][q][r]);
+                printf("% 0.6f, ", Pleg[p][q][r]);
                 if (i % (i-1) == 0)
                     printf("\n");
             }
@@ -139,7 +142,7 @@ void sphfunc(int ndir, double at[], double af[])
         printf("\n_dsph_%d[] = { ", q);
         for (int p = 0; p <= i - 1; p++)
         {
-            printf("%.30f, ", Dsph[p][q]);
+            printf("% 0.6f, ", Dsph[p][q]);
             if (i % 9 == 0)
                 printf("\n");
         }

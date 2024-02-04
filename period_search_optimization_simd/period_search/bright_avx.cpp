@@ -179,7 +179,7 @@ double CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[],
         {
             INNER_CALC_DSMU
 
-                avx_pbr = _mm256_blendv_pd(_mm256_setzero_pd(), avx_pbr, cmp);
+            avx_pbr = _mm256_blendv_pd(_mm256_setzero_pd(), avx_pbr, cmp);
             avx_dsmu = _mm256_blendv_pd(_mm256_setzero_pd(), avx_dsmu, cmp);
             avx_dsmu0 = _mm256_blendv_pd(_mm256_setzero_pd(), avx_dsmu0, cmp);
             avx_lmu = _mm256_blendv_pd(_mm256_setzero_pd(), avx_lmu, cmp);

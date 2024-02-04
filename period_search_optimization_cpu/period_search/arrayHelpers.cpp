@@ -13,17 +13,17 @@ void printArray(int array[], int iMax, char msg[])
 
 void printArray(double array[], int iMax, char msg[])
 {
-    printf("\n%s[%d]:\n", msg, iMax);
+	printf("\n%s[%d]:\n", msg, iMax);
 	printf("[0] ");
-    for (int i = 0; i <= iMax; i++)
-    {
-        printf("%.6f, ", array[i]);
-        if (i > 0 && i < iMax && i % 9 == 0)
+	for (int i = 0; i <= iMax; i++)
+	{
+		printf("%.6f, ", array[i]);
+		if (i > 0 && i < iMax && i % 9 == 0)
 		{
-            printf("\n");
+			printf("\n");
 			printf("[%d] ", i + 1);
 		}
-    }
+	}
 }
 
 void printArray(double **array, int iMax, int jMax, char msg[])

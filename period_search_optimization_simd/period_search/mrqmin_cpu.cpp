@@ -2,8 +2,6 @@
    converted from Mikko's fortran code
 
    8.11.2006
-
-   Numerical recipes: Nonlinear least-squares fit, Marquardt’s method
 */
 
 #include "globals.h"
@@ -11,14 +9,14 @@
 #include "constants.h"
 
 int mrqmin(double** x1, double** x2, double x3[], double y[],
-	double sig[], double a[], int ia[], int ma,
-	double** covar, double** alpha)
+			double sig[], double a[], int ia[], int ma,
+			double** covar, double** alpha)
 {
 
 	int j, k, l, err_code;
 	static int mfit, lastone, lastma; /* it is set in the first call*/
 
-	static double* atry, * beta, * da; //beta, da are zero indexed
+	static double* atry, * beta, * da;
 
 	double temp;
 
@@ -50,60 +48,30 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 					lastma = j;
 				}
 			}
-
 			lastone = 0;
 			for (j = 1; j <= lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
 			{
 				if (!ia[j]) break;
 				lastone = j;
 			}
-
 			Alamda = Alamda_start; /* initial alambda */
-			//printf("Alamda: %0.6f\n", Alamda);
 
-			temp = calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-			//printf("% 0.6f\n", temp);
+			temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
 
-//#ifdef AVX512
-//			temp = mrqcof_avx512(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//#else
-//	#ifdef FMA
-//			temp = mrqcof_fma(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//	#else
-//			temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//	#endif
-//#endif
 			Ochisq = temp;
 			for (j = 1; j <= ma; j++)
-			{
 				atry[j] = a[j];
-			}
 		}
-
 		for (j = 0; j < mfit; j++)
 		{
 			for (k = 0; k < mfit; k++)
-			{
 				covar[j][k] = alpha[j][k];
-				//if(j == 0 || j == 1)
-				//	printf("[%3d] [%3d] % 0.6f\n", j, k, alpha[j][k]);
-			}
-
 			covar[j][j] = alpha[j][j] * (1 + Alamda);
 			da[j] = beta[j];
 		}
 
-		err_code = calcCtx.CalculateGaussErrc(covar, mfit, da);
+		err_code = gauss_errc(covar, mfit, da);
 
-//#ifdef AVX512
-//	err_code = gauss_errc_avx512(covar, mfit, da);
-//#else
-//	#ifdef FMA
-//		err_code = gauss_errc_fma(covar, mfit, da);
-//	#else
-//		err_code = gauss_errc(covar, mfit, da);
-//	#endif
-//#endif
 		if (err_code != 0) return(err_code);
 
 
@@ -119,24 +87,10 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 	} /* Lastcall != 1 */
 
 	if (Lastcall == 1)
-	{
 		for (l = 1; l <= ma; l++)
-		{
 			atry[l] = a[l];
-		}
-	}
 
-	temp = calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-
-//#ifdef AVX512
-//	temp = mrqcof_avx512(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//#else
-//	#ifdef FMA
-//		temp = mrqcof_fma(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//	#else
-//		temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//	#endif
-//#endif
+	temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
 	Chisq = temp;
 
 
@@ -154,16 +108,11 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 		for (j = 0; j < mfit; j++)
 		{
 			for (k = 0; k < mfit; k++)
-			{
 				alpha[j][k] = covar[j][k];
-			}
 			beta[j] = da[j];
 		}
-
 		for (l = 1; l <= ma; l++)
-		{
 			a[l] = atry[l];
-		}
 	}
 	else
 	{

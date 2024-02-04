@@ -8,6 +8,7 @@
 #include "globals.h"
 #include "declarations.h"
 //#include "../period_search/arrayHelpers.hpp"
+#include "arrayHelpers.hpp"
 
 
 void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, double at[], double af[])
@@ -87,7 +88,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
         cg[i] = fitvec[i];
 
     // For Unit tests reference only
-    //printArray(cg, ncoef, "cg[x]:");
+    //printArray(cg, ncoef, "cg");
 
     deallocate_matrix_double(fitmat, ncoef);
     deallocate_matrix_double(fmat, ndir);
