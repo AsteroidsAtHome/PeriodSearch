@@ -120,11 +120,14 @@ period_search_state*
 test_*.txt
 test_values*.txt
 
-# Files build unde Linux
+# Files build under Linux
 *.o
 *.so
 *.a
 period_search_BOINC*
+
+# Keep main cpp file
+!period_search_BOINC.cpp
 
 # Profiler directories
 /*/DawnCache
