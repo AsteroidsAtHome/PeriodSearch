@@ -13,6 +13,9 @@
 //#endif
 #include "CalcStrategySse2.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("sse2")))
+#endif
 void CalcStrategySse2::curv(double cg[])
 {
 	int i, m, l, k;

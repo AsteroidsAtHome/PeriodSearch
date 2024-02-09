@@ -71,6 +71,9 @@
 
 
 //double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+#if defined(__GNUC__)
+__attribute__((target("avx,fma")))
+#endif
 double CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 {
 	int ncoef0, i, j, k,

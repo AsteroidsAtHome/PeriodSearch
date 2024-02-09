@@ -73,7 +73,9 @@
 	  avx_dsmu0=_mm_add_pd(_mm_mul_pd(avx_cls,avx_powdnom),_mm_mul_pd(avx_cl,avx_lmu));
 // end of inner_calc_dsmu
 
-
+#if defined(__GNUC__)
+__attribute__((target("sse2")))
+#endif
 double CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 {
 	int ncoef0, i, j, k,

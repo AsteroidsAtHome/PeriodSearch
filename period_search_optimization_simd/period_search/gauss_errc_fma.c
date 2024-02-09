@@ -7,6 +7,9 @@
 #include <immintrin.h>
 #include <string.h>
 
+#if defined(__GNUC__)
+__attribute__((target("avx,fma")))
+#endif
 int gauss_errc_fma(double **a, int n, double b[])
 {
     int *indxc, *indxr, *ipiv;

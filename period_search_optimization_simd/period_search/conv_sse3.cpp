@@ -15,6 +15,9 @@
 //#endif
 #include "CalcStrategySse3.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("sse3")))
+#endif
 double CalcStrategySse3::conv(int nc, double dres[], int ma)
 {
 	int i, j;

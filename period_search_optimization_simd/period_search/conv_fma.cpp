@@ -11,6 +11,9 @@
 #include <immintrin.h>
 #include "CalcStrategyFma.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("avx,fma")))
+#endif
 double CalcStrategyFma::conv(int nc, double dres[], int ma)
 {
     int i, j;

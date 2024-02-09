@@ -14,6 +14,9 @@ int CalcStrategyFma::gauss_errc(double** a, int n, double b[])
 	return CalcStrategyAvx::gauss_errc(a, n, b);
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx,fma")))
+#endif
 int CalcStrategyAvx::gauss_errc(double **a, int n, double b[])
 {
     int *indxc, *indxr, *ipiv;

@@ -8,6 +8,9 @@
 #include <string.h>
 #include "CalcStrategyAvx512.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 int CalcStrategyAvx512::gauss_errc(double **a, int n, double b[])
 {
     int *indxc, *indxr, *ipiv;

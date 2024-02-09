@@ -11,6 +11,9 @@
 #include <immintrin.h>
 #include "CalcStrategyAvx.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("avx")))
+#endif
 double CalcStrategyAvx::conv(int nc, double dres[], int ma)
 {
     int i, j;

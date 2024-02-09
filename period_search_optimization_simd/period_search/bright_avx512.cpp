@@ -13,12 +13,18 @@
 #include <immintrin.h>
 #include "CalcStrategyAvx512.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline __m512d hadd_pd(__m512d a, __m512d b) {
   __m512i idx1 = _mm512_set_epi64(14, 6, 12, 4, 10, 2, 8, 0);
   __m512i idx2 = _mm512_set_epi64(15, 7, 13, 5, 11, 3, 9, 1);
   return _mm512_add_pd(_mm512_mask_permutex2var_pd(a, 0xff, idx1, b), _mm512_mask_permutex2var_pd(a, 0xff, idx2, b));
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
 	__m512i result = _mm512_ternarylogic_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(b), _mm512_srai_epi64(_mm512_castpd_si512(c), 63), 0xd8);
 
@@ -26,16 +32,25 @@ inline __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
 }
 
 // -mavx512dq
+#if defined(__GNUC__)
+__attribute__((target("avx512dq,avx512f")))
+#endif
 inline __m512d cmp_pd(__m512d a, __m512d b) {
 	__m512i result = _mm512_movm_epi64(_mm512_cmp_pd_mask(a, b, _CMP_GT_OS));
 
 	return _mm512_castsi512_pd(result);
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline int movemask_pd(__m512d a) {
 	return (int) _mm512_cmpneq_epi64_mask(_mm512_setzero_si512(), _mm512_and_si512(_mm512_set1_epi64(0x8000000000000000ULL), _mm512_castpd_si512(a)));
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline __m512d permute4(__m512d a) {
   //1 2 3 4 5 6 7 8
   //5 6 7 8 1 2 3 4
@@ -43,6 +58,9 @@ inline __m512d permute4(__m512d a) {
   return _mm512_mask_permutex2var_pd(a, 0xff, idx, a);
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline __m512d permute3(__m512d a) {
   //1 2 3 4 5 6 7 8
   //3 4 5 6 7 8 1 2
@@ -50,6 +68,9 @@ inline __m512d permute3(__m512d a) {
   return _mm512_mask_permutex2var_pd(a, 0xff, idx, a);
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 inline __m512d hpermute_add_pd(__m512d a) {
   __m512d tmp = _mm512_add_pd(a, permute3(a));
   return _mm512_add_pd(tmp, permute4(tmp));
@@ -112,6 +133,9 @@ inline __m512d hpermute_add_pd(__m512d a) {
 // end of inner_calc_dsmu
 
 
+#if defined(__GNUC__)
+__attribute__((target("avx512dq,avx512f")))
+#endif
 double CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 {
 	int ncoef0, i, j, k,

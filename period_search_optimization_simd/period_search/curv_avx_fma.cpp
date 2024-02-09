@@ -17,6 +17,9 @@ void CalcStrategyFma::curv(double cg[])
 	CalcStrategyAvx::curv(cg);
 }
 
+#if defined(__GNUC__)
+__attribute__((target("avx")))
+#endif
 void CalcStrategyAvx::curv(double cg[])
 {
     int i, m, l, k;

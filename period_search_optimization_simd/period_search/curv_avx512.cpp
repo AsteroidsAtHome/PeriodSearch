@@ -9,6 +9,9 @@
 #include <immintrin.h>
 #include "CalcStrategyAvx512.hpp"
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 void CalcStrategyAvx512::curv(double cg[])
 {
     int i, m, l, k;

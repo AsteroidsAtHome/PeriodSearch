@@ -58,10 +58,10 @@ extern double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 
 	extern struct SIMDSupport
 	{
+		bool hasAVX512dq = false;
 		bool hasAVX512 = false;
 		bool hasFMA = false;
 		bool hasAVX = false;
 		bool hasSSE3 = false;
 		bool hasSSE2 = false;
-		bool isAVXSupported = false;
 	} CPUopt;

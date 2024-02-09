@@ -36,6 +36,9 @@ constexpr auto MIN(T1 X, T2 Y) { return ((X) < (Y) ? (X) : (Y)); }
 
 const __m128i avx_ones1 = _mm_set_epi32(1, 1, 1, 1);
 
+#if defined(__GNUC__)
+__attribute__((target("sse3")))
+#endif
 double CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 			  double sig[], double a[], int ia[], int ma,
 		  double** alpha, double beta[], int mfit, int lastone, int lastma)

@@ -29,6 +29,9 @@
 //dave2[MAX_N_PAR + 1 + 4],
 //coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
 
+#if defined(__GNUC__)
+__attribute__((target("avx512f")))
+#endif
 double CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
     double **alpha, double beta[], int mfit, int lastone, int lastma)

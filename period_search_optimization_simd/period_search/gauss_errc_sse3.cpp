@@ -21,6 +21,9 @@
 
 const  __m128i avx_ones = _mm_set_epi16(1, 1, 1, 1, 1, 1, 1, 1);
 
+#if defined(__GNUC__)
+__attribute__((target("sse3")))
+#endif
 int CalcStrategySse3::gauss_errc(double** a, int n, double b[])
 {
 	int* indxc, * indxr;

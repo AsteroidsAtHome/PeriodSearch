@@ -74,6 +74,9 @@
 // end of inner_calc_dsmu
 
 
+#if defined(__GNUC__)
+__attribute__((target("sse3")))
+#endif
 double CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 {
 	int ncoef0, i, j, k,
