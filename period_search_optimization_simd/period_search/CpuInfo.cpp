@@ -122,36 +122,22 @@ static void GetCpuid(unsigned int info_type, unsigned int &a, unsigned int &b, u
 #endif
 static bool IsAVXSupportedByOS()
 {
-	bool supported = false;
+        unsigned int a, b, c, d;
+        GetCpuid(1, a, b, c, d);
 
-	unsigned int a, b, c, d;
-	GetCpuid(1, a, b, c, d);
+        bool osUsesXSAVE_XRSTORE = c & (1 << 27);
 
-	bool osUsesXSAVE_XRSTORE = c & (1 << 27) || false;
-
-	if (osUsesXSAVE_XRSTORE)
-	{
-		supported = (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0x6) || false;
-	}
-
-	return supported;
+        return osUsesXSAVE_XRSTORE && (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0x6);
 }
 
 static bool IsAVX512SupportedByOS()
 {
-	bool supported = false;
+        unsigned int a, b, c, d;
+        GetCpuid(1, a, b, c, d);
 
-	unsigned int a, b, c, d;
-	GetCpuid(1, a, b, c, d);
+        bool osUsesXSAVE_XRSTORE = c & (1 << 27);
 
-	bool osUsesXSAVE_XRSTORE = c & (1 << 0xe6) || false;
-
-	if (osUsesXSAVE_XRSTORE)
-	{
-		supported = (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0xe6) || false;
-	}
-
-	return supported;
+        return osUsesXSAVE_XRSTORE && (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0xe6);
 }
 
 void GetSupportedSIMDs()
