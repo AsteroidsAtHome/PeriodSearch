@@ -633,7 +633,7 @@ int main(int argc, char** argv) {
 	}
 
 	// TEST
-	//CPUopt.isAVXSupported = false;
+	//CPUopt.hasAVX512dq = false;
 	//CPUopt.hasAVX512 = false;
 	//CPUopt.hasFMA = false;
 	//CPUopt.hasAVX = false;

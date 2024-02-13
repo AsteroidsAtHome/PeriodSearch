@@ -6,4 +6,8 @@
 void getSystemInfo();
 void getCpuInfoByArch(std::ifstream &cpuinfo);
 #endif
+#ifdef _WIN32
 std::string getTotalSystemMemory();
+#else
+float getTotalSystemMemory();
+#endif

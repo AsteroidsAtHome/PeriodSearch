@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <string>
+#include <string.h>
 #include "declarations.h"
 #include "CalcStrategyNone.hpp"
 
