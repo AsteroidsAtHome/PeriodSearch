@@ -63,7 +63,7 @@ double CalcStrategyNone::bright(double ee[], double ee0[], double t, double cg[]
 	/*Integrated brightness (phase coeff. used later) */
 	double lmu, lmu0, dsmu, dsmu0;
 	//for (i = 1; i <= Numfac; i++)
-	for (i = 0; i <= Numfac; i++)
+	for (i = 0; i < Numfac; i++)
 	{
 		//lmu = e[1] * Nor[i][1] + e[2] * Nor[i][2] + e[3] * Nor[i][3];
 		//lmu0 = e0[1] * Nor[i][1] + e0[2] * Nor[i][2] + e0[3] * Nor[i][3];
@@ -115,13 +115,9 @@ double CalcStrategyNone::bright(double ee[], double ee0[], double t, double cg[]
 	for (i = 1; i <= ncoef0 - 3; i++)
 	{
 		tmpdyda = 0;
-		int x;
 		for (j = 0; j < incl_count; j++)
 		{
-			x = incl[j] +1;
-			//if(i == 49)
-			//	printf("incl[%3d] %3d Dg[%3d][%3d] % 0.6f\n", j, x, x, i - 1, Dg[x][i - 1]);
-			tmpdyda = tmpdyda + dbr[j] * Dg[x][i - 1];
+			tmpdyda = tmpdyda + dbr[j] * Dg[incl[j]][i - 1];
 		}
 		dyda[i - 1] = Scale * tmpdyda;
 	}

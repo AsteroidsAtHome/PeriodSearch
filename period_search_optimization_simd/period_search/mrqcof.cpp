@@ -103,8 +103,8 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 			for (l = 1; l <= ma; l++)
 			{
 				dytemp[jp][l] = dyda[l - 1];
-				if (Inrel[i] == 1)
-					dave[l] = dave[l] + dyda[l - 1];
+				//if (Inrel[i] == 1)
+				dave[l] = dave[l] + dyda[l - 1];
 			}
 			/* save lightcurves */
 
@@ -153,14 +153,14 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 					beta[j] = beta[j] + dy * wt;
 					j++;
 					//
-					for (l = 0; l <= lastone; l++)  //line of ones
+					for (l = 1; l <= lastone; l++)  //line of ones
 					{
 						wt = dyda[l] * sig2iwght;
 						k = 0;
 						//m=0
 						alpha[j][k] = alpha[j][k] + wt * dyda[0];
 						k++;
-						for (m = 0; m <= l; m++)
+						for (m = 1; m <= l; m++)
 						{
 							alpha[j][k] = alpha[j][k] + wt * dyda[m];
 							k++;
@@ -180,7 +180,7 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 							int kk = k;
 							for (m = 1; m <= lastone; m++)
 							{
-								alpha[j][kk] = alpha[j][kk] + wt * dyda[m];
+								alpha[j][k] = alpha[j][kk] + wt * dyda[m];
 								kk++;
 							} /* m */
 							k += lastone;
@@ -266,7 +266,7 @@ double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[
 
 	} /* i,  lcurves */
 
-	for (j = 1; j <= mfit; j++)
+	for (j = 1; j < mfit; j++)
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
 

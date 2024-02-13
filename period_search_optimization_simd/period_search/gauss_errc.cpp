@@ -11,8 +11,7 @@
 
 int CalcStrategyNone::gauss_errc(double** a, int n, double b[])
 {
-	int* indxc, * indxr;
-	int* ipiv;
+	int *indxc, *indxr, *ipiv;
 	int i, icol = 0, irow = 0, j, k, l, ll, ipivsize;
 	double big, dum, pivinv, temp;
 
@@ -94,8 +93,7 @@ int CalcStrategyNone::gauss_errc(double** a, int n, double b[])
 		}
 	}
 
-	//for (l = n; l >= 1; l--)
-	for (l = n - 1; l >= 0; l--)
+	for (l = n; l >= 1; l--)
 	{
 		if (indxr[l] != indxc[l])
 			for (k = 0; k < n; k++)
