@@ -456,14 +456,13 @@ int main(int argc, char** argv)
 				fprintf(stderr, "\nError: Number of data %d is greater than MAX_N_OBS = %d\n", ndata, MAX_N_OBS); fflush(stderr); exit(2);
 			}
 
-			fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); // NOTE: JD, brightness
+			fscanf(infile, "%lf %lf", &tim[ndata - 1], &brightness[ndata]); // NOTE: JD, brightness
 			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]);      // NOTE: ecliptic astronomical tempocentric coordinates of the Sun in AU
 			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]);         // NOTE: ecliptic astronomical centric coordinates of the Earth in AU
 
 			// NOTE: selects the minimum and maximum JD
-			if (tim[ndata] < jdMin) jdMin = tim[ndata];
-			if (tim[ndata] > jdMax) jdMax = tim[ndata];
-
+			if (tim[ndata - 1] < jdMin) jdMin = tim[ndata - 1];
+			if (tim[ndata - 1] > jdMax) jdMax = tim[ndata - 1];
 
 			// NOTE: normals of distance vectors
 			e0Len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
@@ -474,8 +473,8 @@ int main(int argc, char** argv)
 			// NOTE: normalization of distance vectors
 			for (k = 1; k <= 3; k++)
 			{
-				ee[k - 1][ndata] = e[k] / elen;
-				ee0[k - 1][ndata] = e0[k] / e0Len;
+				ee[k - 1][ndata - 1] = e[k] / elen;
+				ee0[k - 1][ndata - 1] = e0[k] / e0Len;
 			}
 
 			if (j == 1)
@@ -538,7 +537,7 @@ int main(int argc, char** argv)
 	}
 
 	/* loop over data - subtraction of jd_0 */
-	for (i = 1; i <= ndata; i++)
+	for (i = 0; i < ndata; i++)
 		tim[i] = tim[i] - jd0;
 
 	phi_0 = phi_0 * DEG2RAD;

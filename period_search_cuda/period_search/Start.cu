@@ -72,9 +72,7 @@ __device__ double dev_newg[N_BLOCKS];
 __device__ double trial_chisqg[N_BLOCKS];
 __device__ double aveg[N_BLOCKS];
 __device__ double raveg[N_BLOCKS]; // 1/aveg
-__device__ int    npg[N_BLOCKS];
-__device__ int    npg1[N_BLOCKS];
-__device__ int    npg2[N_BLOCKS];
+__device__ int    npg[3][N_BLOCKS];
 
 __device__ double Ochisq[N_BLOCKS];
 __device__ double Chisq[N_BLOCKS];
@@ -93,7 +91,7 @@ __managed__ double be_best[N_BLOCKS];
 
 //global to all freq
 __constant__ int CUDA_Ncoef, CUDA_Numfac, CUDA_Numfac1, CUDA_Dg_block;
-__constant__ int CUDA_ma, CUDA_mfit, CUDA_mfit1, CUDA_lastone, CUDA_lastma, CUDA_ncoef0;
+__constant__ int CUDA_ma, CUDA_mfit, /*CUDA_mfit1,*/ CUDA_lastone, CUDA_lastma, CUDA_ncoef0;
 __constant__ double CUDA_cg_first[MAX_N_PAR + 1];
 __constant__ int CUDA_n_iter_max, CUDA_n_iter_min, CUDA_ndata;
 __constant__ double CUDA_iter_diff_max;
@@ -138,15 +136,15 @@ __device__ double CUDA_ee0[3][MAX_N_OBS+1];
 #define UNRL 4
 
 // MRQMIN
-__device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC, int ma, int mfit, int mfit1, const int block)
+__device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC, int ma, int mfit, /*int mfit1,*/ const int block)
 {
   int bid = blockIdx();
-  
+
   if(isAnyTrue(isAlambda, bid)) //__ldg(&isAlamda[bid]))
     {
       int n = threadIdx.x + 1;
       double * __restrict__ ap = atry[bid] + n; 
-      double const * __restrict__ cgp = cgg[bid] + n; //CUDA_LCC->cg + n;
+      double const * __restrict__ cgp = cgg[bid] + n;
 #pragma unroll 2
       while(n <= ma - block)
 	{
@@ -163,11 +161,12 @@ __device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC
      }
   
   double ccc = 1 + __ldg(&Alamda[bid]); 
-  
+
+  int mfit1 = mfit + 1;
   int ixx = mfit1 + threadIdx.x + 1;
-  
+
   double * __restrict__ a = CUDA_LCC->covar + ixx;
-  double const * __restrict__ b = alphag[bid] + ixx; 
+  double const * __restrict__ b = alphag[bid] + ixx - 1; 
 #pragma unroll 2
   while(ixx < mfit1 * mfit1 - (UNRL - 1) * block)
     {
@@ -205,8 +204,8 @@ __device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC
   int xx = threadIdx.x + 1;
   double const * __restrict__ bp;
   double * __restrict__ dap;
-  bp  = betag[bid] + xx;
-  dap = CUDA_LCC->da   + xx;
+  bp  = betag[bid] + xx - 1;
+  dap = CUDA_LCC->da + xx;
 #pragma unroll 2
   while(xx <= mfit - block)
     {
@@ -232,13 +231,13 @@ __device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC
       return err_code;
     }
 
-  int n = threadIdx.x + 1;
-  int    const * __restrict__ iap = CUDA_ia + n;
-  double * __restrict__ ap  = atry[bid] + n; 
-  double const * __restrict__ cgp = cgg[bid] + n; //CUDA_LCC->cg + n;
-  double const * __restrict__ ddap = CUDA_LCC->da + n - 1;
+  int n = threadIdx.x;
+  int    const * __restrict__ iap = CUDA_ia + n + 1;
+  double * __restrict__ ap  = atry[bid] + n + 1; 
+  double const * __restrict__ cgp = cgg[bid] + n + 1; 
+  double const * __restrict__ ddap = CUDA_LCC->da + n;
 #pragma unroll 2
-  while(n <= ma - block)
+  while(n < ma - block)
     {
       if(*iap)
 	*ap = cgp[0] + ddap[0];
@@ -251,7 +250,7 @@ __device__ int __forceinline__ mrqmin_1_end(freq_context * __restrict__ CUDA_LCC
       ddap += 2*block;
     }
   //#pragma unroll 2
-  if(n <= ma)
+  if(n < ma)
     {
       if(*iap)
 	*ap = cgp[0] + ddap[0];
@@ -275,7 +274,7 @@ __device__ void __forceinline__ mrqmin_2_end(freq_context * __restrict__ CUDA_LC
     {
       double rai = CUDA_Alamda_incr;
       double const * __restrict__ dap = CUDA_LCC->da + 1 + threadIdx.x;
-      double * __restrict__ dbp = betag[bid] + 1 + threadIdx.x;
+      double * __restrict__ dbp = betag[bid] + 1 + threadIdx.x - 1;
 #pragma unroll 1
       for(j = threadIdx.x; j < mf - CUDA_BLOCK_DIM; j += CUDA_BLOCK_DIM)
 	{
@@ -290,13 +289,13 @@ __device__ void __forceinline__ mrqmin_2_end(freq_context * __restrict__ CUDA_LC
 	*dbp = dap[0];
 
       rai = CUDA_Alamda_incrr; //__drcp_rn(rai); ///1.0/rai;
-      int mf1 = CUDA_mfit1;
+      int mf1 = mf + 1;
       double Alm = __ldg(&Alamda[bid]);
 
       double const * __restrict__ cvpo = CUDA_LCC->covar + mf1 + threadIdx.x + 1;
 
       Alm *= rai;
-      double *apo = alphag[bid] + mf1 + threadIdx.x + 1;
+      double *apo = alphag[bid] + mf1 + threadIdx.x;
 
       Alamda[bid] = Alm;
 
@@ -319,13 +318,11 @@ __device__ void __forceinline__ mrqmin_2_end(freq_context * __restrict__ CUDA_LC
 	  if(k < mf)
 	      __stwb(ap, __ldca(cvp));//[0]; //ldcs
 
-	  cvpo += mf + 1;
-	  apo += mf + 1;
+	  cvpo += mf1;
+	  apo += mf1;
 	}
 
       double const * __restrict__ atp = atry[bid] + 1 + threadIdx.x; 
-
-      //double * __restrict__ cgp = CUDA_LCC->cg + 1 + threadIdx.x;
       double * __restrict__ cgp = cgg[bid] + 1 + threadIdx.x;
 
 #pragma unroll 1
@@ -380,38 +377,39 @@ __device__ void __forceinline__ curv(freq_context const * __restrict__ CUDA_LCC,
   int i, m, n, l, k;
   double g;
   
-  int numfac = CUDA_Numfac, nf1 = CUDA_Numfac1, mm = CUDA_Mmax, lm = CUDA_Lmax;
-  i = threadIdx.x + 1;
+  int mm = CUDA_Mmax, lm = CUDA_Lmax;
+  i = threadIdx.x;
+  int nf = CUDA_Numfac;
   double * __restrict__ CUDA_Fcp = CUDA_Fc[0] + i;
   double * __restrict__ CUDA_Fsp = CUDA_Fs[0] + i;
   double * __restrict__ CUDA_Dareap = CUDA_Darea + i;
 
 #pragma unroll 1
-  while(i <= numfac)
+  while(i < nf)
     {
       g = 0;
       n = 0;
-      double const * __restrict__ cgp = cg + 1;
+      double const * __restrict__ cgp = cg + 1; //cgg, atry
       double const * __restrict__ fcp = CUDA_Fcp;
       double const * __restrict__ fsp = CUDA_Fsp;
 
 #pragma unroll 2
       for(m = 0; m <= mm; m++)
 	{ 
-	  double fcim = __ldca(&fcp[0]); //* //[m*(MAX_N_FAC + 1)]; //CUDA_Fc[m][i];
-	  double fsim = __ldca(&fsp[0]); //[m*(MAX_N_FAC + 1)]; //CUDA_Fs[m][i];
-	  double * __restrict__ CUDA_Plegp = &CUDA_Pleg[m][m][i]; //[MAX_LM + 1][MAX_LM + 1][MAX_N_FAC + 1];
+	  double fcim = __ldca(&fcp[0]); 
+	  double fsim = __ldca(&fsp[0]); 
+	  double * __restrict__ CUDA_Plegp = &CUDA_Pleg[m][m][i]; 
 #pragma unroll 3
 	  for(l = m; l <= lm; l++)
 	    {
 	      n++;
-	      double fsum = __ldca(cgp++) * fcim; //CUDA_Fc[i][m];
+	      double fsum = __ldca(cgp++) * fcim; 
 	      if(m > 0)
 		{
 		  n++;
-		  fsum += __ldca(cgp++) * fsim; //CUDA_Fs[i][m];
+		  fsum += __ldca(cgp++) * fsim; 
 		}
-	      g += CUDA_Plegp[0] * fsum; //[m][l][i] * fsum; //CUDA_Pleg[m][l][i] * fsum;
+	      g += CUDA_Plegp[0] * fsum; 
 	      CUDA_Plegp += (MAX_N_FAC + 1);
 	    }
 	  fcp += MAX_N_FAC + 1;
@@ -420,8 +418,9 @@ __device__ void __forceinline__ curv(freq_context const * __restrict__ CUDA_LCC,
       double dd = CUDA_Dareap[0];
       g = exp(g);
       dd *= g;
-      double * __restrict__ dgp = CUDA_LCC->Dg + (nf1 + i);
-      double const * __restrict__ dsphp = CUDA_Dsph[0] + i + MAX_N_FAC + 1;
+      int nf1 = nf + 1;
+      double * __restrict__ dgp = CUDA_LCC->Dg + (nf1 + i + 1);
+      double const * __restrict__ dsphp = CUDA_Dsph[0] + i + (MAX_N_FAC + 1);
       
       Areag[bid][i] = dd;
       k = 1;
@@ -473,31 +472,35 @@ __device__ void __forceinline__ mrqcof_start(freq_context * __restrict__ CUDA_LC
 					     int bid)
 {
   int j, k;
-  int mf = CUDA_mfit, mf1 = CUDA_mfit1;
-  
+
   /* N.B. curv and blmatrix called outside bright
      because output same for all points */
+  int mf1 = CUDA_mfit + 1;
   curv(CUDA_LCC, a, bid);
 
 #pragma unroll 4
-  for(j = 1; j <= mf; j++)
+  for(j = 1; j < mf1; j++)
     {
       alpha += mf1;
       k = threadIdx.x + 1;
+      double *alphap = alpha + k;
 #pragma unroll 
       while(k <= j)
 	{ 
-	  __stwb(&alpha[k], 0.0);
+	  __stwb(alphap, 0.0);
 	  k += CUDA_BLOCK_DIM;
+	  alphap += CUDA_BLOCK_DIM;
 	}
     }
   
   j = threadIdx.x + 1;
+  double *betap = beta + j;
 #pragma unroll 2
-  while(j <= mf)
+  while(j < mf1)
     {
-      __stwb(&beta[j], 0.0);
+      __stwb(betap, 0.0);
       j += CUDA_BLOCK_DIM;
+      betap += CUDA_BLOCK_DIM;
     }
   
   // __syncthreads(); //pro jistotu
@@ -507,20 +510,20 @@ __device__ void __forceinline__ mrqcof_start(freq_context * __restrict__ CUDA_LC
 
 __device__ double __forceinline__ mrqcof_end(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha)
 {
-  int j, k, mf = CUDA_mfit, mf1 = CUDA_mfit1;
+  int j, k, mf = CUDA_mfit;
+  int mf1 = mf + 1;
   int tid = threadIdx.x;
-  double * __restrict__ app = alpha + mf1 + 2 + tid;;
+  double * __restrict__ app = alpha + mf1 + 2 + tid;
   double const * __restrict__ ap2 = alpha + (2 + tid) * mf1;
   long int mf1add = sizeof(double) * mf1;
 #pragma unroll 
-   for(j = 2 + tid; j <= mf; j += blockDim.x)
+   for(j = 1 + tid; j < mf; j += blockDim.x)
      {
        double * __restrict__ ap = app;
 #pragma unroll 
-       for(k = 1; k <= j - 1; k++)
+       for(k = 1; k <= j; k++)
          {
 	   __stwb(ap, __ldca(&ap2[k]));
-	   //ap  += mf1;
 	   ap  = (double *)(((char *)ap) + mf1add);
 	 }
        app += blockDim.x;
@@ -551,21 +554,21 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
   double nc02r, phi0, nc02r2;
   double nc00, nc01, nc03;
 
-  int lnp, Lpoints1 = Lpoints + 1;
+  int Lpoints1 = Lpoints + 1;
   double lave = 0;
 
-  int n = threadIdx.x;
+  int n = threadIdx.x + 1;
   if(Inrel == 1)
     {
-      int lnp, lnp1, jp;
       int blockidx = bid;
-      lnp1 = npg[bid];
+      int lnp1 = npg[0][bid];
       if(threadIdx.x == 0)
-	{
-	  double tmp = a[CUDA_ncoef0 + 2];
-	  nc03s = a[CUDA_ncoef0 + 3];
-	  nc00s = a[CUDA_ncoef0 + 0];
-	  nc01s = a[CUDA_ncoef0 + 1];
+	{ //  a = cgg and atry
+	  int nc = CUDA_ncoef0;
+	  double tmp = a[nc + 2];
+	  nc03s = a[nc + 3];
+	  nc00s = a[nc + 0];
+	  nc01s = a[nc + 1];
 
 	  nc02r = nc02rs = __drcp_rn(tmp);
 	  phi0s = CUDA_Phi_0;
@@ -581,11 +584,11 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 #pragma unroll 1
       while(n <= Lpoints) 
 	{
-	  jp = n;
+	  int jp = n - 1;
 	  double f, cf, sf, alpha;
 	  double ee_1, ee_2, ee_3, ee0_1, ee0_2, ee0_3, t; //, tmat1, tmat2, tmat3;
 
-	  lnp = lnp1 + jp;
+	  int lnp = lnp1 + jp;
 
 	  ee_1  = CUDA_ee[0][lnp];// position vectors
 	  ee0_1 = CUDA_ee0[0][lnp];
@@ -697,7 +700,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 
 	  ge02 += Blmat21 * ee_2;
 	  ge12 += Blmat21 * ee0_2;
-	  gde021 += Blmat20 * ee_2;
+      gde021 += Blmat20 * ee_2;
 	  gde121 += Blmat20 * ee0_2;
 
 	  double gde000 = tmat21 * ee_1;
@@ -721,9 +724,9 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  int incl_count = 0;
 	  int i, j; //, blockidx = blockIdx();
 	  double cl, cls, dnom, s; //, Scale;
-
-	  cl = exp(a[CUDA_ma - 1]); /* Lambert */
-	  cls = a[CUDA_ma];       /* Lommel-Seeliger */
+	  int ma = CUDA_ma;
+	  cl = exp(a[ma - 1]); /* Lambert */
+	  cls = a[ma];       /* Lommel-Seeliger */
 
 
 	  /*Integrated brightness (phase coeff. used later) */
@@ -734,7 +737,8 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  double dbr[MAX_N_FAC];
 
 	  //int2 bfr;
-	  int nf = CUDA_Numfac, nf1 = CUDA_Numfac1;
+	  int nf = CUDA_Numfac;
+	  int nf1 = nf  + 1;
 
 	  int bid = blockidx;
 	  br   = 0;
@@ -757,7 +761,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  dareap = CUDA_Darea;
 
 #pragma unroll 1
-	  for(i = 1; i <= nf && i <= MAX_N_FAC; i++, j++)
+	  for(i = 0; i < nf && i < MAX_N_FAC; i++, j++)
 	    {
 	      double n0 = norp0[i], n1 = norp1[i], n2 = norp2[i];
 	      lmu  = ge00 * n0 + ge01 * n1 + ge02 * n2;
@@ -765,7 +769,9 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	      //if((lmu > TINY) && (lmu0 > TINY))
 	      //{	
 	      if((lmu <= TINY) || (lmu0 <= TINY))
-		continue;     
+		{
+		  continue;
+		}
 	      dnom = lmu + lmu0;
 	      ar = __ldca(&areap[i]);
 
@@ -777,13 +783,12 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	      br += ar * s;
 	      //
 	      dbr[incl_count] = __ldca(&dareap[i]) * s;
-	      incl[incl_count] = i;
+	      incl[incl_count] = i + 1;
 	      incl_count++;
 
 	      double lmu_dnom = lmu * dnom_1;
 	      dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
 	      dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
-	      //	  double n0 = CUDA_Nor[0][i], n1 = CUDA_Nor[1][i], n2 = CUDA_Nor[2][i]; 
 
 	      sum1  = n0 * gde000 + n1 * gde010 + n2 * gde020;
 	      sum10 = n0 * gde100 + n1 * gde110 + n2 * gde120;
@@ -1194,16 +1199,16 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
     {
       int ma = CUDA_ma;
       double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
-      double const * __restrict__ pp = &(dytemp[2 * Lpoints1 + threadIdx.x + 1]); // good, consecutive
+      double const * __restrict__ pp = &(dytemp[2 * Lpoints1 + threadIdx.x]); // good, consecutive
       int bid = blockIdx();
 #pragma unroll 1
       for(int i = 2; i <= ma; i++) 
         {
 	  double dl = 0, dl2 = 0;
-	  int nn = threadIdx.x + 1;
+	  int nn = threadIdx.x;
 	  double const *  __restrict__ p = pp;
 	  
-	  while(nn <= Lpoints - 3*CUDA_BLOCK_DIM)
+	  while(nn < Lpoints - 3*CUDA_BLOCK_DIM)
 	    {
 	      dl  += p[0] + p[2*CUDA_BLOCK_DIM];
 	      dl2 += p[CUDA_BLOCK_DIM] + p[3*CUDA_BLOCK_DIM];
@@ -1211,7 +1216,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	      nn  += 4 * CUDA_BLOCK_DIM;
 	    }
 #pragma unroll 2
-	  while(nn <= Lpoints - CUDA_BLOCK_DIM)
+	  while(nn < Lpoints - CUDA_BLOCK_DIM)
 	    {
 	      dl  += p[0];
 	      dl2 += p[CUDA_BLOCK_DIM];
@@ -1219,7 +1224,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	      nn  += 2 * CUDA_BLOCK_DIM;
 	    }
 	  //#pragma unroll 1
-	  if(nn <= Lpoints)
+	  if(nn < Lpoints)
 	    {
 	      dl += p[0];
 	      //p  += CUDA_BLOCK_DIM;
@@ -1237,14 +1242,14 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  pp += Lpoints1;
 	  
 	  if(threadIdx.x == 0)
-	    dave[bid][i] = dl;
+	    dave[bid][i - 1] = dl;
 	}
       
       double d = 0, d2 = 0;
-      int n = threadIdx.x + 1;
+      int n = threadIdx.x;
       double const * __restrict__ p2 = &(ytemp[n]);
 
-    while(n <= Lpoints - 3*CUDA_BLOCK_DIM)
+      while(n < Lpoints - 3*CUDA_BLOCK_DIM)
 	{
 	  d  += p2[0] + p2[2*CUDA_BLOCK_DIM];
 	  d2 += p2[CUDA_BLOCK_DIM] + p2[3*CUDA_BLOCK_DIM];
@@ -1252,7 +1257,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  n  += 4 * CUDA_BLOCK_DIM;
 	}
 #pragma unroll 2
-      while(n <= Lpoints - CUDA_BLOCK_DIM)
+      while(n < Lpoints - CUDA_BLOCK_DIM)
 	{
 	  d  += p2[0];
 	  d2 += p2[CUDA_BLOCK_DIM];
@@ -1260,7 +1265,7 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
 	  n  += 2 * CUDA_BLOCK_DIM;
 	}
 
-      if(n <= Lpoints)
+      if(n < Lpoints)
 	{
 	  d += p2[0];
 	}
@@ -1277,22 +1282,17 @@ __device__ void __forceinline__ mrqcof_curve1(freq_context * __restrict__ CUDA_L
   
   if(threadIdx.x == 0)
     {
-      lnp       = npg[bid];
+      int lnp = npg[0][bid];
       //aveg[bid] = lave;
       raveg[bid] = __drcp_rn(lave);
-      npg[bid]  = lnp + Lpoints;
+      npg[0][bid]  = lnp + Lpoints;
     }
   __syncwarp();
 }
 
 
 
-__device__ void __forceinline__  mrqcof_curve1_lastI1(
-	      freq_context * __restrict__ CUDA_LCC,
-	      double * __restrict__ a,
-	      double * __restrict__ alpha,
-	      double * __restrict__ beta,
-	      int bid)
+__device__ void __forceinline__  mrqcof_curve1_lastI1(freq_context * __restrict__ CUDA_LCC, int bid)
 {
   int Lpoints = 3;
   int Lpoints1 = Lpoints + 1;
@@ -1302,12 +1302,12 @@ __device__ void __forceinline__  mrqcof_curve1_lastI1(
   double * __restrict__ dydap = dyda[threadIdx.y];
   //int bid = blockIdx();
   
-  lnp = npg[bid];
+  lnp = npg[0][bid];
 
-  int n = threadIdx.x + 1, ma = CUDA_ma;
+  int n = threadIdx.x, ma = CUDA_ma;
   double * __restrict__ p = &(dave[bid][n]);
 #pragma unroll 2
-  while(n <= ma)
+  while(n < ma)
     {
       *p = 0;
       p += CUDA_BLOCK_DIM;
@@ -1321,9 +1321,9 @@ __device__ void __forceinline__  mrqcof_curve1_lastI1(
   long int lpadd = sizeof(double) * Lpoints1;
 
 #pragma unroll 1
-  for(jp = 1; jp <= Lpoints; jp++)
+  for(jp = 0; jp < Lpoints; jp++)
     {
-      ymod = conv(CUDA_LCC, (jp - 1), dydap, bid); 
+      ymod = conv(CUDA_LCC, jp, dydap, bid); 
 
       lnp++;
       
@@ -1333,37 +1333,35 @@ __device__ void __forceinline__  mrqcof_curve1_lastI1(
 	  lave = lave + ymod;
 	}
       
-      int n = threadIdx.x + 1;
+      int n = threadIdx.x;
       double const * __restrict__ a;
       double * __restrict__ b, * __restrict__ c;
 
-      a = &(dydap[n-1]);
+      a = &(dydap[n]);
       b = &(dave[bid][n]);
-      c = &(dytemp[jp + Lpoints1 * n]); //ZZZ bad store order, strided
+      c = &(dytemp[jp + Lpoints1 * (n + 1)]); //ZZZ bad store order, strided
 
       //unrl2
 #pragma unroll 2
-      while(n <= ma - CUDA_BLOCK_DIM)
+      while(n < ma - CUDA_BLOCK_DIM)
 	{ /////////////  ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZz
 	  double d = a[0], bb = b[0];
 	  double d2 = a[CUDA_BLOCK_DIM], bb2 = b[CUDA_BLOCK_DIM];
 
 	  c[0] = d;
-
-	  //c += Lpoints1;
 	  c = (double *)(((char *)c) + lpadd);
 	  b[0] = bb + d;
-	  c[0] = d2;
 
-	  //c += Lpoints1;
+	  c[0] = d2;
 	  c = (double *)(((char *)c) + lpadd);
-	  b[CUDA_BLOCK_DIM] = bb2 + d2;	      
+	  b[CUDA_BLOCK_DIM] = bb2 + d2;
+
+	  n += 2 * CUDA_BLOCK_DIM;
 	  a += 2 * CUDA_BLOCK_DIM;
 	  b += 2 * CUDA_BLOCK_DIM;
-	  n += 2 * CUDA_BLOCK_DIM;
 	}
       //#pragma unroll 1
-      if(n <= ma)
+      if(n < ma)
 	{
 	  double d = a[0], bb = b[0];
 	  c[0] = d;
@@ -1373,7 +1371,7 @@ __device__ void __forceinline__  mrqcof_curve1_lastI1(
   
   if(threadIdx.x == 0)
     {
-      npg[bid]  = lnp;
+      npg[0][bid]  = lnp;
       //aveg[bid] = lave;
       raveg[bid] = __drcp_rn(lave);
     }
@@ -1383,11 +1381,7 @@ __device__ void __forceinline__  mrqcof_curve1_lastI1(
 }
 
 
-__device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__ CUDA_LCC,
-						     double * __restrict__ a,
-						     double * __restrict__ alpha,
-						     double * __restrict__ beta,
-						     int bid)
+__device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__ CUDA_LCC, int bid)
 {
   int Lpoints = 3;
   int Lpoints1 = Lpoints + 1;
@@ -1397,7 +1391,7 @@ __device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__
   //int bid = blockIdx();
   double * __restrict__ dydap = dyda[threadIdx.y];
   
-  lnp = npg[bid];
+  lnp = npg[0][bid];
 
   //  if(threadIdx.x == 0)
   //  lave = CUDA_LCC->ave;
@@ -1408,22 +1402,22 @@ __device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__
   double * __restrict__ dytemp = CUDA_LCC->dytemp, *ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 1
-  for(jp = 1; jp <= Lpoints; jp++)
+  for(jp = 0; jp < Lpoints; jp++)
     {
       lnp++;
       
-      ymod = conv(CUDA_LCC, (jp - 1), dydap, bid); 
+      ymod = conv(CUDA_LCC, jp, dydap, bid); 
       
       if(threadIdx.x == 0)
 	ytemp[jp] = ymod;
       
-      int n = threadIdx.x + 1;
-      double * __restrict__ p = &dytemp[jp + Lpoints1 * n]; // ZZZ bad store order, strided
+      int n = threadIdx.x;
+      double * __restrict__ p = &dytemp[jp + Lpoints1 * (n + 1)]; // ZZZ bad store order, strided
 #pragma unroll 2
-      while(n <= ma - CUDA_BLOCK_DIM)
+      while(n < ma - CUDA_BLOCK_DIM)
 	{
-	  double d  = dydap[n - 1];
-	  double d2 = dydap[n + CUDA_BLOCK_DIM - 1];
+	  double d  = dydap[n];
+	  double d2 = dydap[n + CUDA_BLOCK_DIM];
 	  *p = d; //  YYYY
 	  p += Lpoints1 * CUDA_BLOCK_DIM;
 	  *p = d2;
@@ -1432,9 +1426,9 @@ __device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__
 	  n += 2 * CUDA_BLOCK_DIM;
 	}
       //#pragma unroll 1
-      if(n <= ma)
+      if(n < ma)
 	{
-	  double d = dydap[n - 1];
+	  double d = dydap[n];
 	  *p = d;
 	  //p += Lpoints1 * CUDA_BLOCK_DIM;
 	  //n += CUDA_BLOCK_DIM;
@@ -1443,7 +1437,7 @@ __device__ void __forceinline__ mrqcof_curve1_lastI0(freq_context * __restrict__
   
   if(threadIdx.x == 0)
     {
-      npg[bid]  = Lpoints; //lnp;
+      npg[0][bid]  = Lpoints; //lnp;
       //      CUDA_LCC->ave = lave;
     }
   
@@ -1463,16 +1457,17 @@ __device__ double __forceinline__ conv(freq_context * __restrict__ CUDA_LCC, int
   int i, j;
   //__shared__ double res[CUDA_BLOCK_DIM];
   double tmp, tmp2; //, dtmp, dtmp2;
-  int nf = CUDA_Numfac, nf1 = CUDA_Numfac1, nco = CUDA_Ncoef;
+  int nf = CUDA_Numfac;
+  int nf1 = nf + 1, nco = CUDA_Ncoef;
 
   j = bid * nf1 + threadIdx.x + 1;
-  int xx = threadIdx.x + 1;
+  int xx = threadIdx.x;
   tmp = 0, tmp2 = 0;
   //double * __restrict__ areap = CUDA_Area + j;
-  double * __restrict__ areap = &(Areag[bid][threadIdx.x + 1]);
+  double * __restrict__ areap = &(Areag[bid][threadIdx.x]);
   double * __restrict__ norp  = CUDA_Nor[nc] + xx;  
 #pragma unroll 4
-  while(xx <= nf - CUDA_BLOCK_DIM)
+  while(xx < nf - CUDA_BLOCK_DIM)
     { 
       double a0, a1, n0, n1;
       a0 = areap[0];
@@ -1487,9 +1482,9 @@ __device__ double __forceinline__ conv(freq_context * __restrict__ CUDA_LCC, int
 
     }
   //#pragma unroll 1
-  if(xx <= nf)
+  if(xx < nf)
     {
-      tmp += areap[0] * norp[0]; //CUDA_Area[j] * CUDA_Nor[nc][xx];
+      tmp += areap[0] * norp[0]; 
     }
 
   tmp += tmp2;
@@ -1513,8 +1508,8 @@ __device__ double __forceinline__ conv(freq_context * __restrict__ CUDA_LCC, int
 
 	  i = threadIdx.x + 1;
 	  double * __restrict__ dgp = dg + mm;
-	  double * __restrict__ dareap = darea + i;
-	  double * __restrict__ norp = nor + i;
+	  double * __restrict__ dareap = darea + i - 1;
+	  double * __restrict__ norp = nor + i - 1;
 	    
 #pragma unroll 4
 	  while(i <= nf - CUDA_BLOCK_DIM)
@@ -1589,10 +1584,10 @@ __device__ int __forceinline__ gauss_errc(freq_context * __restrict__ CUDA_LCC, 
   __shared__ int16_t indxc[MAX_N_PAR + 1];
   __shared__ int16_t ipiv[MAX_N_PAR + 1];
 
-  int mf1 = CUDA_mfit1;
   int i, licol = 0, irow = 0, j, k, l, ll;
   double big, dum, temp;
-  int mf = CUDA_mfit;
+  int mf  = CUDA_mfit;
+  int mf1 = mf + 1;
   
   j = threadIdx.x + 1;
 
@@ -1699,9 +1694,8 @@ __device__ int __forceinline__ gauss_errc(freq_context * __restrict__ CUDA_LCC, 
 	      SWAP(dapp[irow], dapp[icol]);
 	      //SWAP(b[irow],b[icol])
 	    }
-	  //CUDA_LCC->indxr[i] = irow;
+
 	  indxr[i] = irow;
-	  //CUDA_LCC->indxc[i] = icol;
 	  indxc[i] = icol;
 	  double cov = covarp[icol * mf1 + icol];
 	  if(cov == 0.0) 
@@ -1710,11 +1704,11 @@ __device__ int __forceinline__ gauss_errc(freq_context * __restrict__ CUDA_LCC, 
 	      j = 0;
 	      
 	      int    const * __restrict__ iap = CUDA_ia + 1;
-	      double * __restrict__ atp = atry[bid] + 1; //CUDA_LCC->atry + 1;
-	      double * __restrict__ cgp = cgg[bid] + 1; //CUDA_LCC->cg + 1;
+	      double * __restrict__ atp = atry[bid] + 1; 
+	      double * __restrict__ cgp = cgg[bid] + 1; 
 	      double * __restrict__ dap = dapp;
 #pragma unroll 4
-	      for(int l = 1; l <= ma; l++)
+	      for(int l = 0; l < ma; l++)
 		{
 		  if(*iap)
 		    {
@@ -1778,9 +1772,7 @@ __device__ int __forceinline__ gauss_errc(freq_context * __restrict__ CUDA_LCC, 
 
   while(l >= 1)
     {
-      //int r = CUDA_LCC->indxr[l];
       int r = indxr[l];
-      //int c = CUDA_LCC->indxc[l];
       int c = indxc[l];
       if(r != c)
 	{
@@ -1828,29 +1820,26 @@ __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CU
   //inrel = 0;
   int l, jp, j, /*k, m,*/ lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   
   __shared__ double dydat[4][N80];
   
-  //__syncwarp(); // remove sync ?
-
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int ma = CUDA_ma, lma = CUDA_lastma;
   int lastone = CUDA_lastone;
-  int * __restrict__ iapp = CUDA_ia;
   double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 2
-  for(jp = 1; jp <= lpoints; jp++)
+  for(jp = 0; jp < lpoints; jp++)
     {
-      if(((jp-1)&3) == 0)
+      if(((jp)&3) == 0)
 	{
 	  int tid = threadIdx.x >> 2;
 	  int u = threadIdx.x & 3;
@@ -1869,100 +1858,81 @@ __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CU
 	}
       __syncwarp();
       
-      double * __restrict__ dyda = &(dydat[(jp-1) & 3][0]);	  
-
-      /*
-      int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ bad, strided read, BAD
-      double *c = &(CUDA_LCC->dytemp[ixx]);
-#pragma unroll 2
-      for(l = threadIdx.x; l < ma; l += CUDA_BLOCK_DIM, c += CUDA_BLOCK_DIM * Lpoints1)
-	dyda[l] = __ldca(c); // YYYY
-      */  
+      double * __restrict__ dyda = &(dydat[(jp) & 3][0]);	  
 
       lnp2++;
-      //double s = __ldg(&CUDA_sig[lnp2]);
+
       ymod = __ldca(&ytemp[jp]);
-      //sig2i = __drcp_rn(s * s);
       sig2i = __ldg(&CUDA_sigr2[lnp2]);
       wght = __ldg(&CUDA_Weight[lnp2]);
       dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
 
-      j = 0;
+      //j = 0;
       double sig2iwght = sig2i * wght;
-
+      double *betap = beta;
+      double * __restrict__ alph = &alpha[mf1 + threadIdx.x + 1];
+      double *alphp = alph,  *alphpp = alph;
 #pragma unroll 2
-      for(l = 2; l <= lastone; l++)
+      for(l = 1; l < lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
-
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alph = (&alpha[j * mf1 - 1]) + xx;
+	  wt = dyda[l - 1] * sig2iwght;
+	  int xx = threadIdx.x;
+	  alphpp += mf1;
 #pragma unroll 2
 	  while(xx <= l)
 	    {
-	      //if(xx != 0)
-	      //alpha[j * mf1 - 1 + xx] += wt * dyda[xx-1];
-	      double const * __restrict__ alph2 = alph;
-	      __stwb(alph, __ldca(alph2) + wt * dyda[xx-1]); //ldg
-	      //*alpha += wt * dyda[xx-1];
-	      //alpha += CUDA_BLOCK_DIM;
-	      //xx += CUDA_BLOCK_DIM;
+	      __stwb(alph, __ldg(alph) + wt * dyda[xx]); //ldg
 	      alph  += CUDA_BLOCK_DIM;
 	    } /* m */
-	  //__syncthreads();
+
+	  alph = alphpp;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
-	  //__syncthreads();
 	  l++;
 	} /* l */
 	  
+      int * __restrict__ iapp = CUDA_ia;
+      alph = alphp;
 #pragma unroll 1
-      while(l <= lma)
+      while(l < lma)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
+	      wt = dyda[l - 1] * sig2iwght;
+	      int xx = threadIdx.x;
 
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alph = &alpha[j * mf1 - 1 + xx]; // + xx;
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
-		  //if(xx != 0)
-		  double const * __restrict__ alph2 = alph;
-		  __stwb(alph, __ldca(alph2) + wt * dyda[xx-1]); //ldg
-		  //*alpha += wt * dyda[xx-1];
-		  //alpha += CUDA_BLOCK_DIM;
+		  __stwb(alph, __ldca(alph) + wt * dyda[xx]); //ldg
 		  alph  += CUDA_BLOCK_DIM;
 		} /* m */
-	      //__syncthreads();
+
 	      if(threadIdx.x == 0)
 		{
-		  int k = lastone - 1;
-		  int m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
-		  beta[j] = beta[j] + dy * wt;
+		  int k = lastone;
+		  int m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alphp + k; //ha + l * mf1 + k;
+		  beta[l] = beta[l] + dy * wt;
 #pragma unroll 4
 		  while(m <= l)
 		    {
 		      if(*iap)
 			{
-			  //k++;
+			  __stwb(alp, __ldca(alp) + wt * dyda[m]);
 			  alp++;
-			  double const * __restrict__ alp2 = alp;
-			  __stwb(alp, __ldca(alp2) + wt * dyda[m - 1]);
 			}
 		      iap++;
 		      m++;
 		    } /* m */
 		}
-	      //__syncthreads();
 	    }
+	  alphp += mf1;
+	  alph = alphp;
 	  l++;
 	} /* l */
       ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
@@ -1970,7 +1940,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -1979,78 +1949,67 @@ __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CU
 // SLOWW
 __device__ void __forceinline__ MrqcofCurve2I1IA0(freq_context *__restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int lpoints, int bid)
 {
-  int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   __shared__ double dydat[4][N80];
-  //__shared__ double ddd[4500];
   
-  lnp1 = npg1[bid] + threadIdx.x + 1;
+  lnp1 = npg[1][bid] + threadIdx.x + 1;
 
   int ma = CUDA_ma;
-  //int bid = blockIdx();
-  jp = threadIdx.x + 1;
-  double rave = raveg[bid]; //__drcp_rn(aveg[bid]);
+  jp = threadIdx.x;
+  double rave = raveg[bid]; 
   double * __restrict__ dytempp = CUDA_LCC->dytemp, * __restrict__ ytempp = CUDA_LCC->ytemp;
   double * __restrict__ cuda_sig = CUDA_sig;
-  //double * __restrict__ davep = CUDA_LCC->dave;
   double * __restrict__ davep = &(dave[bid][0]);
   long int lpadd = sizeof(double) * Lpoints1;
   
 #pragma unroll 1
-  while(jp <= lpoints)
+  while(jp < lpoints)
     {
       int ixx = jp + Lpoints1;
       // Set the size scale coeff. deriv. explicitly zero for relative lcurves 
       dytempp[ixx] = 0; // YYY, good, consecutive
 
-      //ddd[ixx] = 0;
-      coef = __ldca(&cuda_sig[lnp1]) * lpoints * rave; // / CUDA_LCC->ave;
-      
-      double yytmp = __ldca(&ytempp[jp]);
-      coef1 = yytmp * rave; // / CUDA_LCC->ave;
-      ytempp[jp] = coef * yytmp;
-      
-      ixx += Lpoints1;
-      double * __restrict__ dyp = &(dytempp[ixx]), *__restrict__ dypp; //, *ddyp = ddd + ixx, *ddypp; 
-      double * __restrict__ dap = &(davep[2]);
-      //dypp = dyp;
+      coef = __ldca(&cuda_sig[lnp1]) * lpoints * rave; 
 
-#pragma unroll 1
-      for(l = 2; l <= ma - (2 - 1); l += 2, ixx += 2 * Lpoints1)
+      double yytmp = __ldca(&ytempp[jp]);
+      coef1 = yytmp * rave; 
+      ytempp[jp] = coef * yytmp;
+
+      ixx += Lpoints1;
+      double const * __restrict__ dyp = &(dytempp[ixx]);
+      double const * __restrict__ dypp; //, *ddyp = ddd + ixx, *ddypp; 
+      double const * __restrict__ dap = &(davep[1]);
+
+#pragma unroll 2
+      for(l = 2; l <= ma - (4 - 1); l += 4, ixx += 4 * Lpoints1)
 	{
-	  double dd[2], dy[2];
+	  double dd[4], dy[4];
 	  int ii;
 	  dypp = dyp;
-	  //ddypp = ddyp;
-	  for(ii = 0; ii < 2; ii++)
-	    {
-	      dy[ii] = __ldca(dypp);
-	      //dypp += Lpoints1;
-	      dypp = (double *)(((char *)dypp) + lpadd);
 
-	      //ddyp += Lpoints1;
-	      dd[ii] = __ldca(dap);
+	  for(ii = 0; ii < 4; ii++)
+	    {
+	      dy[ii] = *dypp; //__ldca(dypp);
+	      dypp = (double *)(((char *)dypp) + lpadd);
+	      dd[ii] = *dap;//__ldca(dap);
 	      dap++;
 	    }
-	  for(ii = 0; ii < 2; ii++)
+	  for(ii = 0; ii < 4; ii++)
 	    {
 	      double d = coef * (dy[ii] - coef1 * dd[ii]);
-	      *dyp = d;
-	      //dyp += Lpoints1;
+	      double *dypp = (double *)dyp;
+	      *dypp = d;
 	      dyp = (double *)(((char *)dyp) + lpadd);
-
-	      //*ddypp = d;
-	      //ddypp += Lpoints1;
 	    }
 	}
-#pragma unroll 
+#pragma unroll 3
       while(l <= ma)
 	{
 	  double d = coef * __ldca(&dyp[0]) - coef1 * __ldca(&dap[0]);
-	  *dyp = d;
+	  *(double *)dyp = d;
 	  l++;
-	  //dyp += Lpoints1;
 	  dyp = (double *)(((char *)dyp) + lpadd);
 
 	  dap++;
@@ -2063,20 +2022,19 @@ __device__ void __forceinline__ MrqcofCurve2I1IA0(freq_context *__restrict__ CUD
   
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
   
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
   
   int lastone = CUDA_lastone, lma = CUDA_lastma;
-  int * __restrict__ iapp = CUDA_ia;
   double * __restrict__ cuda_weight = CUDA_Weight, * __restrict__ cuda_brightness = CUDA_brightness;
   
 #pragma unroll 4
-  for(jp = 1; jp <= lpoints; jp++)
+  for(jp = 0; jp < lpoints; jp++)
     {
-      if(((jp-1)&3) == 0)
+      if(((jp)&3) == 0)
 	{
 	  int tid = threadIdx.x >> 2;
 	  int u = threadIdx.x & 3;
@@ -2087,96 +2045,99 @@ __device__ void __forceinline__ MrqcofCurve2I1IA0(freq_context *__restrict__ CUD
 #pragma unroll 4
 	  while(l < ma)
 	    {
-	      dydat[u][l] = __ldca(c); //*dddc //__ldca(c); // YYYY
-
+	      dydat[u][l] = __ldca(c);
 	      l += CUDA_BLOCK_DIM/4;
 	      c += CUDA_BLOCK_DIM/4 * Lpoints1;
 	    }
 	}
       __syncwarp();
-      double * __restrict__ dyda = &(dydat[(jp-1) & 3][0]);	  
+      double * __restrict__ dyda = &(dydat[(jp) & 3][0]);	  
       lnp2++;
-      //double s = cuda_sig[lnp2];
+
       ymod = ytempp[jp];
-      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s);
+      sig2i = __ldg(&CUDA_sigr2[lnp2]); 
       wght = cuda_weight[lnp2];
       dy = cuda_brightness[lnp2] - ymod;
 
-      j = 0;
+      //j = 0;
       double sig2iwght = sig2i * wght;
-
+      double *betap = beta;
+      double *__restrict__ alph = &alpha[mf1 + threadIdx.x];
+      double *alphp = alph, *alphpp = alph;
 
 #pragma unroll 2
-      for(l = 2; l <= lastone; l++)
+      for(l = 1; l < lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
+	  wt = dyda[l] * sig2iwght;
 
 	  int xx = threadIdx.x;
-	  double *__restrict__ alph = &alpha[j * mf1 + xx];
 #pragma unroll 2
-	  while(xx < l)
+	  while(xx <= l)
 	    {
-	      //if(xx != 0)
 	      __stwb(alph, __ldca(alph) +  wt * dyda[xx]);
 	      alph += CUDA_BLOCK_DIM;
 	      xx += CUDA_BLOCK_DIM;
 	    } /* m */
-	  //__syncthreads();
+
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
-	  //	  __syncthreads();
+	  alphpp += mf1;
+	  alph = alphpp;
 	} /* l */
 	  
+      int * __restrict__ iapp = CUDA_ia;
+      alph = alphp;
 #pragma unroll 1
-      for(; l <= lma; l++)
+      for(; l < lma; l++)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
+	      //j++;
+	      wt = dyda[l - 1] * sig2iwght;
 
 	      int xx = threadIdx.x;
-	      double * __restrict__ alph = &alpha[j * mf1 + xx];
+
 #pragma unroll 2
 	      while(xx < lastone)
 		{
-		  //if(xx != 0)
 		  __stwb(alph, __ldca(alph) + wt * dyda[xx]);
 		  alph += CUDA_BLOCK_DIM;
 		  xx += CUDA_BLOCK_DIM;
 		} /* m */
-	      //__syncthreads();
+
 	      if(threadIdx.x == 0)
 		{
-		  k = lastone - 1;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = &(alpha[j * mf1 + k]);
+		  k = lastone;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alphp + k; //&(alpha[l * mf1 + k]);
 #pragma unroll 4
-		  for(; m <= l; m++)
+		  for(; m < l; m++)
 		    {
 		      if(*iap)
 			{
-			  //k++;
-			  ++alp;
 			  __stwb(alp, __ldca(alp) + wt * dyda[m-1]);
+			  ++alp;
 			}
 		      iap++;
 		    } /* m */
-		  beta[j] +=  dy * wt;
+
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
-	      //__syncthreads();
 	    }
+	  alphp += mf1;
+	  alph = alphp;
 	} /* l */
       ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
     } /* jp */
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -2188,39 +2149,33 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 {
   int l, jp, j, k, m, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   __shared__ double dyda[N80];
   
   //__syncwarp(); // remove
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int ma = CUDA_ma, lma = CUDA_lastma;
   int lastone = CUDA_lastone;
-  int * __restrict__ iapp = CUDA_ia;
   double * __restrict__ dytemp = CUDA_LCC->dytemp, *ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 2
-  for(jp = 1; jp <= lpoints; jp++) // CHANGE LOOP threadIdx.x ?
+  for(jp = 0; jp < lpoints; jp++) // CHANGE LOOP threadIdx.x ?
     {
       lnp2++;
-      //double s = __ldg(&CUDA_sig[lnp2]);
-      ymod = __ldca(&(ytemp[jp]));
-      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
-      wght = __ldg(&CUDA_Weight[lnp2]);
-      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
 
       int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ, bad, strided read, BAD!
       double * __restrict__ c = &(dytemp[ixx]); //  bad c
-      l = threadIdx.x + 1;
+      l = threadIdx.x;
 #pragma unroll 2
-      while(l <= ma - CUDA_BLOCK_DIM)
+      while(l < ma - CUDA_BLOCK_DIM)
 	{
 	  double a, b;
 	  a = __ldca(c);
@@ -2229,60 +2184,66 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	  b = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 
-	  dyda[l-1] = a;
-	  dyda[l-1 + CUDA_BLOCK_DIM] = b;
+	  dyda[l] = a;
+	  dyda[l + CUDA_BLOCK_DIM] = b;
 
 	  l += 2*CUDA_BLOCK_DIM;
 	}
-      //#pragma unroll 1
-      //for( ; l <= ma; l += CUDA_BLOCK_DIM, c += CUDA_BLOCK_DIM * Lpoints1)
-      if(l <= ma)
-	dyda[l-1] = __ldca(c);
+
+      if(l < ma)
+	dyda[l] = __ldca(c);
 
       __syncwarp();
 
-      j = 0;
+      //j = 0;
+      ymod = __ldca(&(ytemp[jp]));
+      sig2i = __ldg(&CUDA_sigr2[lnp2]);  
+      wght = __ldg(&CUDA_Weight[lnp2]);
+      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       double sig2iwght = sig2i * wght;
-
+      double *betap = beta;
 #pragma unroll 2
-      for(l = 1; l <= lastone; l++)
+      for(l = 1; l < lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alp = alpha + mf1 + xx;
+	  //j++;
+	  wt = dyda[l] * sig2iwght;
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = alpha + l * mf1 + xx + 1;
 #pragma unroll 2
-	  while(xx <= l)
+	  while(xx < l)
 	    {
-	      double const * __restrict__ alp2 = alp;
-	      __stwb(alp, __ldca(alp2) + wt * dyda[xx-1]);
-	      alp += mf1;
+	      __stwb(alp, __ldg(alp) + wt * dyda[xx]);
+	      alp += CUDA_BLOCK_DIM; //mf1;
 	      xx += CUDA_BLOCK_DIM;
 	    } /* m */
-	  //__syncthreads();
+	  //__syncthreads()
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} /* l */
 	  
+      int * __restrict__ iapp = CUDA_ia;
 #pragma unroll 2
-      for(; l <= lma; l++)
+      for(; l < lma; l++)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alp = &alpha[j * mf1 + xx];
+	      //j++;
+	      wt = dyda[l] * sig2iwght;
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = &alpha[l * mf1 + xx + 1];
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
 		  //if(xx != 0)
 		  //alpha[j * mf1 + xx] += wt * dyda[xx-1];
 		  double const * __restrict__ alp2 = alp;
-		  __stwb(alp, __ldca(alp2) + wt * dyda[xx-1]);
+		  __stwb(alp, __ldg(alp2) + wt * dyda[xx]);
 		  xx += CUDA_BLOCK_DIM;
 		  alp  += CUDA_BLOCK_DIM;
 		} /* m */
@@ -2290,20 +2251,21 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	      if(threadIdx.x == 0)
 		{
 		  k = lastone;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + l * mf1 + k + 1;
 #pragma unroll 4
 		  for(; m <= l; m++)
 		    {
 		      if(*iap)
 			{
+			  __stwb(alp, __ldg(alp) + wt * dyda[m]);
 			  alp++;
-			  __stwb(alp, __ldca(alp) + wt * dyda[m-1]);
 			}
 		      iap++;
 		    } /* m */
-		  beta[j] = beta[j] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -2313,7 +2275,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -2326,31 +2288,31 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 {
   int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   __shared__ double dyda[N80];
   
-  lnp1 = npg1[bid] + threadIdx.x + 1;
+  lnp1 = npg[1][bid] + threadIdx.x + 1;
   
   int ma = CUDA_ma;
   //int bid = blockIdx();
-  jp = threadIdx.x + 1;
-  double rave = raveg[bid]; //__drcp_rn(aveg[bid]);
+  jp = threadIdx.x;
+  double rave = raveg[bid]; 
   double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 1
-  while(jp <= lpoints)
+  while(jp < lpoints)
     {
       int ixx = jp + Lpoints1;
       // Set the size scale coeff. deriv. explicitly zero for relative lcurves 
       dytemp[ixx] = 0; // YYY, good, consecutive
       double yytmp = ytemp[jp];
-      coef = __ldg(&CUDA_sig[lnp1]) * lpoints * rave; // / CUDA_LCC->ave;
+      coef = __ldg(&CUDA_sig[lnp1]) * lpoints * rave; 
 
       ixx += Lpoints1;
-      double * __restrict__ dyp = &(dytemp[ixx]);
-      double * __restrict__ dap = &(dave[bid][2]);
+      double const * __restrict__ dyp = &(dytemp[ixx]);
+      double const * __restrict__ dap = &(dave[bid][1]);
 
-      coef1 = yytmp * rave; // / CUDA_LCC->ave;
+      coef1 = yytmp * rave; 
       ytemp[jp] = coef * yytmp;
 
 #pragma unroll 2
@@ -2358,25 +2320,29 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	{
 	  double dd[UNRL], dy[UNRL];
 	  int ii;
-	  double * __restrict__ dypp = dyp;
-#pragma unroll 4
+	  double * __restrict__ dypp = (double *)dyp;
+#pragma unroll 
 	  for(ii = 0; ii < UNRL; ii++)
 	    {
-	      dy[ii] = __ldca(dyp);
+	      dy[ii] = *dyp; //__ldca(dyp);
 	      dyp += Lpoints1;
-	      dd[ii] = __ldg(dap);
+	      dd[ii] = *dap; //__ldg(dap);
 	      dap++;
 	    }
-#pragma unroll 4
+#pragma unroll
 	  for(ii = 0; ii < UNRL; ii++)
 	    {
 	      __stwb(dypp, coef * (dy[ii] - coef1 * dd[ii]));
 	      dypp += Lpoints1;
 	    }
 	}
+
 #pragma unroll 3
       for(; l <= ma; l++, dyp += Lpoints1, dap++)
-	__stwb(dyp, __ldca(dyp) * coef - coef1 * __ldg(dap));
+	{
+	  double *dypp = (double *)dyp;
+	  __stwb(dypp, __ldca(dyp) * coef - coef1 * __ldg(dap));
+	}
       
       jp += CUDA_BLOCK_DIM;
       lnp1 += CUDA_BLOCK_DIM;
@@ -2386,30 +2352,25 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int lastone = CUDA_lastone, lma = CUDA_lastma;
-  int * __restrict__ iapp = CUDA_ia;
   
 #pragma unroll 2
-  for(jp = 1; jp <= lpoints; jp++) // CHANGE LOOP threadIDx.x ?
+  for(jp = 0; jp < lpoints; jp++) // CHANGE LOOP threadIDx.x ?
     {
       lnp2++;
       //double s = __ldg(&CUDA_sig[lnp2]);
-      ymod = __ldca(&(ytemp[jp]));
-      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
-      wght = __ldg(&CUDA_Weight[lnp2]);
-      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
 
       int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ, bad, strided read, BAD!
       double * __restrict__ c = &(dytemp[ixx]); //  bad c
-      l = threadIdx.x + 1;
+      l = threadIdx.x;
 #pragma unroll 2
-      while(l <= ma - CUDA_BLOCK_DIM)
+      while(l < ma - CUDA_BLOCK_DIM)
 	{
 	  double a, b;
 	  a = __ldca(c);
@@ -2418,81 +2379,89 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	  b = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 
-	  dyda[l-1] = a;
-	  dyda[l-1 + CUDA_BLOCK_DIM] = b;
+	  dyda[l] = a;
+	  dyda[l + CUDA_BLOCK_DIM] = b;
 
 	  l += 2*CUDA_BLOCK_DIM;
 	}
       //#pragma unroll 2
       //for( ; l <= ma; l += CUDA_BLOCK_DIM, c += CUDA_BLOCK_DIM * Lpoints1)
       if(l < ma)
-	dyda[l-1] = __ldca(c);
+	dyda[l] = __ldca(c);
 	    
       __syncwarp();
 
-      j = 0;
+      //j = 0;
+      ymod = __ldca(&(ytemp[jp]));
+      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
+      wght = __ldg(&CUDA_Weight[lnp2]);
+      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       double sig2iwght = sig2i * wght;
+      double *betap = beta;
 
 #pragma unroll 2
       for(l = 1; l <= lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alp = &alpha[j * mf1 + xx];
+	  //j++;
+	  wt = dyda[l] * sig2iwght;
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = &alpha[l * mf1 + xx + 1];
 #pragma unroll 2
-	  while(xx <= l)
+	  while(xx < l)
 	    {
-	      double const * __restrict__ alp2 = alp;
-	      __stwb(alp, *alp2 + wt * dyda[xx-1]);
+	      __stwb(alp, __ldca(alp) + wt * dyda[xx]);
 	      xx += CUDA_BLOCK_DIM;
 	      alp += CUDA_BLOCK_DIM;
 	    } // m 
 	  //__syncthreads();
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      //beta[l] = beta[l] + dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} // l
 	  
+      int * __restrict__ iapp = CUDA_ia;
 #pragma unroll 1
-      for(; l <= lma; l++)
+      for(; l < lma; l++)
 	{
+	  ++betap;
 	  if(iapp[l])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alp = &alpha[j * mf1 + xx];
+	      //j++;
+	      wt = dyda[l - 1] * sig2iwght;
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = &alpha[l * mf1 + xx + 1];
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
-		  //if(xx != 0)
-		  double const * __restrict__ alp2 = alp;
-		  //alpha[j * mf1 + xx] += wt * dyda[xx-1];
-		  *alp = *alp2 + wt * dyda[xx-1];
+		  __stwb(alp, __ldca(alp) + wt * dyda[xx]);
 		  xx += CUDA_BLOCK_DIM;
+		  alp += CUDA_BLOCK_DIM;
 		} // m 
 	      //__syncthreads();
 	      if(threadIdx.x == 0)
 		{
 		  k = lastone;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + l * mf1 + k + 1;
 #pragma unroll 4
-		  for(; m <= l; m++)
+		  for(; m < l; m++)
 		    {
 		      if(*iap)
 			{
+			  __stwb(alp, __ldca(alp) + wt * dyda[m]);
 			  alp++;
-			  double const * __restrict__ alp2 = alp;
-			  *alp = *alp2 + wt * dyda[m-1];
 			}
 		      iap++;
 		    } // m 
-		  beta[j] = beta[j] + dy * wt;
+		  //beta[l] = beta[l] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -2502,7 +2471,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -2513,25 +2482,24 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
   __device__ void __forceinline__ MrqcofCurve23I1IA0(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int bid)
 {
   int lpoints = 3;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
   __shared__ double dydat[3][N80];
   
-  lnp1 = npg1[bid] + threadIdx.x + 1;
+  lnp1 = npg[1][bid] + threadIdx.x + 1;
 
   int ma = CUDA_ma;
   //int bid = blockIdx();
-  jp = threadIdx.x + 1;
-  double rave = raveg[bid]; //__drcp_rn(aveg[bid]);
+  jp = threadIdx.x;
+  double rave = raveg[bid]; 
   double * __restrict__ dytmpp = CUDA_LCC->dytemp, * __restrict__ cuda_sig = CUDA_sig, * __restrict__ ytemp = CUDA_LCC->ytemp;
   double * __restrict__ cuda_weight = CUDA_Weight, * __restrict__ cuda_brightness = CUDA_brightness;
-  //double * __restrict__ dave = CUDA_LCC->dave;
   double * __restrict__ davep = &(dave[bid][0]);
   long int lpadd = sizeof(double) * Lpoints1;
   
   //#pragma unroll 
-  if(jp <= lpoints)
+  if(jp < lpoints)
     {
       int ixx = jp + Lpoints1;
       // Set the size scale coeff. deriv. explicitly zero for relative lcurves 
@@ -2544,9 +2512,9 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
       
       ixx += Lpoints1;
       double * __restrict__ dyp = dytmpp + ixx; //&(CUDA_LCC->dytemp[ixx]);
-      double * __restrict__ dap = &(davep[2]);
-#pragma unroll 
-      for(l = 2; l <= ma - (UNRL - 1); l += UNRL, ixx += UNRL * Lpoints1)
+      double * __restrict__ dap = &(davep[1]);
+#pragma unroll 2
+      for(l = 1; l < ma - (UNRL - 1); l += UNRL, ixx += UNRL * Lpoints1)
 	{
 	  double dd[UNRL], dy[UNRL];
 	  int ii;
@@ -2563,14 +2531,12 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	  for(ii = 0; ii < UNRL; ii++)
 	    {
 	      __stwb(dyp, coef * (dy[ii] - coef1 * dd[ii])); //WXX
-	      //dyp += Lpoints1;
 	      dyp = (double *)(((char *)dyp) + lpadd);
 	    }
 	}
-#pragma unroll 
-      for(; l <= ma; l++, dyp += Lpoints1, dap++)
+#pragma unroll 1
+      for(; l < ma; l++, dyp += Lpoints1, dap++)
 	__stwb(dyp, coef * ( __ldg(dyp) - coef1 * __ldca(dap))); //WXX
-	//*dyp = __ldg(dyp) * coef - coef1 * __ldg(dap);
 
       jp += CUDA_BLOCK_DIM;
       lnp1 += CUDA_BLOCK_DIM;
@@ -2580,18 +2546,17 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
   int lastone = CUDA_lastone;
-  int * __restrict__ iapp = CUDA_ia;
 
 #pragma unroll 
-  for(jp = 1; jp <= lpoints; jp++)
+  for(jp = 0; jp < lpoints; jp++)
     {
-      if(jp == 1)
+      if(jp == 0)
 	{
 	  int ixx = jp + (threadIdx.x + 1) * Lpoints1; // RXX bad, strided read, BAD
 	  double * __restrict__ c = dytmpp + ixx;  //&(CUDA_LCC->dytemp[ixx]);
@@ -2607,9 +2572,10 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	    }
 	  __syncwarp();
 	}
-      
-      double * __restrict__ dyda = &dydat[jp-1][0];
-      
+
+      double * __restrict__ dyda = &dydat[jp][0];
+
+      //j = 0;
       lnp2++;
       //double s = cuda_sig[lnp2];
       ymod = ytemp[jp];
@@ -2617,75 +2583,76 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
       wght = cuda_weight[lnp2];
       dy = cuda_brightness[lnp2] - ymod;
       
-      j = 0;
       double sig2iwght = sig2i * wght;
 
       double * __restrict__ dydap = dyda + 1;
+      double *betap = beta;
 #pragma unroll 
-      for(l = 2; l <= lastone; l++)
+      for(l = 1; l <= lastone; l++)
 	{
-	  j++;
+	  //j++;
 	  wt = *dydap * sig2iwght;
 	  dydap++;
 	  
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alp = &(alpha[j * mf1 - 1 + xx]);
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = &(alpha[l * mf1 + xx + 1]);
 #pragma unroll 2
-	  while(xx <= l)
+	  while(xx < l)
 	    {
-	      //if(xx != 0)
-	      double * __restrict__ alp2 = alp;
-	      __stwb(alp, *alp2 + wt * dyda[xx-1]);
+	      __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 	      xx += CUDA_BLOCK_DIM;
 	      alp += CUDA_BLOCK_DIM;
 	    } /* m */
 	  //__syncthreads();
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] += dy * wt;
+	      //beta[l] += dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} /* l */
       
+      int * __restrict__ iapp = CUDA_ia;
 #pragma unroll 
-      for(; l <= CUDA_lastma; l++)
+      for(; l < CUDA_lastma; l++)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
+	      //j++;
 	      wt = *dydap * sig2iwght;
 	      
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alp = &alpha[j * mf1 - 1];
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = &alpha[l * mf1 + xx + 1];
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
-		  //if(xx != 0)
-		  double const * __restrict__ alp2 = alp;
-		  __stwb(alp, *alp2 + wt * dyda[xx-1]);
+		  __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 		  xx += CUDA_BLOCK_DIM;
 		  alp += CUDA_BLOCK_DIM;
 		} /* m */
 	      //__syncthreads();
 	      if(threadIdx.x == 0)
 		{
-		  k = lastone - 1;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  k = lastone;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + l * mf1 + k + 1;
 #pragma unroll 4
-		  for(; m <= l; m++)
+		  for(; m < l; m++)
 		    {
 		      if(*iap)
 			{
-			  //k++;
+			  __stwb(alp, __ldg(alp) + wt * dyda[m]);
 			  alp++;
-			  double const * __restrict__ alp2 = alp;
-			  __stwb(alp, *alp2 + wt * dyda[m - 1]);
 			}
 		      iap++;
 		    } /* m */
-		  beta[j] = beta[j] + dy * wt;
+		  //beta[l] = beta[l] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -2695,7 +2662,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -2704,20 +2671,20 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
   __device__ void __forceinline__ MrqcofCurve23I1IA1(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int bid)
 {
   int lpoints = 3;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   //int bid = blockIdx();
   int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
   __shared__ double dyda[N80];
   
-  lnp1 = npg1[bid] + 1;
+  lnp1 = npg[1][bid] + 1;
 
   int ma = CUDA_ma;
   double rave = raveg[bid]; //__drcp_rn(aveg[bid]);
   double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 
-  for(jp = 1; jp <= lpoints; jp++, lnp1++)
+  for(jp = 0; jp < lpoints; jp++, lnp1++)
     {
       int ixx = jp + Lpoints1;
       // Set the size scale coeff. deriv. explicitly zero for relative lcurves 
@@ -2730,10 +2697,10 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
       ytemp[jp] = coef * yytmp;
 
       double * __restrict__ dyp = &(dytemp[ixx]);
-      double * __restrict__ dap = &(dave[bid][2]);
-      l = 2 + threadIdx.x;
+      double * __restrict__ dap = &(dave[bid][1]);
+      l = 1 + threadIdx.x;
 #pragma unroll 2
-      while(l <= ma)
+      while(l < ma)
 	{
 	  double dy = __ldg(dyp);
 	  double dd = __ldca(dap);
@@ -2749,91 +2716,92 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int lastone = CUDA_lastone, lma = CUDA_lastma;
-  int * __restrict__ iapp = CUDA_ia;
   
 #pragma unroll 
-  for(jp = 1; jp <= lpoints; jp++) 
+  for(jp = 0; jp < lpoints; jp++) 
     {
       lnp2++;
       //double s = __ldg(&CUDA_sig[lnp2]);
-      ymod = __ldca(&(ytemp[jp]));
-      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
-      wght = __ldg(&CUDA_Weight[lnp2]);
-      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       
       int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ, bad, strided read, BAD!
       double * __restrict__ c = &(dytemp[ixx]); //  bad c
-      l = threadIdx.x + 1;
-#pragma unroll 4
-      while(l <= ma - CUDA_BLOCK_DIM)
+      l = threadIdx.x;
+#pragma unroll 2
+      while(l < ma - CUDA_BLOCK_DIM)
 	{
 	  double a, b;
 	  a = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 	  b = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
-	  dyda[l-1] = a;
-	  dyda[l-1 + CUDA_BLOCK_DIM] = b;
+	  dyda[l] = a;
+	  dyda[l + CUDA_BLOCK_DIM] = b;
 	  l += 2*CUDA_BLOCK_DIM;
 	}
 #pragma unroll 1
       while(l <= ma)
 	{
-	  dyda[l-1] = __ldca(c);
+	  dyda[l] = __ldca(c);
 	  l += CUDA_BLOCK_DIM;
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 	}
       
       __syncwarp();
       
-      j = 0;
+      //j = 0;
+      ymod = __ldca(&(ytemp[jp]));
+      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
+      wght = __ldg(&CUDA_Weight[lnp2]);
+      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       double sig2iwght = sig2i * wght;
-      
+      double *betap = beta;
 #pragma unroll 4
-      for(l = 1; l <= lastone; l++)
+      for(l = 1; l < lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alp = &alpha[j * mf1 + xx]; 
+	  //j++;
+	  wt = dyda[l] * sig2iwght;
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = &alpha[l * mf1 + xx + 1]; 
 #pragma unroll 2
 	  while(xx <= l)
 	    {
-	      double const * __restrict alp2 = alp;
-	      __stwb(alp, *alp2 +  wt * dyda[xx-1]);
+	      __stwb(alp, __ldg(alp) +  wt * dyda[xx]);
 	      xx += CUDA_BLOCK_DIM;
 	      alp += CUDA_BLOCK_DIM;
 	    } /* m */
 	  //__syncthreads();
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      //beta[l] = beta[l] + dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} /* l */
       
+      int * __restrict__ iapp = CUDA_ia;
 #pragma unroll 4
-      while(l <= lma)
+      while(l < lma)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alp = &alpha[j * mf1 + xx]; 
+	      //j++;
+	      wt = dyda[l - 1] * sig2iwght;
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = &alpha[l * mf1 + xx + 1]; 
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
-		  //if(xx != 0)
-		  double const * __restrict alp2 = alp;
-		  __stwb(alp, *alp2 + wt * dyda[xx-1]);
+		  __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 		  xx += CUDA_BLOCK_DIM;
 		  alp += CUDA_BLOCK_DIM;
 		} /* m */
@@ -2841,21 +2809,23 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 	      if(threadIdx.x == 0)
 		{
 		  k = lastone;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + j * mf1 + k + 1;
 #pragma unroll 4
 		  while(m <= l)
 		    {
 		      if(*iap)
 			{
+			  __stwb(alp, __ldg(alp) + wt * dyda[m]);
 			  alp++;
-			  __stwb(alp, *alp + wt * dyda[m-1]);
 			}
 		      iap++;
 		      m++;
 		    } /* m */
-		  beta[j] = beta[j] + dy * wt;
+		  //beta[l] = beta[l] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -2866,7 +2836,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
   
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -2876,8 +2846,8 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 __device__ void __forceinline__ MrqcofCurve23I0IA0(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int bid)
 {
   int lpoints = 3;
-  int mf1 = CUDA_mfit1;
-  int l, jp, j, k, m, lnp2, Lpoints1 = lpoints + 1;
+  int mf1 = CUDA_mfit + 1;
+  int l, jp, k, m, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
   __shared__ double dyda[BLOCKX4][N80];
   double * __restrict__ dydap = dyda[threadIdx.y];
@@ -2885,19 +2855,18 @@ __device__ void __forceinline__ MrqcofCurve23I0IA0(freq_context * __restrict__ C
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int ma = CUDA_ma, lma = CUDA_lastma;
   int lastone = CUDA_lastone;
-  int * __restrict__ iapp = CUDA_ia;
   double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
   
 #pragma unroll 
-  for(jp = 1; jp <= lpoints; jp++)
+  for(jp = 0; jp < lpoints; jp++)
     {
       int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ bad, strided read, BAD
       double * __restrict__ c = &(dytemp[ixx]);
@@ -2919,69 +2888,76 @@ __device__ void __forceinline__ MrqcofCurve23I0IA0(freq_context * __restrict__ C
       wght = __ldg(&CUDA_Weight[lnp2]);
       dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       
-      j = 0;
+      //j = 0;
       double sig2iwght = sig2i * wght;
-      
+      double *betap = beta;
 #pragma unroll 
-      for(l = 2; l <= lastone; l++)
+      for(l = 1; l < lastone; l++)
 	{
-	  j++;
-	  wt = dydap[l-1] * sig2iwght;
+	  //j++;
+	  wt = dydap[l] * sig2iwght;
 	  
-	  int xx = threadIdx.x + 1;
-	  double * __restrict__ alp = &alpha[j * mf1 + xx - 1];
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = &alpha[l * mf1 + xx];
 #pragma unroll 2
 	  while(xx <= l)
 	    {
-	      //if(xx != 0)
-	      double const * __restrict__ alp2 = alp;
-	      __stwb(alp, *alp2 + wt * dydap[xx-1]);
+	      __stwb(alp, __ldg(alp) + wt * dydap[xx]);
 	      xx  += CUDA_BLOCK_DIM;
 	      alp += CUDA_BLOCK_DIM;
 	    } /* m */
 	  //__syncthreads();
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      //beta[l] = beta[l] + dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} /* l */
       
+      int * __restrict__ iapp = CUDA_ia;
+
 #pragma unroll 
-      for(; l <= lma; l++)
+      for(; l < lma; l++)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
+	      //j++;
 	      wt = dydap[l-1] * sig2iwght;
 	      
-	      int xx = threadIdx.x + 1;
-	      double * __restrict__ alph = &alpha[j * mf1 - 1];
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = &alpha[l * mf1 + xx];
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
 		  //if(xx != 0)
-		  __stwb(&alph[xx], alph[xx] + wt * dydap[xx-1]);
+		  __stwb(alp, __ldg(alp) + wt * dydap[xx]);
+		  alp += CUDA_BLOCK_DIM;
 		  xx += CUDA_BLOCK_DIM;
 		} /* m */
 	      //__syncthreads();
 	      if(threadIdx.x == 0)
 		{
-		  k = lastone - 1;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  k = lastone;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + l * mf1 + k;
 #pragma unroll 4
-		  for(; m <= l; m++)
+		  for(; m < l; m++)
 		    {
 		      if(*iap)
 			{
+			  __stwb(alp, *alp + wt * dydap[m]);
 			  alp++;
-			  __stwb(alp, *alp + wt * dydap[m-1]);
 			}
 		      iap++;
 		    } /* m */
-		  beta[j] = beta[j] + dy * wt;
+		  //beta[l] = beta[l] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -2991,7 +2967,7 @@ __device__ void __forceinline__ MrqcofCurve23I0IA0(freq_context * __restrict__ C
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -3000,7 +2976,7 @@ __device__ void __forceinline__ MrqcofCurve23I0IA0(freq_context * __restrict__ C
 __device__ void __forceinline__ MrqcofCurve23I0IA1(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int bid)
 {
   int lpoints = 3;
-  int mf1 = CUDA_mfit1;
+  int mf1 = CUDA_mfit + 1;
   int l, jp, j, k, m, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
   __shared__ double dyda[N80];
@@ -3009,107 +2985,117 @@ __device__ void __forceinline__ MrqcofCurve23I0IA1(freq_context * __restrict__ C
 
   if(threadIdx.x == 0)
     {
-      npg1[bid] += lpoints;
+      npg[1][bid] += lpoints;
     }
 
-  lnp2 = npg2[bid];
+  lnp2 = npg[2][bid];
   ltrial_chisq = trial_chisqg[bid];
 
   int ma = CUDA_ma, lma = CUDA_lastma;
   int lastone = CUDA_lastone;
-  int * __restrict__ iapp = CUDA_ia;
   double * __restrict__ dytemp = CUDA_LCC->dytemp, * __restrict__ ytemp = CUDA_LCC->ytemp;
+
 #pragma unroll 
-  for(jp = 1; jp <= lpoints; jp++) 
+  for(jp = 0; jp < lpoints; jp++) 
     {
       lnp2++;
       //double s = __ldg(&CUDA_sig[lnp2]);
       ymod = __ldca(&(ytemp[jp]));
-      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
-      wght = __ldg(&CUDA_Weight[lnp2]);
-      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       
       int ixx = jp + (threadIdx.x + 1) * Lpoints1; // ZZZ, bad, strided read, BAD!
       double * __restrict__ c = &(dytemp[ixx]); //  bad c
-      l = threadIdx.x + 1;
-#pragma unroll 4
-      while(l <= ma - CUDA_BLOCK_DIM)
+      l = threadIdx.x;
+#pragma unroll 2
+      while(l < ma - CUDA_BLOCK_DIM)
 	{
 	  double a, b;
 	  a = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 	  b = __ldca(c);
 	  c += CUDA_BLOCK_DIM * Lpoints1;
-	  dyda[l-1] = a;
-	  dyda[l-1 + CUDA_BLOCK_DIM] = b;
+	  dyda[l] = a;
+	  dyda[l + CUDA_BLOCK_DIM] = b;
 	  l += 2*CUDA_BLOCK_DIM;
 	}
 #pragma unroll 1
-      while(l <= ma)
+      while(l < ma)
 	{
-	  dyda[l-1] = __ldca(c);
+	  dyda[l] = __ldca(c);
 	  l += CUDA_BLOCK_DIM;
 	  c += CUDA_BLOCK_DIM * Lpoints1;
 	}
       
       __syncwarp();
       
-      j = 0;
+      //j = 0;
+      sig2i = __ldg(&CUDA_sigr2[lnp2]); //__drcp_rn(s * s); 
+      wght = __ldg(&CUDA_Weight[lnp2]);
+      dy = __ldg(&CUDA_brightness[lnp2]) - ymod;
       double sig2iwght = sig2i * wght;
-      
+      double *betap = beta;
 #pragma unroll 4
       for(l = 1; l <= lastone; l++)
 	{
-	  j++;
-	  wt = dyda[l-1] * sig2iwght;
-	  int xx = threadIdx.x + 1;
+	  //j++;
+	  wt = dyda[l] * sig2iwght;
+	  int xx = threadIdx.x;
+	  double * __restrict__ alp = alpha + l * mf1 + xx + 1;
 #pragma unroll 2
-	  while(xx <= l)
+	  while(xx < l)
 	    {
-	      alpha[j * mf1 + xx] += wt * dyda[xx-1];
+	      __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 	      xx += CUDA_BLOCK_DIM;
+	      alp += CUDA_BLOCK_DIM;
 	    } /* m */
 	  //__syncthreads();
+	  ++betap;
 	  if(threadIdx.x == 0)
 	    {
-	      beta[j] = beta[j] + dy * wt;
+	      //beta[l] = beta[l] + dy * wt;
+	      //double *betap = beta + l;
+	      __stwb(betap, __ldca(betap) + dy * wt);
 	    }
 	  //__syncthreads();
 	} /* l */
       
+      int * __restrict__ iapp = CUDA_ia;
 #pragma unroll 4
-      for(; l <= lma; l++)
+      for(; l < lma; l++)
 	{
-	  if(iapp[l])
+	  ++betap;
+	  if(iapp[l + 1])
 	    {
-	      j++;
-	      wt = dyda[l-1] * sig2iwght;
-	      int xx = threadIdx.x + 1;
+	      //j++;
+	      wt = dyda[l - 1] * sig2iwght;
+	      int xx = threadIdx.x;
+	      double * __restrict__ alp = alpha + l * mf1 + xx + 1;
 #pragma unroll 2
-	      while(xx <= lastone)
+	      while(xx < lastone)
 		{
-		  //if(xx != 0)
-		  alpha[j * mf1 + xx] += wt * dyda[xx-1];
+		  __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 		  xx += CUDA_BLOCK_DIM;
+		  alp += CUDA_BLOCK_DIM;
 		} /* m */
 	      //__syncthreads();
 	      if(threadIdx.x == 0)
 		{
 		  k = lastone;
-		  m = lastone + 1;
-		  int * __restrict__ iap = iapp + m;
-		  double * __restrict__ alp = alpha + j * mf1 + k;
+		  m = lastone;
+		  int * __restrict__ iap = iapp + m + 1;
+		  double * __restrict__ alp = alpha + l * mf1 + k;
 #pragma unroll 4
-		  for(; m <= l; m++)
+		  for(; m < l; m++)
 		    {
 		      if(*iap)
 			{
+			  __stwb(alp, __ldg(alp) + wt * dyda[xx]);
 			  alp++;
-			  __stwb(alp, *alp + wt * dyda[m-1]);
 			}
 		      iap++;
 		    } /* m */
-		  beta[j] = beta[j] + dy * wt;
+		  //beta[l] = beta[l] + dy * wt;
+		  //double *betap = beta + l;
+		  __stwb(betap, __ldca(betap) + dy * wt);
 		}
 	      //__syncthreads();
 	    }
@@ -3119,7 +3105,7 @@ __device__ void __forceinline__ MrqcofCurve23I0IA1(freq_context * __restrict__ C
 
   if(threadIdx.x == 0)
     {
-      npg2[bid] = lnp2;
+      npg[2][bid] = lnp2;
       trial_chisqg[bid] = ltrial_chisq;
     }
 }
@@ -3134,13 +3120,11 @@ __global__ void CudaCalculatePrepare(int n_start, int n_max)
 
   if(n > n_max)
     {
-      //isInvalid[tid] = 1;
       setFlag(isInvalid, tid);
       return;
     }
   else
     {
-      //isInvalid[tid] = 0;
       resetFlag(isInvalid, tid);
     }
 
@@ -3154,14 +3138,12 @@ __global__ void CudaCalculatePrepare(int n_start, int n_max)
 
 __global__ void 
 __launch_bounds__(1024,1)
-CudaCalculatePreparePole(int m, double freq_start, double freq_step, int n_start)
+  CudaCalculatePreparePole(double freq_start, double freq_step, int n_start, double beta, double lambda)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   n_start += tid;
-  //auto CUDA_LCC = &CUDA_CC[tid];
-  //auto CUDA_LFR = &CUDA_FR[tid];
 
-  if(isAnyTrue(isInvalid, tid)) //__ldg(&isInvalid[tid]))  
+  if(isAnyTrue(isInvalid, tid)) 
     {
       atomicAdd(&CUDA_End, 1);
       isReported[tid] = 0; //signal not to read result
@@ -3169,10 +3151,9 @@ CudaCalculatePreparePole(int m, double freq_start, double freq_step, int n_start
       return;
     }
 
-  //double period = __drcp_rn(__ldg(&CUDA_freq[tid]));
   double period = __drcp_rn(freq_start - (n_start - 1) * freq_step);
-  double * __restrict__ cgp = cgg[tid] + 1; //CUDA_LCC->cg + 1;
-  double const * __restrict__ cfp = CUDA_cg_first + 1;
+  double * __restrict__ cgp = cgg[tid] + 1;
+  double const * __restrict__ cfp = CUDA_cg_first; // + 1;
   /* starts from the initial ellipsoid */
   int i;
   int ncoef = CUDA_Ncoef;
@@ -3189,14 +3170,14 @@ CudaCalculatePreparePole(int m, double freq_start, double freq_step, int n_start
 #pragma unroll 3
   for( ; i <= ncoef; i++)
     {
-      *cgp++ = *cfp++; //CUDA_cg_first[i];
+      *cgp++ = *cfp++;
     }
 
   
   /* The formulae use beta measured from the pole */
   /* conversion of lambda, beta to radians */
-  *cgp++ = DEG2RAD * 90 - DEG2RAD * CUDA_beta_pole[m];
-  *cgp++ = DEG2RAD * CUDA_lambda_pole[m];
+  *cgp++ = DEG2RAD * 90 - DEG2RAD * beta; //CUDA_beta_pole[m];
+  *cgp++ = DEG2RAD * lambda; //CUDA_lambda_pole[m];
    
   /* Use omega instead of period */
   *cgp++ = (24.0 * 2.0 * PI) / period;
@@ -3231,14 +3212,14 @@ __global__ void CudaCalculateIter1Begin(int n_max)
   
   if(tid > n_max) return;
 
-  if(isAnyTrue(isInvalid, tid))//__ldg(&isInvalid[tid])) 
+  if(isAnyTrue(isInvalid, tid))
     {
       return;
     }
 
   int niter = __ldg(&Niter[tid]);
-  bool b_isniter = ((niter < CUDA_n_iter_max) && (iter_diffg[tid] > CUDA_iter_diff_max)) || (niter < CUDA_n_iter_min);
-  //isNiter[tid] = b_isniter;
+  bool b_isniter = ((niter < CUDA_n_iter_max) && (__ldg(&iter_diffg[tid]) > CUDA_iter_diff_max)) || (niter < CUDA_n_iter_min);
+
   if(b_isniter)
     setFlag(isNiter, tid);
   else
@@ -3248,14 +3229,12 @@ __global__ void CudaCalculateIter1Begin(int n_max)
     {
       if(__ldg(&Alamda[tid]) < 0)
 	{
-	  //isAlamda[tid] = 1;
 	  setFlag(isAlambda, tid);
 
 	  Alamda[tid] = CUDA_Alamda_start; /* initial alambda */
 	}
       else
 	{
-	  //isAlamda[tid] = 0;
 	  resetFlag(isAlambda, tid);
 	}
     }
@@ -3264,13 +3243,6 @@ __global__ void CudaCalculateIter1Begin(int n_max)
       if(!(__ldg(&isReported[tid])))
 	{
 	  atomicAdd(&CUDA_End, 1);
-#ifdef _DEBUG
-	  /*const int is_precalc = CUDA_Is_Precalc;
-	    if(is_precalc)
-	    {
-	    printf("%d ", CUDA_End);
-	    }*/
-#endif
 	  isReported[tid] = 1;
 	}
     }
@@ -3283,7 +3255,7 @@ __global__ void
 #if (__CUDA_ARCH__ < 700)
 __launch_bounds__(512, 1) //768
 #else
-__launch_bounds__(768, 1) //768
+__launch_bounds__(512, 1) //768
 #endif  
 CudaCalculateIter1Mrqmin1End(void)
 {
@@ -3293,7 +3265,7 @@ CudaCalculateIter1Mrqmin1End(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
   
-  mrqmin_1_end(CUDA_LCC, CUDA_ma, CUDA_mfit, CUDA_mfit1, CUDA_BLOCK_DIM);
+  mrqmin_1_end(CUDA_LCC, CUDA_ma, CUDA_mfit, /*CUDA_mfit + 1,*/ CUDA_BLOCK_DIM);
 }
 
 
@@ -3305,7 +3277,6 @@ __launch_bounds__(1024, 1) //768
 #endif  
 CudaCalculateIter1Mrqmin2End(void)
 {
-  //int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
   uint flags = getFlags(bid);
@@ -3316,11 +3287,10 @@ CudaCalculateIter1Mrqmin2End(void)
   __syncwarp();
   if(threadIdx.x == 0)
     Niter[bid]++;
-  //CUDA_LCC->Niter++;
 }
 
 
-__global__ void
+__global__ void 
 #if (__CUDA_ARCH__ < 700)
 __launch_bounds__(512, 1) //768
 #else
@@ -3339,17 +3309,17 @@ CudaCalculateIter1Mrqcof1Start(void)
       if(threadIdx.x == 0)
 	{
 	  trial_chisqg[bid] = 0;
-	  npg[bid] = 0;
-	  npg1[bid] = 0;
-	  npg2[bid] = 0;
+	  npg[0][bid] = 0;
+	  npg[1][bid] = 0;
+	  npg[2][bid] = 0;
 	  aveg[bid] = 0;
 	}
-
-      mrqcof_start(CUDA_LCC, cgg[bid], alphag[bid], betag[bid], bid);
+      
+      mrqcof_start(CUDA_LCC, cgg[bid], alphag[bid] - 1, betag[bid] - 1, bid);
     }
   
   int tid = blockIdx() * blockDim.x + threadIdx.x;
-
+  
   if(tid < blockDim.y * gridDim.x)
     {
       double *a = cgg[tid]; 
@@ -3368,7 +3338,7 @@ CudaCalculateIter1Mrqcof1Curve2I0IA0(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  MrqcofCurve23I0IA0(CUDA_LCC, alphag[bid], betag[bid], bid);
+  MrqcofCurve23I0IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
 }
 
 
@@ -3382,7 +3352,7 @@ CudaCalculateIter1Mrqcof1Curve2I0IA1(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  MrqcofCurve23I0IA1(CUDA_LCC, alphag[bid], betag[bid], bid);
+  MrqcofCurve23I0IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
 }
 
 
@@ -3396,7 +3366,7 @@ CudaCalculateIter1Mrqcof1Curve2I1IA0(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  MrqcofCurve23I1IA0(CUDA_LCC, alphag[bid], betag[bid], bid);
+  MrqcofCurve23I1IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
 }
 
 
@@ -3411,7 +3381,7 @@ CudaCalculateIter1Mrqcof1Curve2I1IA1(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  MrqcofCurve23I1IA1(CUDA_LCC, alphag[bid], betag[bid], bid);
+  MrqcofCurve23I1IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
 }
 
 
@@ -3509,7 +3479,7 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA0(const int lpoints)
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
   mrqcof_curve1(CUDA_LCC, cg, 0, lpoints, bid);
-  MrqcofCurve2I0IA0(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
+  MrqcofCurve2I0IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, lpoints, bid);
 }
 
 
@@ -3529,7 +3499,7 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA1(const int lpoints)
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
   mrqcof_curve1(CUDA_LCC, cg, 0, lpoints, bid);
-  MrqcofCurve2I0IA1(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
+  MrqcofCurve2I0IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, lpoints, bid);
 }
 
 
@@ -3550,7 +3520,7 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA0(const int lpoints)
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
   mrqcof_curve1(CUDA_LCC, cg, 1, lpoints, bid);
-  MrqcofCurve2I1IA0(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
+  MrqcofCurve2I1IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, lpoints, bid);
 }
 
 
@@ -3570,7 +3540,7 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA1(const int lpoints)
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
   mrqcof_curve1(CUDA_LCC, cg, 1, lpoints, bid);
-  MrqcofCurve2I1IA1(CUDA_LCC, alphag[bid], betag[bid], lpoints, bid);
+  MrqcofCurve2I1IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, lpoints, bid);
 }
 
 
@@ -3590,7 +3560,7 @@ void CudaCalculateIter1Mrqcof1Curve1LastI0(void)
 
   if(CUDA_LCC->ytemp == NULL) return;
 
-  mrqcof_curve1_lastI0(CUDA_LCC, cgg[bid] /*CUDA_LCC->cg*/, alphag[bid], betag[bid], bid);
+  mrqcof_curve1_lastI0(CUDA_LCC, bid);
 }
 
 
@@ -3608,7 +3578,7 @@ CudaCalculateIter1Mrqcof1Curve1LastI1(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  mrqcof_curve1_lastI1(CUDA_LCC, cgg[bid], alphag[bid], betag[bid], bid);
+  mrqcof_curve1_lastI1(CUDA_LCC, bid);
 }
 
 
@@ -3621,7 +3591,7 @@ __global__ void CudaCalculateIter1Mrqcof1End(void)
   uint flags = getFlags(tid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
-  mrqcof_end(CUDA_LCC, alphag[tid]);
+  mrqcof_end(CUDA_LCC, alphag[tid] - 1);
   Ochisq[tid] = trial_chisqg[tid];
 }
 
@@ -3646,9 +3616,9 @@ CudaCalculateIter1Mrqcof2Start(void)
       if(threadIdx.x == 0)
 	{
 	  trial_chisqg[bid] = 0;
-	  npg[bid] = 0;
-	  npg1[bid] = 0;
-	  npg2[bid] = 0;
+	  npg[0][bid] = 0;
+	  npg[1][bid] = 0;
+	  npg[2][bid] = 0;
 	  aveg[bid] = 0;
 	}
         
@@ -3657,9 +3627,7 @@ CudaCalculateIter1Mrqcof2Start(void)
 
   if(tid < blockDim.y * gridDim.x)
     {
-      //auto CUDA_LCC = &CUDA_CC[tid];
- 
-      double *a = atry[tid]; //CUDA_LCC->atry;
+      double *a = atry[tid]; 
       blmatrix(a[CUDA_ma - CUDA_Nphpar - 4], a[CUDA_ma - CUDA_Nphpar - 3], tid);
     }
 
@@ -3681,7 +3649,7 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA1(const int lpoints)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  double *atryp = atry[bid]; //CUDA_LCC->atry;
+  double *atryp = atry[bid];
   mrqcof_curve1(CUDA_LCC, atryp, 0, lpoints, bid);
   MrqcofCurve2I0IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3702,7 +3670,7 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA0(const int lpoints)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  double *atryp = atry[bid]; //CUDA_LCC->atry;
+  double *atryp = atry[bid];
   mrqcof_curve1(CUDA_LCC, atryp, 0, lpoints, bid);
   MrqcofCurve2I0IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3723,7 +3691,7 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA1(const int lpoints)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  double *atryp = atry[bid]; //CUDA_LCC->atry;
+  double *atryp = atry[bid];
   mrqcof_curve1(CUDA_LCC, atryp, 1, lpoints, bid);
   MrqcofCurve2I1IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3743,7 +3711,7 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA0(const int lpoints)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  double *atryp = atry[bid]; //CUDA_LCC->atry;
+  double *atryp = atry[bid];
   mrqcof_curve1(CUDA_LCC, atryp, 1, lpoints, bid);
   MrqcofCurve2I1IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, lpoints, bid);
 }
@@ -3763,7 +3731,7 @@ CudaCalculateIter1Mrqcof2Curve1LastI0(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  mrqcof_curve1_lastI0(CUDA_LCC, atry[bid], CUDA_LCC->covar, CUDA_LCC->da, bid);
+  mrqcof_curve1_lastI0(CUDA_LCC, bid);
 }
 
 
@@ -3782,7 +3750,7 @@ CudaCalculateIter1Mrqcof2Curve1LastI1(void)
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
-  mrqcof_curve1_lastI1(CUDA_LCC, atry[bid], CUDA_LCC->covar, CUDA_LCC->da, bid);
+  mrqcof_curve1_lastI1(CUDA_LCC, bid);
 }
 
 
@@ -3808,58 +3776,66 @@ __launch_bounds__(1024, 1) //768
 #endif  
 CudaCalculateFinishPole(void)
 {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int bid = blockIdx();
 
-  uint flags = getFlags(tid);
+  uint flags = getFlags(bid);
   if(!!(flags & isInvalid)) return;
 
-  double dn = __ldg(&dev_newg[tid]), db = __ldg(&dev_best[tid]);
+  double dn = __ldca(&dev_newg[bid]), db = __ldca(&dev_best[bid]);
   int nf = CUDA_Numfac;
-  double dark = __ldg(&chck[tid]); 
 
   if(dn >= db)
     return;
 
-  register double tot = 0, tot2 = 0;
-  double const * __restrict__ p = &(Areag[tid][1]); 
-
-  int i = 0;
-#pragma unroll 4
-  for( ; i < nf - 3; i += 4)
+  double tot = 0;
+  int xx = threadIdx.x;
+  double const * __restrict__ p = &Areag[bid][xx]; 
+#pragma unroll 1
+  for( ; xx < nf - (CUDA_BLOCK_DIM * 4 - 1); xx += 4 * CUDA_BLOCK_DIM)
     {
-      tot  += __ldca(p++);
-      tot2 += __ldca(p++);
-      tot  += __ldca(p++);
-      tot2 += __ldca(p++);
+      double a[4];
+#pragma unroll      
+      for(int i = 0; i < 4; i++)
+	a[i] = p[i * CUDA_BLOCK_DIM];
+      a[0] += a[1];
+      a[2] += a[3];
+      tot += a[0] + a[2];
+      p += CUDA_BLOCK_DIM * 4;
     }
-  for( ; i < nf - 1; i++)
+  
+#pragma unroll 2
+  for( ; xx < nf; xx += CUDA_BLOCK_DIM)
     {
-      tot  += __ldca(p++);
-      i++;
-      tot2 += __ldca(p++);
+      tot +=  *p;
+      p += CUDA_BLOCK_DIM;
     }
-  if(nf & 1)
-    tot += Areag[tid][nf - 1]; //LDG_d_ca(CUDA_LCC->Area, (nf - 1));
-  //tot += CUDA_LCC->Area[nf - 1];
-
-  tot = __drcp_rn(tot + tot2);
-
-  /* period solution */
-  double *cggp = cgg[tid];
-  double dd = dark * 100.0 * tot;
-  if(isnan(dd) == 1)
-    dd = 1.0;
-  double period = 2 * PI / cggp[CUDA_Ncoef + 3];
-
-  /* pole solution */
-  double la_tmp = RAD2DEG * cggp[CUDA_Ncoef + 2];
-  double be_tmp = 90 - RAD2DEG * cggp[CUDA_Ncoef + 1];
-
-  dev_best[tid] = dn;
-  dark_best[tid] = dd;
-  per_best[tid] = period;
-  la_best[tid] = la_tmp + (la_tmp < 0 ? 360 : 0);
-  be_best[tid] = be_tmp;
+  tot += __shfl_down_sync(0xffffffff, tot, 16);
+  tot += __shfl_down_sync(0xffffffff, tot, 8);
+  tot += __shfl_down_sync(0xffffffff, tot, 4);
+  tot += __shfl_down_sync(0xffffffff, tot, 2);
+  tot += __shfl_down_sync(0xffffffff, tot, 1);
+  if(threadIdx.x == 0)
+    {
+      tot = __drcp_rn(tot);
+      
+      double dark = __ldca(&chck[bid]); 
+      /* period solution */
+      double *cggp = cgg[bid];
+      double dd = dark * 100.0 * tot;
+      if(isnan(dd) == 1)
+	dd = 1.0;
+      double period = 2 * PI / __ldca(&cggp[CUDA_Ncoef + 3]);
+      
+      /* pole solution */
+      double la_tmp = RAD2DEG * __ldca(&cggp[CUDA_Ncoef + 2]);
+      double be_tmp = 90 - RAD2DEG * __ldca(&cggp[CUDA_Ncoef + 1]);
+      
+      dev_best[bid]  = dn;
+      dark_best[bid] = dd;
+      per_best[bid]  = period;
+      la_best[bid]   = la_tmp + (la_tmp < 0 ? 360 : 0);
+      be_best[bid]   = be_tmp;
+    }
 }
 
 
@@ -3872,7 +3848,6 @@ __launch_bounds__(1024, 1) //768
 #endif  
 CudaCalculateIter2(void)
 {
-  //bool beenThere = false;
   int bid = blockIdx();
   uint flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
@@ -3884,22 +3859,22 @@ CudaCalculateIter2(void)
   double ochisq = __ldg(&Ochisq[bid]);
   if(Niter[bid] == 1 || chisq < ochisq)
     {
-      curv(CUDA_LCC, cgg[bid]/*CUDA_LCC->cg*/, bid); //gggg
+      curv(CUDA_LCC, cgg[bid], bid);
       
       double a[3] = {0, 0, 0};
 
-      int j = threadIdx.x + 1;
+      int j = threadIdx.x;
 
       double const * __restrict__ areap = Areag[bid];
 #pragma unroll 1
-      while(j <= nf)
+      while(j < nf)
 	{
-	  double dd = areap[j];
+	  double dd = __ldca(&areap[j]);
 #pragma unroll 3
 	  for(int i = 0; i < 3; i++)
 	    {
 	      double const * __restrict__ norp = CUDA_Nor[i];
-	      a[i] += dd * norp[j];
+	      a[i] += dd * __ldca(&norp[j]);
 	    }
 	  j += CUDA_BLOCK_DIM;
 	}
@@ -3930,7 +3905,7 @@ CudaCalculateIter2(void)
 	      aa += a[i]*a[i];
 	    }
 	  
-	  double rchisq = chisq - aa * conwr2; //(CUDA_conw_r * CUDA_conw_r);
+	  double rchisq = chisq - aa * conwr2;
 	  double dev_old = dev_oldg[bid];
 	  double dev_new = __dsqrt_rn(rchisq / (CUDA_ndata - 3));
 	  chck[bid] = norm3d(a[0], a[1], a[2]);
@@ -3955,23 +3930,9 @@ CudaCalculateIter2(void)
 
 __global__ void CudaCalculateFinish(void) //  not used
 {
-  /*
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  //  auto CUDA_LCC = &CUDA_CC[tid];
-  //auto CUDA_LFR = &CUDA_FR[tid];
-
-  //if(__ldg(&isInvalid[tid])) return;
-  uint flags = Flags[bid];
-  if(!!(flags & isInvalid)) return;
-
-  double lla_best = la_best[tid];
-  if(lla_best < 0)
-    la_best[tid] = lla_best + 360;
-
-  if(isnan(__ldg(&dark_best[tid])) == 1)
-    dark_best[tid] = 1.0;
-  */
 }
+
+
 
 __global__ void test(float *p)
 {

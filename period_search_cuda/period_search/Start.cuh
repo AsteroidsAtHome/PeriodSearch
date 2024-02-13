@@ -2,7 +2,8 @@
 
 __global__ void CudaCalculatePrepare(int n_start, int n_max);
 
-__global__ void CudaCalculatePreparePole(int m, double freq_start, double freq_step, int n);
+//__global__ void CudaCalculatePreparePole(int m, double freq_start, double freq_step, int n);
+__global__ void CudaCalculatePreparePole(double freq_start, double freq_step, int n, double beta, double lambda);
 
 __global__ void CudaCalculateIter1Begin(int n_max);
 

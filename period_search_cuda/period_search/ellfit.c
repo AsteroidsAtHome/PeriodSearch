@@ -45,12 +45,12 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
             n++;
             if (m != 0)
 	    {
-               fmat[i][n] = pleg[m][l][i] * cos(m * af[i]);
+               fmat[i][n] = pleg[m][l][i - 1] * cos(m * af[i]);
                n++;
-               fmat[i][n] = pleg[m][l][i] * sin(m * af[i]);
+               fmat[i][n] = pleg[m][l][i - 1] * sin(m * af[i]);
             }
             else
-               fmat[i][n] = pleg[m][l][i];
+               fmat[i][n] = pleg[m][l][i - 1];
          }
    }
 
@@ -76,7 +76,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
    lubksb(fitmat,ncoef,indx,fitvec);
 
    for (i = 1; i <= ncoef; i++)
-      cg[i] = fitvec[i];
+      cg[i - 1] = fitvec[i];
 
    deallocate_matrix_double(fitmat, ncoef);
    deallocate_matrix_double(fmat, ndir);

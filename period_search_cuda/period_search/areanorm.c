@@ -44,15 +44,15 @@ void areanorm(double t[], double f[], int ndir, int nfac, int **ifp, double at[]
       /* Areas (on the unit sphere) and normals */
       clen2 = c[1] * c[1] + c[2] * c[2] + c[3] * c[3];
       clen = sqrt(clen2);
-      /* normal */
-      normal[0][i] = c[1] / clen;
-      normal[1][i] = c[2] / clen;
-      normal[2][i] = c[3] / clen;
+      /* normal, array index starts from 0 */
+      normal[0][i-1] = c[1] / clen;
+      normal[1][i-1] = c[2] / clen;
+      normal[2][i-1] = c[3] / clen;
       /* direction angles of normal */
-      at[i] = acos(normal[2][i]);
-      af[i] = atan2(normal[1][i], normal[0][i]);
+      at[i] = acos(normal[2][i-1]);
+      af[i] = atan2(normal[1][i-1], normal[0][i-1]);
       /* triangle area */
-      d_area[i]= 0.5 * clen;
+      d_area[i-1]= 0.5 * clen;
    }
 
    deallocate_vector((void *) x);
