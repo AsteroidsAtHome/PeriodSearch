@@ -371,7 +371,7 @@ int main(int argc, char** argv)
 	fscanf(infile, "%lf", &a_lamda_incr);                       fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	if (a_lamda_incr != 0.0)
-	  a_lamda_incrr = 1.0d / (double)a_lamda_incr;
+	  a_lamda_incrr = double(1.0) / (double)a_lamda_incr;
 	else
 	  a_lamda_incrr = std::numeric_limits<double>::max();
 
@@ -432,7 +432,9 @@ int main(int argc, char** argv)
 		{
 			printf("%d points in light curve[%d]\n", l_points[i], i);
 		}
-		usleep(1);
+        #if defined __GNUC__
+		  usleep(1);
+        #endif
 		fgets(stringTemp, MAX_LINE_LENGTH, infile);
 		in_rel[i] = 1 - iTemp;
 		if (in_rel[i] == 0)
@@ -449,7 +451,9 @@ int main(int argc, char** argv)
 		for (j = 1; j <= l_points[i]; j++)
 		{
 			ndata++;
-			usleep(1);
+            #if defined __GNUC__
+			  usleep(1);
+            #endif
 
 			if (ndata > MAX_N_OBS)
 			{
@@ -505,7 +509,7 @@ int main(int argc, char** argv)
 		{
 			k2++;
 			sig[k2] = ave;
-			sigr2[k2] = 1.0d/(ave*ave);
+			sigr2[k2] = double(1.0)/(ave*ave);
 		}
 
 	} /* i, all lightcurves */
@@ -630,14 +634,18 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
 	}
 
-  	usleep(1);
+    #if defined __GNUC__
+  	  usleep(1);
+    #endif
   	retval = CUDAPrepare(cuda_device, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, a_lamda_incrr, ee, ee0, tim, phi_0, checkpointExists, ndata);
 	if (!retval)
 	{
 		fflush(stderr);
 		exit(2);
 	}
-    usleep(1);
+    #if defined __GNUC__
+      usleep(1);
+    #endif
 
 	/* optimization of the convexity weight **************************************************************/
 	if (!checkpointExists)

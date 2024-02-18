@@ -21,21 +21,21 @@ __device__ double cgg[N_BLOCKS][MAX_N_PAR + 1];
 
 __device__ double chck[N_BLOCKS];
 
-__device__ uint    Flags[N_BLOCKS];
+__device__ unsigned int    Flags[N_BLOCKS];
 
 #define isInvalid 1U
 #define isNiter   2U
 #define isAlambda 4U
 
-__device__ void __forceinline__ setFlag(uint i, int idx)
+__device__ void __forceinline__ setFlag(unsigned int i, int idx)
 {
-  uint *a = &Flags[idx]; 
+  unsigned int *a = &Flags[idx]; 
   __stwb(a, __ldg(a) | i); 
 }
 
-__device__ void __forceinline__ resetFlag(uint i, int idx)
+__device__ void __forceinline__ resetFlag(unsigned int i, int idx)
 {
-  uint *a = &Flags[idx]; 
+  unsigned int *a = &Flags[idx]; 
   __stwb(a, __ldg(a) & ~i); 
 }
 
@@ -45,18 +45,18 @@ __device__ void __forceinline__ clearFlag(int idx)
 }
 
 
-__device__ uint __forceinline__ getFlags(int idx)
+__device__ unsigned int __forceinline__ getFlags(int idx)
 {
   return __ldg(&Flags[idx]);
 }
 
 
-__device__ bool __forceinline__ isAllTrue(uint flags, int idx)
+__device__ bool __forceinline__ isAllTrue(unsigned int flags, int idx)
 {
   return (__ldg(&Flags[idx]) & flags) == flags;
 }
 
-__device__ bool __forceinline__ isAnyTrue(uint flags, int idx)
+__device__ bool __forceinline__ isAnyTrue(unsigned int flags, int idx)
 {
   return (__ldg(&Flags[idx]) & flags) != 0;
 }
@@ -1818,7 +1818,7 @@ __device__ int __forceinline__ gauss_errc(freq_context * __restrict__ CUDA_LCC, 
 __device__ void __forceinline__ MrqcofCurve2I0IA0(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int lpoints, int bid)
 {
   //inrel = 0;
-  int l, jp, j, /*k, m,*/ lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, /*j, k, m,*/ lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
   int mf1 = CUDA_mfit + 1;
   
@@ -2147,7 +2147,7 @@ __device__ void __forceinline__ MrqcofCurve2I1IA0(freq_context *__restrict__ CUD
 
 __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int lpoints, int bid)
 {
-  int l, jp, j, k, m, lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, /*j,*/ k, m, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
   int mf1 = CUDA_mfit + 1;
   __shared__ double dyda[N80];
@@ -2286,7 +2286,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 // WORKING, SLOW
   __device__ void __forceinline__ MrqcofCurve2I1IA1(freq_context * __restrict__ CUDA_LCC, double * __restrict__ alpha, double * __restrict__ beta, int lpoints, int bid)
 {
-  int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, /*j,*/ k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
   int mf1 = CUDA_mfit + 1;
   __shared__ double dyda[N80];
@@ -2483,7 +2483,7 @@ __device__ void __forceinline__ MrqcofCurve2I0IA1(freq_context * __restrict__ CU
 {
   int lpoints = 3;
   int mf1 = CUDA_mfit + 1;
-  int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, /*j,*/ k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
   __shared__ double dydat[3][N80];
   
@@ -2977,7 +2977,7 @@ __device__ void __forceinline__ MrqcofCurve23I0IA1(freq_context * __restrict__ C
 {
   int lpoints = 3;
   int mf1 = CUDA_mfit + 1;
-  int l, jp, j, k, m, lnp2, Lpoints1 = lpoints + 1;
+  int l, jp, /*j,*/ k, m, lnp2, Lpoints1 = lpoints + 1;
   double dy, sig2i, wt, ymod, wght, ltrial_chisq;
   __shared__ double dyda[N80];
   
@@ -3262,7 +3262,7 @@ CudaCalculateIter1Mrqmin1End(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
   
   mrqmin_1_end(CUDA_LCC, CUDA_ma, CUDA_mfit, /*CUDA_mfit + 1,*/ CUDA_BLOCK_DIM);
@@ -3279,7 +3279,7 @@ CudaCalculateIter1Mrqmin2End(void)
 {
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   mrqmin_2_end(CUDA_LCC, CUDA_ma, bid);
@@ -3301,7 +3301,7 @@ CudaCalculateIter1Mrqcof1Start(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!(flags & isInvalid)) &&
      (flags & isNiter) &&
      (flags & isAlambda))
@@ -3335,7 +3335,7 @@ CudaCalculateIter1Mrqcof1Curve2I0IA0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   MrqcofCurve23I0IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
@@ -3349,7 +3349,7 @@ CudaCalculateIter1Mrqcof1Curve2I0IA1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   MrqcofCurve23I0IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
@@ -3363,7 +3363,7 @@ CudaCalculateIter1Mrqcof1Curve2I1IA0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   MrqcofCurve23I1IA0(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
@@ -3378,7 +3378,7 @@ CudaCalculateIter1Mrqcof1Curve2I1IA1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   MrqcofCurve23I1IA1(CUDA_LCC, alphag[bid] - 1, betag[bid] - 1, bid);
@@ -3398,7 +3398,7 @@ CudaCalculateIter1Mrqcof2Curve2I0IA0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   MrqcofCurve23I0IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, bid);
@@ -3417,7 +3417,7 @@ CudaCalculateIter1Mrqcof2Curve2I0IA1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   MrqcofCurve23I0IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, bid);
@@ -3436,7 +3436,7 @@ CudaCalculateIter1Mrqcof2Curve2I1IA0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   MrqcofCurve23I1IA0(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, bid);
@@ -3455,7 +3455,7 @@ CudaCalculateIter1Mrqcof2Curve2I1IA1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   MrqcofCurve23I1IA1(CUDA_LCC, CUDA_LCC->covar, CUDA_LCC->da, bid);
@@ -3474,7 +3474,7 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA0(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
@@ -3494,7 +3494,7 @@ CudaCalculateIter1Mrqcof1CurveM12I0IA1(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
@@ -3515,7 +3515,7 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA0(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
@@ -3535,7 +3535,7 @@ CudaCalculateIter1Mrqcof1CurveM12I1IA1(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   double *cg = cgg[bid]; //CUDA_LCC->cg;
@@ -3555,7 +3555,7 @@ void CudaCalculateIter1Mrqcof1Curve1LastI0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   if(CUDA_LCC->ytemp == NULL) return;
@@ -3575,7 +3575,7 @@ CudaCalculateIter1Mrqcof1Curve1LastI1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   mrqcof_curve1_lastI1(CUDA_LCC, bid);
@@ -3588,7 +3588,7 @@ __global__ void CudaCalculateIter1Mrqcof1End(void)
   int tid = blockIdx.x * blockDim.y + threadIdx.y;
   auto CUDA_LCC = &CUDA_CC[tid];
 
-  uint flags = getFlags(tid);
+  unsigned int flags = getFlags(tid);
   if((!!(flags & isInvalid)) | !(flags & isNiter) | !(flags & isAlambda)) return;
 
   mrqcof_end(CUDA_LCC, alphag[tid] - 1);
@@ -3609,7 +3609,7 @@ CudaCalculateIter1Mrqcof2Start(void)
   auto CUDA_LCC = &CUDA_CC[bid];
   int tid = blockIdx() * blockDim.x + threadIdx.x;
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!(flags & isInvalid)) &&
      (flags & isNiter))
     {
@@ -3646,7 +3646,7 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA1(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   double *atryp = atry[bid];
@@ -3667,7 +3667,7 @@ CudaCalculateIter1Mrqcof2CurveM12I0IA0(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   double *atryp = atry[bid];
@@ -3688,7 +3688,7 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA1(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   double *atryp = atry[bid];
@@ -3708,7 +3708,7 @@ CudaCalculateIter1Mrqcof2CurveM12I1IA0(const int lpoints)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   double *atryp = atry[bid];
@@ -3728,7 +3728,7 @@ CudaCalculateIter1Mrqcof2Curve1LastI0(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   mrqcof_curve1_lastI0(CUDA_LCC, bid);
@@ -3747,7 +3747,7 @@ CudaCalculateIter1Mrqcof2Curve1LastI1(void)
   int bid = blockIdx();
   auto CUDA_LCC = &CUDA_CC[bid];
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   mrqcof_curve1_lastI1(CUDA_LCC, bid);
@@ -3760,7 +3760,7 @@ __global__ void CudaCalculateIter1Mrqcof2End(void)
   int tid = blockIdx.x * blockDim.y + threadIdx.y;
   auto CUDA_LCC = &CUDA_CC[tid];
 
-  uint flags = getFlags(tid);
+  unsigned int flags = getFlags(tid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   mrqcof_end(CUDA_LCC, CUDA_LCC->covar);
@@ -3778,7 +3778,7 @@ CudaCalculateFinishPole(void)
 {
   int bid = blockIdx();
 
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if(!!(flags & isInvalid)) return;
 
   double dn = __ldca(&dev_newg[bid]), db = __ldca(&dev_best[bid]);
@@ -3849,7 +3849,7 @@ __launch_bounds__(1024, 1) //768
 CudaCalculateIter2(void)
 {
   int bid = blockIdx();
-  uint flags = getFlags(bid);
+  unsigned int flags = getFlags(bid);
   if((!!(flags & isInvalid)) | !(flags & isNiter)) return;
 
   int nf = CUDA_Numfac;

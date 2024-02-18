@@ -4,6 +4,8 @@
 
 //#define NEWDYTEMP
 
+#if defined __GNUC__
+#include <sys/time.h>
 int msleep(long ms)
 {
   struct timespec ts;
@@ -22,7 +24,20 @@ int msleep(long ms)
   
   return ret;
 }
-
+#else
+  #include <thread>
+  #include <chrono>
+  int msleep(long ms)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    return 0;
+  }
+  int usleep(long usec)
+  {
+    std::this_thread::sleep_for(std::chrono::microseconds(usec));
+    return 0;
+  }
+#endif
 #include <cuda.h>
 #include <cstdio>
 #include "mfile.h"
@@ -39,8 +54,11 @@ int msleep(long ms)
 #include <cuda_texture_types.h>
 #include <nvml.h>
 
-#include <sys/time.h>
+#ifdef __GNUC__
 #include <sys/resource.h>
+#else
+#define PRIO_PROCESS
+#endif
 
 #ifdef __GNUC__
 #include <ctime>
@@ -49,11 +67,19 @@ int msleep(long ms)
 #include "ComputeCapability.h"
 
 
+#if defined __GNUC__
 int sched_yield(void) __THROW
 {
   usleep(0);
   return 0;
 }
+#else
+int sched_yield(void)
+{
+  usleep(0);
+  return 0;
+}
+#endif
 
 /*
 void myinit(void)
@@ -301,7 +327,9 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
   //freq_result *res;
   void *pcc; //, *pbrightness; //, *psig, *psigr2;
 
-  setpriority(PRIO_PROCESS, 0, -20);
+  #if defined __GNUC__
+    setpriority(PRIO_PROCESS, 0, -20);
+  #endif
 
   // NOTE: max_test_periods dictates the CUDA_Grid_dim_precalc value which is actual Threads-per-Block
   /*	Cuda Compute profiler gives the following advice for almost every kernel launched:
@@ -658,7 +686,9 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 {
   int retval, i, n, m, iC, n_max = (int)((freq_start - freq_end) / freq_step) + 1;
 
-  setpriority(PRIO_PROCESS, 0, 20);
+  #if defined __GNUC__
+    setpriority(PRIO_PROCESS, 0, 20);
+  #endif
 
   if(n_max < CUDA_grid_dim)
     CUDA_grid_dim = 32 * ((n_max + 31) / 32);
@@ -803,7 +833,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 	{
 	  //cudaStreamQuery(stream1);
 	  usleep(1);
-	  
+
 	  //sched_yield(); //usleep(1);
 	  double q = n_max - n; q = q > CUDA_grid_dim ? CUDA_grid_dim : q;
 	  double fractionDone2 = (double)(n-1)/(double)n_max + q/(double)n_max * (double)(m-1)/(double)N_POLES;

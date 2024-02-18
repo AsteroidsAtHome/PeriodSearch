@@ -39,17 +39,7 @@
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="period_search\blmatrix.cu" />
-    <CudaCompile Include="period_search\bright.cu" />
     <CudaCompile Include="period_search\ComputeCapability.cu" />
-    <CudaCompile Include="period_search\conv.cu" />
-    <CudaCompile Include="period_search\curv.cu" />
-    <CudaCompile Include="period_search\curve2_CUDA.cu" />
-    <CudaCompile Include="period_search\gauss_errc.cu" />
-    <CudaCompile Include="period_search\matrix.cu" />
-    <CudaCompile Include="period_search\mrqcof.cu" />
-    <CudaCompile Include="period_search\mrqmin.cu" />
-    <CudaCompile Include="period_search\phasec.cu" />
     <CudaCompile Include="period_search\Start.cu" />
     <CudaCompile Include="period_search\start_CUDA.cu" />
   </ItemGroup>
@@ -132,7 +122,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <GenerateLineInfo>false</GenerateLineInfo>
-      <MaxRegCount>255</MaxRegCount>
+      <MaxRegCount>32</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52;compute_53,sm_53;compute_60,sm_60;compute_61,sm_61;compute_62,sm_62;compute_70,sm_70;compute_72,sm_72;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86;compute_87,sm_87;compute_89,sm_89;compute_90,sm_90;%(CodeGeneration)</CodeGeneration>
     </CudaCompile>
@@ -165,7 +155,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <MaxRegCount>255</MaxRegCount>
+      <MaxRegCount>32</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52;compute_53,sm_53;compute_60,sm_60;compute_61,sm_61;compute_62,sm_62;compute_70,sm_70;compute_72,sm_72;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86;compute_87,sm_87;compute_89,sm_89;compute_90,sm_90;%(CodeGeneration)</CodeGeneration>
     </CudaCompile>

@@ -439,9 +439,9 @@ __device__ double inline ___drcp_rn(double a)
 }
 
 
-__device__ uint inline get_smid(void)
+__device__ unsigned int inline get_smid(void)
 {
-  uint ret;
+  unsigned int ret;
   asm("mov.u32 %0, %%smid ;" : "=r"(ret) );
   return ret; 
 }
