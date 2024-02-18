@@ -20,34 +20,22 @@ extern double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
               Dblm[3][4][4],
 	      Weight[MAX_N_OBS+1];
 
-#ifdef AVX512
-  #ifdef __GNUC__
-    extern double Nor[3][MAX_N_FAC+8] __attribute__ ((aligned (64))),
-  	          Area[MAX_N_FAC+8] __attribute__ ((aligned (64))),
-  			  Darea[MAX_N_FAC+8] __attribute__ ((aligned (64))),
-  			  Dg[MAX_N_FAC+16][MAX_N_PAR+8] __attribute__ ((aligned (64)));
-  #else
-    extern __declspec(align(64)) double Nor[3][MAX_N_FAC+8], Area[MAX_N_FAC+8], Darea[MAX_N_FAC+8],Dg[MAX_N_FAC+16][MAX_N_PAR+8]; //All are zero indexed
-  #endif
+#ifdef __GNUC__
+  extern double Nor[3][MAX_N_FAC+8] __attribute__ ((aligned (64))),
+	          Area[MAX_N_FAC+8] __attribute__ ((aligned (64))),
+			  Darea[MAX_N_FAC+8] __attribute__ ((aligned (64))),
+			  Dg[MAX_N_FAC+16][MAX_N_PAR+8] __attribute__ ((aligned (64)));
 #else
-  #ifdef __GNUC__
-    extern double Nor[3][MAX_N_FAC+4] __attribute__ ((aligned (32))),
-	          Area[MAX_N_FAC+4] __attribute__ ((aligned (32))),
-			  Darea[MAX_N_FAC+4] __attribute__ ((aligned (32))),
-			  Dg[MAX_N_FAC+8][MAX_N_PAR+4] __attribute__ ((aligned (32)));
-  #else
-    //extern __declspec(align(32)) double Nor[3][MAX_N_FAC+4], Area[MAX_N_FAC+4], Darea[MAX_N_FAC+4],Dg[MAX_N_FAC+8][MAX_N_PAR+4]; //All are zero indexed
-	extern __declspec(align(64)) double Nor[3][MAX_N_FAC + 8], Area[MAX_N_FAC + 8], Darea[MAX_N_FAC + 8], Dg[MAX_N_FAC + 16][MAX_N_PAR + 8]; //All are zero indexed
-  #endif
+  extern __declspec(align(64)) double Nor[3][MAX_N_FAC+8], Area[MAX_N_FAC+8], Darea[MAX_N_FAC+8],Dg[MAX_N_FAC+16][MAX_N_PAR+8]; //All are zero indexed
 #endif
 
 //extern CalcContext caclContext(std::unique_ptr<CalcStrategy>());
 	extern CalcContext calcCtx;
 
 #ifdef __GNUC__
-	extern double dyda[MAX_N_PAR + 8] __attribute__((aligned(32)));
+	extern double dyda[MAX_N_PAR + 16] __attribute__((aligned(64)));
 #else
-	extern __declspec(align(32)) double dyda[MAX_N_PAR + 8]; //is zero indexed for aligned memory access
+	extern __declspec(align(64)) double dyda[MAX_N_PAR + 16]; //is zero indexed for aligned memory access
 #endif
 
 	extern double xx1[4], xx2[4], dy, sig2i, wt, ymod,
