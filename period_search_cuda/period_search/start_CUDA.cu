@@ -4,6 +4,34 @@
 
 //#define NEWDYTEMP
 
+#include <cuda.h>
+#include <cstdio>
+#include "mfile.h"
+#include "globals.h"
+#include "globals_CUDA.h"
+#include "start_CUDA.h"
+#include "declarations_CUDA.h"
+#include "boinc_api.h"
+#include "Start.cuh"
+//#include "cuda_runtime.h"
+#include <cuda_runtime_api.h>
+//#include <cuda_occupancy.h>
+#include <device_launch_parameters.h>
+#include <cuda_texture_types.h>
+#include <nvml.h>
+
+#ifdef __GNUC__
+#include <sys/resource.h>
+#else
+#define PRIO_PROCESS
+#endif
+
+#ifdef __GNUC__
+#include <ctime>
+#include <unistd.h>
+#endif
+#include "ComputeCapability.h"
+
 #if defined __GNUC__
 #include <sys/time.h>
 int msleep(long ms)
@@ -38,34 +66,6 @@ int msleep(long ms)
     return 0;
   }
 #endif
-#include <cuda.h>
-#include <cstdio>
-#include "mfile.h"
-#include "globals.h"
-#include "globals_CUDA.h"
-#include "start_CUDA.h"
-#include "declarations_CUDA.h"
-#include "boinc_api.h"
-#include "Start.cuh"
-//#include "cuda_runtime.h"
-#include <cuda_runtime_api.h>
-//#include <cuda_occupancy.h>
-#include <device_launch_parameters.h>
-#include <cuda_texture_types.h>
-#include <nvml.h>
-
-#ifdef __GNUC__
-#include <sys/resource.h>
-#else
-#define PRIO_PROCESS
-#endif
-
-#ifdef __GNUC__
-#include <ctime>
-#include <unistd.h>
-#endif
-#include "ComputeCapability.h"
-
 
 #if defined __GNUC__
 int sched_yield(void) __THROW
@@ -488,7 +488,10 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 	  *theEnd = 0;
 	  cudaMemcpyToSymbolAsync(CUDA_End, theEnd, sizeof(int), 0, cudaMemcpyHostToDevice, stream3);
 	  //CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(m, freq_start, freq_step, n); 
-	  CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]); 
+	  CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]);
+    #ifndef __GNUC__
+      cudaDeviceSynchronize();
+    #endif
 
 
 #ifdef _DEBUG
@@ -833,7 +836,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 	{
 	  //cudaStreamQuery(stream1);
 	  usleep(1);
-
+	  
 	  //sched_yield(); //usleep(1);
 	  double q = n_max - n; q = q > CUDA_grid_dim ? CUDA_grid_dim : q;
 	  double fractionDone2 = (double)(n-1)/(double)n_max + q/(double)n_max * (double)(m-1)/(double)N_POLES;
@@ -856,7 +859,10 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 	  *theEnd = 0;
 	  cudaMemcpyToSymbolAsync(CUDA_End, theEnd, sizeof(int), 0, cudaMemcpyHostToDevice, stream1);
 	  //CudaCalculatePreparePole<<<dim1, dim2, 0, stream1>>>(m, freq_start, freq_step, n);
-	  CudaCalculatePreparePole<<<dim1, dim2, 0, stream1>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]); 
+	  CudaCalculatePreparePole<<<dim1, dim2, 0, stream1>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]);
+    #ifndef __GNUC__
+      cudaDeviceSynchronize();
+    #endif
 
 	  //cudaStreamQuery(stream1);
 	  usleep(1);
