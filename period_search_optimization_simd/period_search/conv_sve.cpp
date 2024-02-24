@@ -31,7 +31,7 @@ double CalcStrategySve::conv(int nc, double dres[], int ma)
     		svfloat64_t avx_dres = svld1_f64(pg, &dres[j]);
     		svfloat64_t avx_Dg = svld1_f64(pg, &Dg_row[j]);
 
-    		avx_dres = svadd_f64_x(pg, avx_dres, svmul_f64_x(pg, svmul_f64_x(pg, avx_Darea, avx_Dg), avx_Nor));
+    		avx_dres = svmla_f64_x(pg, avx_dres, svmul_f64_x(pg, avx_Darea, avx_Dg), avx_Nor);
     		svst1_f64(pg, &dres[j], avx_dres);
 		}
     }

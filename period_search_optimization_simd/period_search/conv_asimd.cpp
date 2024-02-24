@@ -30,7 +30,7 @@ double CalcStrategyAsimd::conv(int nc, double dres[], int ma)
             float64x2_t avx_dres = vld1q_f64(&dres[j]);
             float64x2_t avx_Dg = vld1q_f64(&Dg_row[j]);
 
-            avx_dres = vaddq_f64(avx_dres, vmulq_f64(vmulq_f64(avx_Darea, avx_Dg), avx_Nor));
+            avx_dres = vfmaq_f64(vmulq_f64(avx_Darea, avx_Dg), avx_Nor, avx_dres);
             vst1q_f64(&dres[j], avx_dres);
         }
     }
