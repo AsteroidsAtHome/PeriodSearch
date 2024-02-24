@@ -9,11 +9,14 @@
 #include "CalcStrategyAsimd.hpp"
 #include "CalcStrategySve.hpp"
 
-#include <sys/auxv.h>
+#if defined(__aarch64__) || defined(_M_ARM64)
+  #include <sys/auxv.h>
 
-#define AT_HWCAP 16
-#define HWCAP_ASIMD (1 << 1)
-#define HWCAP_SVE (1 << 20)
+  #define AT_HWCAP 16
+  #define HWCAP_ASIMD (1 << 1)
+  #define HWCAP_ASIMDDP (1 << 20)
+  #define HWCAP_SVE (1 << 22)
+#endif
 
 std::string GetCpuInfo()
 {
@@ -22,9 +25,14 @@ std::string GetCpuInfo()
 
 void GetSupportedSIMDs()
 {
-	uint64_t hwcap = getauxval(AT_HWCAP);
-    CPUopt.hasASIMD = hwcap & HWCAP_ASIMD; // neon
-	CPUopt.hasSVE = hwcap & HWCAP_SVE;
+	#if defined(__aarch64__) || defined(_M_ARM64)
+	  uint64_t hwcap = getauxval(AT_HWCAP);
+      CPUopt.hasASIMD = hwcap & HWCAP_ASIMD && hwcap & HWCAP_ASIMDDP;
+	  CPUopt.hasSVE = hwcap & HWCAP_SVE;
+	#elif
+	  CPUopt.hasASIMD = false;
+	  CPUopt.hasSVE = false;
+	#endif
 }
 
 SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
