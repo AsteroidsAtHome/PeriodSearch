@@ -1,4 +1,5 @@
-# This should work on Linux.  Modify as needed for other platforms.
+# Stand-alone Makefile for Period_search_BOINC Intel x86_64 application.
+# Updated 24-JAN-2024 for x86_64 OS FreeBSD 13.2 by Gerogi Vidinski
 
 BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
