@@ -64,9 +64,6 @@
     <ClCompile Include="period_search\CpuInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\TargetInstructionSet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">

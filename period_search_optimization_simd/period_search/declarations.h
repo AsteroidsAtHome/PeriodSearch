@@ -75,7 +75,6 @@ double dot_product(double a[], double b[]);
 #endif
 
 std::string GetCpuInfo();
-std::string GetTargetInstructionSet();
 SIMDEnum GetBestSupportedSIMD();
 void GetSupportedSIMDs();
 SIMDEnum CheckSupportedSIMDs(SIMDEnum simd);

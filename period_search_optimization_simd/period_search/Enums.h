@@ -7,5 +7,7 @@ enum SIMDEnum
 	OptSSE3 = 3,
 	OptAVX = 4,
 	OptFMA = 5,
-	OptAVX512 = 6
+	OptAVX512 = 6,
+	OptASIMD = 7,
+	OptSVE = 8
 };

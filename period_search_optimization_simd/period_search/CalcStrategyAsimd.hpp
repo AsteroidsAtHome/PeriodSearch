@@ -1,15 +1,16 @@
 #pragma once
 
 #include "CalcStrategy.hpp"
+#include <arm_neon.h>
 
-#ifndef CSNO
-#define CSNO
+#ifndef CSASIMD
+#define CSASIMD
 
-class CalcStrategyNone : public CalcStrategy
+class CalcStrategyAsimd : public CalcStrategy
 {
 public:
 
-	CalcStrategyNone() {};
+	CalcStrategyAsimd() {};
 
 	virtual double mrqcof(double** x1, double** x2, double x3[], double y[],
 		double sig[], double a[], int ia[], int ma,

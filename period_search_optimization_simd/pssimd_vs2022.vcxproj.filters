@@ -46,9 +46,6 @@
     <ClCompile Include="period_search\sphfunc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\TargetInstructionSet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="period_search\trifac.c">
       <Filter>Source Files</Filter>
     </ClCompile>

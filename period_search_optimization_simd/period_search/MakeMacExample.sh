@@ -73,7 +73,7 @@ rm -f uc2.o
 rm -f uc2_graphics.o
 rm -f uc2
 rm -f uc2_graphics
-make -f Makefile_mac all
+make -f Makefile_mac_uc2 all
 
 if [  $? -ne 0 ]; then exit 1; fi
 
@@ -96,7 +96,7 @@ rm -f uc2.o
 rm -f uc2_graphics.o
 rm -f uc2
 rm -f uc2_graphics
-make -f Makefile_mac all
+make -f Makefile_mac_uc2 all
 
 if [  $? -ne 0 ]; then exit 1; fi
 
@@ -119,7 +119,7 @@ rm -f uc2.o
 rm -f uc2_graphics.o
 rm -f uc2
 rm -f uc2_graphics
-make -f Makefile_mac all
+make -f Makefile_mac_uc2 all
 
 if [  $? -ne 0 ]; then exit 1; fi
 

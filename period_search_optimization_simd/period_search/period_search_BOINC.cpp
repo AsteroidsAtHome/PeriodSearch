@@ -80,8 +80,14 @@
 #include "systeminfo.h"
 #include "Enums.h"
 #include "CalcStrategy.hpp"
-#include "CalcStrategyAvx.hpp"
-#include "CalcStrategyFma.hpp"
+#include "CalcStrategyNone.hpp"
+#if defined __x86_64__ || defined(__i386__)
+  #include "CalcStrategySse2.hpp"
+  #include "CalcStrategySse3.hpp"
+  #include "CalcStrategyAvx.hpp"
+  #include "CalcStrategyFma.hpp"
+  #include "CalcStrategyAvx512.hpp"
+#endif
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -89,13 +95,12 @@
 UC_SHMEM* shmem;
 #endif
 
-#ifdef _WIN64
-bool x64 = true;
-#else
-bool x64 = false;
-#endif
+//#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
+//#include <wiringPi.h>
+//#define	LED	17
+//#endif
 
-CalcContext calcCtx(std::make_unique<CalcStrategyAvx>()); // <--- CalcStrategyNone
+CalcContext calcCtx(std::make_unique<CalcStrategyNone>());
 SIMDSupport CPUopt;
 
 using std::string;
@@ -104,14 +109,14 @@ constexpr auto checkpoint_file = "period_search_state";
 constexpr auto input_filename = "period_search_in";
 constexpr auto output_filename = "period_search_out";
 
-int DoCheckpoint(MFILE& mf, int nlines, int newconw, double conwr, double sumdarkfacet, int testperiods)
+int DoCheckpoint(MFILE& mf, const int nlines, const int newconw, const double conwr, const double sumdarkfacet, const int testperiods)
 {
 	string resolvedName;
 
-	const auto f = fopen("temp", "w");
-	if (!f) return 1;
-	fprintf(f, "%d %d %.17g %.17g %d", nlines, newconw, conwr, sumdarkfacet, testperiods);
-	fclose(f);
+	const auto file = fopen("temp", "w");
+	if (!file) return 1;
+	fprintf(file, "%d %d %.17g %.17g %d", nlines, newconw, conwr, sumdarkfacet, testperiods);
+	fclose(file);
 
 	auto retval = mf.flush();
 	if (retval) return retval;
@@ -190,6 +195,20 @@ double xx1[4], xx2[4], dy, sig2i, wt, ymod,
 
 /*--------------------------------------------------------------*/
 
+//void blinkLed(int count) {
+//	for (int i = 0; i < count; i++) {
+//		digitalWrite(LED, HIGH);  // On
+//		delay(150); // ms
+//		digitalWrite(LED, LOW);	  // Off
+//		delay(150);
+//	}
+//}
+
+//bool cmdOptionExists(std::vector<char> vec, char &option)
+//{
+//	return std::find(vec.begin(), vec.end(), option) != vec.end();
+//}
+
 int main(int argc, char** argv) {
 	int /*c,*/ nchars = 0, retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
 	//    double fsize, fd;
@@ -253,6 +272,9 @@ int main(int argc, char** argv) {
 	lambda_pole[10] = 300; beta_pole[10] = -60;
 
 	ia_lambda_pole = ia_beta_pole = 1;
+
+	//wiringPiSetupSys();
+	//pinMode(LED, OUTPUT);
 
 	retval = boinc_init();
 	if (retval)
@@ -351,9 +373,6 @@ int main(int argc, char** argv) {
 
 	if (boinc_is_standalone())
 	{
-#ifdef _DEBUG
-		//std::cout << std::endl << "Application build: " << (x64 ? "64" : "32") << "-bit" << std::endl;
-#endif
 		printf("\n%g  %g  %g  period start/step/stop (%d)\n", per_start, per_step_coef, per_end, ia_prd);
 		printf("%g epoch of zero time t0\n", jd_00);
 		printf("%g  initial fixed rotation angle fi0\n", Phi_0);
@@ -597,9 +616,12 @@ int main(int argc, char** argv) {
 		std::cerr << "Version: " << major << "." << minor << "." << build << "." << revision << std::endl;
 	}
 
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64) || defined __APPLE__
+	getSystemInfo();
+#else
 	std::cerr << "CPU: " << GetCpuInfo() << std::endl;
-	//std::cerr << "Target instruction set: " << GetTargetInstructionSet() << std::endl;
-	std::cerr << "RAM: " << getTotalSystemMemory() << std::endl;
+	std::cerr << "RAM: " << getTotalSystemMemory() << "GB" << std::endl;
+#endif
 
 	// --- Set desired CPU SIMD optimization ---
 	GetSupportedSIMDs();
@@ -620,7 +642,9 @@ int main(int argc, char** argv) {
 	//CPUopt.hasFMA = false;
 	//CPUopt.hasAVX = false;
 	//CPUopt.hasSSE3 = false;
-	//CPUopt.hasSSE2 = true;
+	//CPUopt.hasSSE2 = false;
+	//CPUopt.hasASIMD = false;
+	//CPUopt.hasSVE = false;
 
 	useOptimization = useOptimization == SIMDEnum::Undefined
 		? GetBestSupportedSIMD()
@@ -1195,6 +1219,9 @@ int main(int argc, char** argv) {
 		else
 		{
 			out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, round(la_best), round(be_best));
+			#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
+				// blinkLed(3);
+			#endif
 		}
 
 

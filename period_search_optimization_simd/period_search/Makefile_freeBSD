@@ -4,22 +4,28 @@ BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-CXXFLAGS = -march=corei7-avx -O3 -mavx -std=c++17 -w -s\
+CXXFLAGS = -march=x86-64 -O3 -std=c++17 -w -s\
 	-DAPP_GRAPHICS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
+	-lexecinfo \
 	-L /usr/X11R6/lib \
 	-L.
 
-CC=g++
-CXX=g++
-OPTFLAGS=-march=corei7-avx -O3 -mavx -std=c++17
-CFLAGS=$(OPTFLAGS) -w -s
+CC=clang++
+CXX=clang++
+OPTFLAGS=-march=x86-64 -O3 -std=c++17
+CFLAGS=$(OPTFLAGS) -w -s -lexecinfo
 LDFLAGS=-lm
-MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
-		curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
-	dot_product.o gauss_errc.o VersionInfo.o CpuInfo.o TargetInstructionSet.o
+MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512.o bright_fma.o \
+    bright_sse2.o bright_sse3.o conv.o conv_avx.o conv_avx512.o conv_fma.o conv_sse2.o \
+    conv_sse3.o covsrt.o CpuInfo.o curv.o curv_sse3.o curv_avx_fma.o curv_avx512.o \
+    curv_sse2.o dot_product.o ellfit.o EnumHelpers.o gauss_errc.o gauss_errc_avx_fma.o \
+    gauss_errc_avx512.o gauss_errc_sse2.o gauss_errc_sse3.o lubksb.o ludcmp.o matrix.o \
+    memory.o mrqcof.o mrqcof_avx.o mrqcof_avx512.o mrqcof_fma.o mrqcof_sse2.o \
+    mrqcof_sse3.o mrqmin.o phasec.o sphfunc.o systeminfo.o \
+    trifac.o VersionInfo.o
 
 # the following should be freeglut; use nm to check
 # you may have to change the paths for your system
@@ -34,22 +40,19 @@ else
 	LIBJPEG = /usr/local/lib/libjpeg.a
 endif
 
-PROGS = period_search_BOINC_linux_10215_x64_avx_linux_Release
+PROGS = Period_search_BOINC_freebsd_10215_universal_freebsd_Release
 # uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
 
 all: $(PROGS)
 
-libstdc++.a:
-	ln -s `g++ -print-file-name=libstdc++.a`
-
 clean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a
+	/bin/rm -f $(PROGS) *.o
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a
+	/bin/rm -f $(PROGS) *.o
 
-install: period_search_BOINC_linux_10215_x64_avx_linux_Release
+install: Period_search_BOINC_freebsd_10215_universal_freebsd_Release
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
@@ -59,8 +62,8 @@ install: period_search_BOINC_linux_10215_x64_avx_linux_Release
 #	$(BOINC_API_DIR)/libboinc_api.a \
 #	$(BOINC_LIB_DIR)/libboinc.a
 
-period_search_BOINC_linux_10215_x64_avx_linux_Release: period_search_BOINC.cpp $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
-	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
+Period_search_BOINC_freebsd_10215_universal_freebsd_Release: period_search_BOINC.o $(MY_LIBS) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a -lm
 

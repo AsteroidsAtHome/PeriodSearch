@@ -9,11 +9,7 @@
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
-//#ifdef NO_SSE3
 #include <emmintrin.h>
-//#else
-//#include <pmmintrin.h>
-//#endif
 #include "CalcStrategySse2.hpp"
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -31,8 +27,6 @@
 //ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 1],
 //dave[MAX_N_PAR + 1 + 1],
 //coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
-
-const __m128i avx_ones1 = _mm_set_epi32(1, 1, 1, 1);
 
 #if defined(__GNUC__)
 __attribute__((target("sse2")))
@@ -123,11 +117,7 @@ double CalcStrategySse2::mrqcof(double** x1, double** x2, double x3[], double y[
 				{
 					coef = sig[np1] * Lpoints[i] / ave;
 					avx_coef = _mm_set1_pd(coef);
-//#ifdef NO_SSE3
 					avx_ytemp = _mm_load1_pd(&ytemp[jp]);
-//#else
-//					avx_ytemp = _mm_loaddup_pd(&ytemp[jp]);
-//#endif
 					for (l = 1; l <= ma; l += 2)
 					{
 						__m128d avx_dytemp = _mm_loadu_pd(&dytemp[jp][l]), avx_dave = _mm_loadu_pd(&dave[l]);

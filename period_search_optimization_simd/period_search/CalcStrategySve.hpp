@@ -1,15 +1,16 @@
 #pragma once
 
 #include "CalcStrategy.hpp"
+#include <arm_sve.h>
 
-#ifndef CSNO
-#define CSNO
+#ifndef CSSVE
+#define CSSVE
 
-class CalcStrategyNone : public CalcStrategy
+class CalcStrategySve : public CalcStrategy
 {
 public:
 
-	CalcStrategyNone() {};
+	CalcStrategySve() {};
 
 	virtual double mrqcof(double** x1, double** x2, double x3[], double y[],
 		double sig[], double a[], int ia[], int ma,

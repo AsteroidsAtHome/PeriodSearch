@@ -52,4 +52,6 @@ extern double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 		bool hasAVX = false;
 		bool hasSSE3 = false;
 		bool hasSSE2 = false;
+		bool hasASIMD = false;
+		bool hasSVE = false;
 	} CPUopt;

@@ -1,18 +1,15 @@
-# makefile for uc2 BOINC example application on Macintosh.
-# This is invoked from MakeMacExample.sh shell script.
-# It should not be used by itself without the script.
-# Updated 2/16/10 for OS 10.6 and XCode 3.2
+# Stand-alone Makefile for Period_search_BOINC Intel x86_64 application on Macintosh.
+# Updated 15-JAN-2024 for OS 10.14, g++ 4.2.1, XCode 11.3.1 by Gerogi Vidinski
+#
 
-BOINC_DIR = ../..
+BOINC_DIR = ../../../boinc
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 BOINC_BUILD_DIR = $(BOINC_DIR)/mac_build/build/Deployment
 BOINC_CONFIG_DIR =  $(BOINC_DIR)/clientgui/mac
 FRAMEWORKS_DIR = /System/Library/Frameworks
 
-CXXFLAGS = $(VARIANTFLAGS) \
-    -g \
-    -DAPP_GRAPHICS \
+CXXFLAGS_ALL = -O3 -std=c++17 -w -s\
     -I$(BOINC_CONFIG_DIR) \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
@@ -20,24 +17,58 @@ CXXFLAGS = $(VARIANTFLAGS) \
     -L$(BOINC_BUILD_DIR) \
     -L.
 
-LIBJPEG = ../../../jpeg-6b/libjpeg.a
+CC = /Library/Developer/CommandLineTools/usr/bin/g++
+CXX = /Library/Developer/CommandLineTools/usr/bin/g++
+CXXFLAGS = -O3 -std=c++17 -arch x86_64 -mmacosx-version-min=10.14 \
+    -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk \
+    $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+CFLAGS = $(CXXFLAGS) -w -s
+LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk,-arch,x86_64
 
-OBJ = \
-    uc2.o \
-    uc2_graphics.o
+# CC_PPC = /usr/bin/gcc-4.0
+# CXX_PPC = /usr/bin/g++-4.0
+# CXXFLAGS_PPC = -arch ppc -mmacosx-version-min=10.4 \
+#     -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_PPC = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk,-arch,ppc
 
-PROGS = uc2 uc2_graphics
+# CC_i386 = /usr/bin/gcc-4.0
+# CXX_i386 = /usr/bin/g++-4.0
+# CXXFLAGS_i386 = -arch i386 -mmacosx-version-min=10.4  \
+#     -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_i386 = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk,-arch,i386
+
+# CC_x86_64 = /usr/bin/gcc-4.0
+# CXX_x86_64 = /usr/bin/g++-4.0
+# CXXFLAGS_x86_64 = -arch x86_64 -mmacosx-version-min=10.5 \
+#     -isysroot /Developer/SDKs/MacOSX10.5.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_x86_64 = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.5.sdk,-arch,x86_64
+
+# LIBJPEG = ../../../jpeg-6b/libjpeg.a
+
+MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512.o bright_fma.o \
+    bright_sse2.o bright_sse3.o conv.o conv_avx.o conv_avx512.o conv_fma.o conv_sse2.o \
+    conv_sse3.o covsrt.o CpuInfo.o curv.o curv_sse3.o curv_avx_fma.o curv_avx512.o \
+    curv_sse2.o dot_product.o ellfit.o EnumHelpers.o gauss_errc.o gauss_errc_avx_fma.o \
+    gauss_errc_avx512.o gauss_errc_sse2.o gauss_errc_sse3.o lubksb.o ludcmp.o matrix.o \
+    memory.o mrqcof.o mrqcof_avx.o mrqcof_avx512.o mrqcof_fma.o mrqcof_sse2.o \
+    mrqcof_sse3.o mrqmin.o phasec.o sphfunc.o systeminfo.o \
+    trifac.o VersionInfo.o
+
+PROGS = Period_search_BOINC_macos_10215_x86_64_universal_Release
 
 all: $(PROGS)
 
 clean:
-	/bin/rm -f $(PROGS) $(OBJ)
+	/bin/rm -f $(PROGS) *.o libstdc++.a
 
-uc2: uc2.o $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) -o uc2 uc2.o -lboinc_api -lboinc
+Period_search_BOINC_macos_10215_x86_64_universal_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
+	$(BOINC_BUILD_DIR)/libboinc_api.a \
+	$(BOINC_BUILD_DIR)/libboinc.a -lm \
+    -framework AppKit
 
-uc2_graphics: uc2_graphics.o $(BOINC_BUILD_DIR)/libboinc.a $(BOINC_BUILD_DIR)/libboinc_graphics2.a
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o uc2_graphics uc2_graphics.o\
-    -lboinc_graphics2 -lboinc_api -lboinc \
-    -framework AppKit -framework GLUT -framework OpenGL  $(LIBJPEG)
-    
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<

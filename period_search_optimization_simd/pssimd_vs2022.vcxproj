@@ -597,7 +597,6 @@
     <ClCompile Include="period_search\phasec.c" />
     <ClCompile Include="period_search\sphfunc.c" />
     <ClCompile Include="period_search\systeminfo.cpp" />
-    <ClCompile Include="period_search\TargetInstructionSet.cpp" />
     <ClCompile Include="period_search\trifac.c" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>

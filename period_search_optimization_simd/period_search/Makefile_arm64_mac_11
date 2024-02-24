@@ -1,0 +1,128 @@
+# stand-alone makefile for uc2 BOINC example application on Macintosh.
+# Updated 2/16/10 for OS 10.6 and XCode 3.2
+#
+
+BOINC_DIR = ../../../boinc
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+BOINC_BUILD_DIR = $(BOINC_DIR)/mac_build/build/Deployment
+BOINC_CONFIG_DIR =  $(BOINC_DIR)/clientgui/mac
+FRAMEWORKS_DIR = /System/Library/Frameworks
+
+CXXFLAGS_ALL = -O3 -w -arch arm64 -target arm64-apple-macos11 -std=c++17 -s\
+    -DARM64 \
+    -I$(BOINC_CONFIG_DIR) \
+    -I$(BOINC_DIR) \
+    -I$(BOINC_LIB_DIR) \
+    -I$(BOINC_API_DIR) \
+    -L$(BOINC_BUILD_DIR) \
+    -L.
+
+CC = /Library/Developer/CommandLineTools/usr/bin/g++
+CXX = /Library/Developer/CommandLineTools/usr/bin/g++
+CXXFLAGS = -O3 -std=c++17 -arch arm64 -target arm64-apple-macos11 \
+    -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk \
+    $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+CFLAGS = $(CXXFLAGS) -w -s
+LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk,-arch,arm64
+
+
+# CC_PPC = /usr/bin/gcc-4.0
+# CXX_PPC = /usr/bin/g++-4.0
+# CXXFLAGS_PPC = -arch ppc -mmacosx-version-min=10.4 \
+#     -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_PPC = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk,-arch,ppc
+
+
+# CC_i386 = /usr/bin/gcc-4.0
+# CXX_i386 = /usr/bin/g++-4.0
+# CXXFLAGS_i386 = -arch i386 -mmacosx-version-min=10.4  \
+#     -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_i386 = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk,-arch,i386
+
+# CC_x86_64 = /usr/bin/gcc-4.0
+# CXX_x86_64 = /usr/bin/g++-4.0
+# CXXFLAGS_x86_64 = -arch x86_64 -mmacosx-version-min=10.5 \
+#     -isysroot /Developer/SDKs/MacOSX10.5.sdk \
+#     $(CXXFLAGS_ALL) -fvisibility=hidden -fvisibility-inlines-hidden
+# LDFLAGS_x86_64 = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.5.sdk,-arch,x86_64
+
+LIBJPEG = ../../../jpeg-6b/libjpeg.a
+
+MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o \
+    conv.o \
+    covsrt.o CpuInfoArm.o curv.o \
+    bright_sve.o conv_sve.o curv_sve.o gauss_errc_sve.o mrqcof_sve.o bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
+    dot_product.o ellfit.o EnumHelpers.o gauss_errc.o \
+    lubksb.o ludcmp.o matrix.o \
+    memory.o mrqcof.o \
+    mrqmin.o phasec.o sphfunc.o systeminfo.o \
+    trifac.o VersionInfo.o
+
+PROGS = Period_search_BOINC_macos_10216_arm64_Release
+
+all: $(PROGS)
+
+# libstdc++.a:
+# 	ln -s `g++ -print-file-name=libstdc++.a`
+
+# clean:
+# 	/bin/rm -f $(PROGS) $(OBJ)
+
+clean:
+	/bin/rm -f $(PROGS) *.o
+
+Period_search_BOINC_macos_10216_arm64_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
+	$(BOINC_BUILD_DIR)/libboinc_api.a \
+	$(BOINC_BUILD_DIR)/libboinc.a -lm \
+    -framework AppKit
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
+
+# uc2_ppc.o: uc2.cpp
+# 	$(CXX_PPC) -c $(CXXFLAGS_PPC) uc2.cpp -o uc2_ppc.o
+
+# uc2_graphics_ppc.o: uc2_graphics.cpp
+# 	$(CXX_PPC) -c $(CXXFLAGS_PPC) uc2_graphics.cpp -o uc2_graphics_ppc.o
+
+# uc2_i386.o: uc2.cpp
+# 	$(CXX_i386) -c $(CXXFLAGS_i386) uc2.cpp -o uc2_i386.o
+
+# uc2_graphics_i386.o: uc2_graphics.cpp
+# 	$(CXX_i386) -c $(CXXFLAGS_i386) uc2_graphics.cpp -o uc2_graphics_i386.o
+
+# uc2_x86_64.o: uc2.cpp
+# 	$(CXX_x86_64) -c $(CXXFLAGS_x86_64) uc2.cpp -o uc2_x86_64.o
+
+# uc2_graphics_x86_64.o: uc2_graphics.cpp
+# 	$(CXX_x86_64) -c $(CXXFLAGS_x86_64) uc2_graphics.cpp -o uc2_graphics_x86_64.o
+
+
+# uc2_ppc: uc2_ppc.o $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+# 	$(CXX_PPC) $(CXXFLAGS_PPC) $(LDFLAGS_PPC) -o uc2_ppc uc2_ppc.o -lboinc_api -lboinc
+
+# uc2_graphics_ppc: uc2_graphics_ppc.o $(BOINC_BUILD_DIR)/libboinc.a $(BOINC_BUILD_DIR)/libboinc_graphics2.a
+# 	$(CXX_PPC) $(CXXFLAGS_PPC) $(LDFLAGS_PPC) -o uc2_graphics_ppc uc2_graphics_ppc.o\
+#     -lboinc_graphics2 -lboinc_api -lboinc \
+#     -framework AppKit -framework GLUT -framework OpenGL  $(LIBJPEG)
+
+# uc2_i386: uc2_i386.o $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+# 	$(CXX_i386) $(CXXFLAGS_i386) $(LDFLAGS_i386) -o uc2_i386 uc2_i386.o -lboinc_api -lboinc
+
+# uc2_graphics_i386: uc2_graphics_i386.o $(BOINC_BUILD_DIR)/libboinc.a $(BOINC_BUILD_DIR)/libboinc_graphics2.a
+# 	$(CXX_i386) $(CXXFLAGS_i386) $(LDFLAGS_i386) -o uc2_graphics_i386 uc2_graphics_i386.o\
+#     -lboinc_graphics2 -lboinc_api -lboinc \
+#     -framework AppKit -framework GLUT -framework OpenGL  $(LIBJPEG)
+
+# uc2_x86_64: uc2_x86_64.o $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+# 	$(CXX_x86_64) $(CXXFLAGS_x86_64) $(LDFLAGS_x86_64) -o uc2_x86_64 uc2_x86_64.o -lboinc_api -lboinc
+
+# uc2_graphics_x86_64: uc2_graphics_x86_64.o $(BOINC_BUILD_DIR)/libboinc.a $(BOINC_BUILD_DIR)/libboinc_graphics2.a
+# 	$(CXX_x86_64) $(CXXFLAGS_x86_64) $(LDFLAGS_x86_64) -o uc2_graphics_x86_64 uc2_graphics_x86_64.o\
+#     -lboinc_graphics2 -lboinc_api -lboinc \
+#     -framework AppKit -framework GLUT -framework OpenGL  $(LIBJPEG)
+
