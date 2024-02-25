@@ -16,29 +16,29 @@
 	res_br = vaddq_f64(res_br, avx_pbr); \
 	float64x2_t avx_sum1, avx_sum10, avx_sum2, avx_sum20, avx_sum3, avx_sum30; \
 	\
-	avx_sum1 = vmulq_f64(avx_Nor1, avx_de11); \
-    avx_sum1 = vaddq_f64(avx_sum1, vmulq_f64(avx_Nor2, avx_de21)); \
-    avx_sum1 = vaddq_f64(avx_sum1, vmulq_f64(avx_Nor3, avx_de31)); \
+    avx_sum1 = vmulq_f64(avx_Nor1, avx_de11); \
+    avx_sum1 = vfmaq_f64(avx_sum1, avx_Nor2, avx_de21); \
+    avx_sum1 = vfmaq_f64(avx_sum1, avx_Nor3, avx_de31); \
     \
     avx_sum10 = vmulq_f64(avx_Nor1, avx_de011); \
-    avx_sum10 = vaddq_f64(avx_sum10, vmulq_f64(avx_Nor2, avx_de021)); \
-    avx_sum10 = vaddq_f64(avx_sum10, vmulq_f64(avx_Nor3, avx_de031)); \
+    avx_sum10 = vfmaq_f64(avx_sum10, avx_Nor2, avx_de021); \
+    avx_sum10 = vfmaq_f64(avx_sum10, avx_Nor3, avx_de031); \
     \
     avx_sum2 = vmulq_f64(avx_Nor1, avx_de12); \
-    avx_sum2 = vaddq_f64(avx_sum2, vmulq_f64(avx_Nor2, avx_de22)); \
-    avx_sum2 = vaddq_f64(avx_sum2, vmulq_f64(avx_Nor3, avx_de32)); \
+    avx_sum2 = vfmaq_f64(avx_sum2, avx_Nor2, avx_de22); \
+    avx_sum2 = vfmaq_f64(avx_sum2, avx_Nor3, avx_de32); \
     \
     avx_sum20 = vmulq_f64(avx_Nor1, avx_de012); \
-    avx_sum20 = vaddq_f64(avx_sum20, vmulq_f64(avx_Nor2, avx_de022)); \
-    avx_sum20 = vaddq_f64(avx_sum20, vmulq_f64(avx_Nor3, avx_de032)); \
+    avx_sum20 = vfmaq_f64(avx_sum20, avx_Nor2, avx_de022); \
+    avx_sum20 = vfmaq_f64(avx_sum20, avx_Nor3, avx_de032); \
     \
     avx_sum3 = vmulq_f64(avx_Nor1, avx_de13); \
-    avx_sum3 = vaddq_f64(avx_sum3, vmulq_f64(avx_Nor2, avx_de23)); \
-    avx_sum3 = vaddq_f64(avx_sum3, vmulq_f64(avx_Nor3, avx_de33)); \
+    avx_sum3 = vfmaq_f64(avx_sum3, avx_Nor2, avx_de23); \
+    avx_sum3 = vfmaq_f64(avx_sum3, avx_Nor3, avx_de33); \
     \
     avx_sum30 = vmulq_f64(avx_Nor1, avx_de013); \
-    avx_sum30 = vaddq_f64(avx_sum30, vmulq_f64(avx_Nor2, avx_de023)); \
-    avx_sum30 = vaddq_f64(avx_sum30, vmulq_f64(avx_Nor3, avx_de033)); \
+    avx_sum30 = vfmaq_f64(avx_sum30, avx_Nor2, avx_de023); \
+    avx_sum30 = vfmaq_f64(avx_sum30, avx_Nor3, avx_de033); \
     \
     avx_sum1 = vmulq_f64(avx_sum1, avx_dsmu); \
     avx_sum2 = vmulq_f64(avx_sum2, avx_dsmu); \
@@ -47,11 +47,11 @@
     avx_sum20 = vmulq_f64(avx_sum20, avx_dsmu0); \
     avx_sum30 = vmulq_f64(avx_sum30, avx_dsmu0); \
     \
-    avx_dyda1 = vaddq_f64(avx_dyda1, vmulq_f64(avx_Area, vaddq_f64(avx_sum1, avx_sum10))); \
-    avx_dyda2 = vaddq_f64(avx_dyda2, vmulq_f64(avx_Area, vaddq_f64(avx_sum2, avx_sum20))); \
-    avx_dyda3 = vaddq_f64(avx_dyda3, vmulq_f64(avx_Area, vaddq_f64(avx_sum3, avx_sum30))); \
+    avx_dyda1 = vfmaq_f64(avx_dyda1, vaddq_f64(avx_sum1, avx_sum10), avx_Area); \
+    avx_dyda2 = vfmaq_f64(avx_dyda2, vaddq_f64(avx_sum2, avx_sum20), avx_Area); \
+    avx_dyda3 = vfmaq_f64(avx_dyda3, vaddq_f64(avx_sum3, avx_sum30), avx_Area); \
     \
-    avx_d = vaddq_f64(avx_d, vmulq_f64(vmulq_f64(avx_lmu, avx_lmu0), avx_Area)); \
+    avx_d = vfmaq_f64(avx_d, vmulq_f64(avx_lmu, avx_lmu0), avx_Area); \
     avx_d1 = vaddq_f64(avx_d1, vdivq_f64(vmulq_f64(vmulq_f64(avx_Area, avx_lmu), avx_lmu0), vaddq_f64(avx_lmu, avx_lmu0)));
 // end of inner_calc
 
@@ -63,10 +63,10 @@
     avx_pbr = vmulq_f64(avx_Area, avx_s); \
     avx_powdnom = vdivq_f64(avx_lmu0, avx_dnom); \
     avx_powdnom = vmulq_f64(avx_powdnom, avx_powdnom); \
-    avx_dsmu = vaddq_f64(vmulq_f64(avx_cls, avx_powdnom), vmulq_f64(avx_cl, avx_lmu0)); \
+    avx_dsmu = vfmaq_f64(vmulq_f64(avx_cls, avx_powdnom), avx_cl, avx_lmu0); \
     avx_powdnom = vdivq_f64(avx_lmu, avx_dnom); \
     avx_powdnom = vmulq_f64(avx_powdnom, avx_powdnom); \
-    avx_dsmu0 = vaddq_f64(vmulq_f64(avx_cls, avx_powdnom), vmulq_f64(avx_cl, avx_lmu));
+    avx_dsmu0 = vfmaq_f64(vmulq_f64(avx_cls, avx_powdnom), avx_cl, avx_lmu);
 // end of inner_calc_dsmu
 
 
@@ -167,16 +167,16 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
       float64x2_t avx_Area;
 
       avx_lmu = vmulq_f64(avx_e1, avx_Nor1);
-      avx_lmu = vaddq_f64(avx_lmu, vmulq_f64(avx_e2, avx_Nor2));
-      avx_lmu = vaddq_f64(avx_lmu, vmulq_f64(avx_e3, avx_Nor3));
+      avx_lmu = vfmaq_f64(avx_lmu, avx_e2, avx_Nor2); \
+      avx_lmu = vfmaq_f64(avx_lmu, avx_e3, avx_Nor3); \
       avx_lmu0 = vmulq_f64(avx_e01, avx_Nor1);
-      avx_lmu0 = vaddq_f64(avx_lmu0, vmulq_f64(avx_e02, avx_Nor2));
-      avx_lmu0 = vaddq_f64(avx_lmu0, vmulq_f64(avx_e03, avx_Nor3));
+      avx_lmu0 = vfmaq_f64(avx_lmu0, avx_e02, avx_Nor2); \
+      avx_lmu0 = vfmaq_f64(avx_lmu0, avx_e03, avx_Nor3); \
 
       cmpe = vreinterpretq_f64_u64(vcgtq_f64(avx_lmu, avx_tiny));
       cmpe0 = vreinterpretq_f64_u64(vcgtq_f64(avx_lmu0, avx_tiny));
-	  cmp = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(cmpe), vreinterpretq_u64_f64(cmpe0)));
-	  int64x2_t cmp_int = vreinterpretq_s64_f64(cmp);
+      cmp = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(cmpe), vreinterpretq_u64_f64(cmpe0)));
+      int64x2_t cmp_int = vreinterpretq_s64_f64(cmp);
       int icmp = (vgetq_lane_s64(cmp_int, 0) & 1) | ((vgetq_lane_s64(cmp_int, 1) & 1) << 1);
 
 	  if(icmp & 1)  //first and second or only first
@@ -212,10 +212,7 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
 	  else if (icmp & 2)
 	  {
  		 INNER_CALC_DSMU
-         //avx_pbr = vextq_f64(avx_pbr, vdupq_n_f64(0.0), 1);
-         //avx_dsmu = vextq_f64(vdupq_n_f64(0.0), avx_dsmu, 1);
-         //avx_dsmu0 = vextq_f64(vdupq_n_f64(0.0), avx_dsmu0, 1);
-         //avx_lmu = vextq_f64(vdupq_n_f64(0.0), avx_lmu, 1);
+
          avx_pbr = vcombine_f64(vget_high_f64(avx_pbr), vdup_n_f64(0.0));
          avx_dsmu = vcombine_f64(vdup_n_f64(0.0), vget_high_f64(avx_dsmu));
          avx_dsmu0 = vcombine_f64(vdup_n_f64(0.0), vget_high_f64(avx_dsmu0));
@@ -261,11 +258,11 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
 		Dgrow3 = &Dg_row[3][dgi];
 		pdbr3=dbr[3];
 
-		tmp1=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[0]),vmulq_f64(pdbr1,Dgrow1[0])),vmulq_f64(pdbr2,Dgrow2[0])),vmulq_f64(pdbr3,Dgrow3[0]));
-		tmp2=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[1]),vmulq_f64(pdbr1,Dgrow1[1])),vmulq_f64(pdbr2,Dgrow2[1])),vmulq_f64(pdbr3,Dgrow3[1]));
-		tmp3=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[2]),vmulq_f64(pdbr1,Dgrow1[2])),vmulq_f64(pdbr2,Dgrow2[2])),vmulq_f64(pdbr3,Dgrow3[2]));
-		tmp4=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[3]),vmulq_f64(pdbr1,Dgrow1[3])),vmulq_f64(pdbr2,Dgrow2[3])),vmulq_f64(pdbr3,Dgrow3[3]));
-		tmp5=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[4]),vmulq_f64(pdbr1,Dgrow1[4])),vmulq_f64(pdbr2,Dgrow2[4])),vmulq_f64(pdbr3,Dgrow3[4]));
+      tmp1 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr1, Dgrow1[0]), pdbr, Dgrow[0]), pdbr2, Dgrow2[0]), pdbr3, Dgrow3[0]);
+      tmp2 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr1, Dgrow1[1]), pdbr, Dgrow[1]), pdbr2, Dgrow2[1]), pdbr3, Dgrow3[1]);
+      tmp3 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr1, Dgrow1[2]), pdbr, Dgrow[2]), pdbr2, Dgrow2[2]), pdbr3, Dgrow3[2]);
+      tmp4 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr1, Dgrow1[3]), pdbr, Dgrow[3]), pdbr2, Dgrow2[3]), pdbr3, Dgrow3[3]);
+      tmp5 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr1, Dgrow1[4]), pdbr, Dgrow[4]), pdbr2, Dgrow2[4]), pdbr3, Dgrow3[4]);
 
 	  for (j=4;j<incl_count;j+=4)
  	  {
@@ -279,11 +276,11 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
 		Dgrow3 = &Dg_row[j+3][dgi];
 		pdbr3=dbr[j+3];
 
-		tmp1=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp1,vmulq_f64(pdbr,Dgrow[0])),vmulq_f64(pdbr1,Dgrow1[0])),vmulq_f64(pdbr2,Dgrow2[0])),vmulq_f64(pdbr3,Dgrow3[0]));
-		tmp2=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp2,vmulq_f64(pdbr,Dgrow[1])),vmulq_f64(pdbr1,Dgrow1[1])),vmulq_f64(pdbr2,Dgrow2[1])),vmulq_f64(pdbr3,Dgrow3[1]));
-		tmp3=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp3,vmulq_f64(pdbr,Dgrow[2])),vmulq_f64(pdbr1,Dgrow1[2])),vmulq_f64(pdbr2,Dgrow2[2])),vmulq_f64(pdbr3,Dgrow3[2]));
-		tmp4=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp4,vmulq_f64(pdbr,Dgrow[3])),vmulq_f64(pdbr1,Dgrow1[3])),vmulq_f64(pdbr2,Dgrow2[3])),vmulq_f64(pdbr3,Dgrow3[3]));
-		tmp5=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp5,vmulq_f64(pdbr,Dgrow[4])),vmulq_f64(pdbr1,Dgrow1[4])),vmulq_f64(pdbr2,Dgrow2[4])),vmulq_f64(pdbr3,Dgrow3[4]));
+      tmp1 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp1, pdbr, Dgrow[0]), pdbr1, Dgrow1[0]), pdbr2, Dgrow2[0]), pdbr3, Dgrow3[0]);
+      tmp2 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp2, pdbr, Dgrow[1]), pdbr1, Dgrow1[1]), pdbr2, Dgrow2[1]), pdbr3, Dgrow3[1]);
+      tmp3 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp3, pdbr, Dgrow[2]), pdbr1, Dgrow1[2]), pdbr2, Dgrow2[2]), pdbr3, Dgrow3[2]);
+      tmp4 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp4, pdbr, Dgrow[3]), pdbr1, Dgrow1[3]), pdbr2, Dgrow2[3]), pdbr3, Dgrow3[3]);
+      tmp5 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp5, pdbr, Dgrow[4]), pdbr1, Dgrow1[4]), pdbr2, Dgrow2[4]), pdbr3, Dgrow3[4]);
 	  }
 	  dgi+=5;
 	  tmp1=vmulq_f64(tmp1,avx_Scale);
@@ -311,8 +308,8 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
 		Dgrow3 = &Dg_row[3][dgi];
 		pdbr3=dbr[3];
 
-		tmp1=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[0]),vmulq_f64(pdbr1,Dgrow1[0])),vmulq_f64(pdbr2,Dgrow2[0])),vmulq_f64(pdbr3,Dgrow3[0]));
-		tmp2=vaddq_f64(vaddq_f64(vaddq_f64(vmulq_f64(pdbr,Dgrow[1]),vmulq_f64(pdbr1,Dgrow1[1])),vmulq_f64(pdbr2,Dgrow2[1])),vmulq_f64(pdbr3,Dgrow3[1]));
+      tmp1 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr, Dgrow[0]), pdbr1, Dgrow1[0]), pdbr2, Dgrow2[0]), pdbr3, Dgrow3[0]);
+      tmp2 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vmulq_f64(pdbr, Dgrow[1]), pdbr1, Dgrow1[1]), pdbr2, Dgrow2[1]), pdbr3, Dgrow3[1]);
 	  for (j=4;j<incl_count;j+=4)
  	  {
 
@@ -325,8 +322,8 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
 		Dgrow3 = &Dg_row[j+3][dgi];
 		pdbr3=dbr[j+3];
 
-		tmp1=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp1,vmulq_f64(pdbr,Dgrow[0])),vmulq_f64(pdbr1,Dgrow1[0])),vmulq_f64(pdbr2,Dgrow2[0])),vmulq_f64(pdbr3,Dgrow3[0]));
-		tmp2=vaddq_f64(vaddq_f64(vaddq_f64(vaddq_f64(tmp2,vmulq_f64(pdbr,Dgrow[1])),vmulq_f64(pdbr1,Dgrow1[1])),vmulq_f64(pdbr2,Dgrow2[1])),vmulq_f64(pdbr3,Dgrow3[1]));
+      tmp1 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp1, pdbr, Dgrow[0]), pdbr1, Dgrow1[0]), pdbr2, Dgrow2[0]), pdbr3, Dgrow3[0]);
+      tmp2 = vfmaq_f64(vfmaq_f64(vfmaq_f64(vfmaq_f64(tmp2, pdbr, Dgrow[1]), pdbr1, Dgrow1[1]), pdbr2, Dgrow2[1]), pdbr3, Dgrow3[1]);
 	  }
 	  dgi+=2;
 	  tmp1=vmulq_f64(tmp1,avx_Scale);
