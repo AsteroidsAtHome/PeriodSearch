@@ -12,7 +12,7 @@
 #include "constants.h"
 #include "CalcStrategySve.hpp"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
 double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)

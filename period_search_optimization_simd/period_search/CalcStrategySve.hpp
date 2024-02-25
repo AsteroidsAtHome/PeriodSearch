@@ -1,7 +1,11 @@
 #pragma once
 
 #include "CalcStrategy.hpp"
-#include <arm_sve.h>
+#if defined __x86_64__ || defined(__i386__) || _WIN32
+  #include "sve_emulator.hpp"
+#else
+  #include <arm_sve.h>
+#endif
 
 #ifndef CSSVE
 #define CSSVE

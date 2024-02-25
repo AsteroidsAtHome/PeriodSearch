@@ -9,7 +9,7 @@
 #include "declarations.h"
 #include "CalcStrategySve.hpp"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
 int CalcStrategySve::gauss_errc(double** a, int n, double b[])

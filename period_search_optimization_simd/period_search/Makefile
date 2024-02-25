@@ -24,6 +24,7 @@ MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512
     gauss_errc_avx512.o gauss_errc_sse2.o gauss_errc_sse3.o lubksb.o ludcmp.o matrix.o \
     memory.o mrqcof.o mrqcof_avx.o mrqcof_avx512.o mrqcof_fma.o mrqcof_sse2.o \
     mrqcof_sse3.o mrqmin.o phasec.o sphfunc.o systeminfo.o \
+	gauss_errc_sve.o mrqcof_sve.o curv_sve.o conv_sve.o bright_sve.o \
     trifac.o VersionInfo.o
 
 # the following should be freeglut; use nm to check

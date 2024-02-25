@@ -5,6 +5,7 @@
 #include "Enums.h"
 #include "declarations.h"
 #include "globals.h"
+#include "CalcStrategySve.hpp"
 #include "CalcStrategyAvx512.hpp"
 #include "CalcStrategyFma.hpp"
 #include "CalcStrategyAvx.hpp"
@@ -217,6 +218,16 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 				   ? SIMDEnum::OptSSE2
 				   : SIMDEnum::OptNONE;
 	}
+
+	if (simd == SIMDEnum::OptASIMD)
+	{
+		simd = SIMDEnum::OptNONE;
+	}
+
+	if (simd == SIMDEnum::OptSVE)
+	{
+		return SIMDEnum::OptSVE; // for testing only
+	}
 	// else
 	//{
 	//	simd = SIMDEnum::OptNONE;
@@ -282,6 +293,9 @@ void SetOptimizationStrategy(SIMDEnum useOptimization)
 		break;
 	case SIMDEnum::OptSSE2:
 		calcCtx.set_strategy(std::make_unique<CalcStrategySse2>());
+		break;
+	case SIMDEnum::OptSVE:
+		calcCtx.set_strategy(std::make_unique<CalcStrategySve>()); // for testing only
 		break;
 	case SIMDEnum::OptNONE:
 	default:

@@ -81,13 +81,15 @@
 #include "Enums.h"
 #include "CalcStrategy.hpp"
 #include "CalcStrategyNone.hpp"
-#if defined __x86_64__ || defined(__i386__)
+/*
+#if defined __x86_64__ || defined(__i386__) || defined(_WIN32)
   #include "CalcStrategySse2.hpp"
   #include "CalcStrategySse3.hpp"
   #include "CalcStrategyAvx.hpp"
   #include "CalcStrategyFma.hpp"
   #include "CalcStrategyAvx512.hpp"
 #endif
+*/
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"

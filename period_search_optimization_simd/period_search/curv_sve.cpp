@@ -9,7 +9,7 @@
 #include "CalcStrategySve.hpp"
 #include "arrayHelpers.hpp"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
 void CalcStrategySve::curv(double cg[])
@@ -45,15 +45,11 @@ void CalcStrategySve::curv(double cg[])
       size_t cnt = svcntd();
       svfloat64_t avx_g = svdup_n_f64(g);
 
-      int cyklus = (n >> 2) << 2;
-      for (k = 1; k <= cyklus; k += cnt) {
-        svbool_t pg = svwhilelt_b64(k, n);
+      for (k = 1; k <= n; k += cnt) {
+        svbool_t pg = svwhilelt_b64(k, n + 1);
         svfloat64_t avx_pom = svld1_f64(pg, &Dsph[i][k]);
         avx_pom = svmul_f64_x(pg, avx_pom, avx_g);
         svst1_f64(pg, &Dg[i - 1][k - 1], avx_pom);
       }
-      if (k <= n) Dg[i - 1][k - 1] = g * Dsph[i][k]; //last odd value
-      if (k + 1 <= n) Dg[i - 1][k - 1 + 1] = g * Dsph[i][k + 1]; //last odd value
-      if (k + 2 <= n) Dg[i - 1][k - 1 + 2] = g * Dsph[i][k + 2]; //last odd value
    }
 }
