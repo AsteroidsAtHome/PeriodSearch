@@ -99,5 +99,4 @@ void SetOptimizationStrategy(SIMDEnum useOptimization)
 		calcCtx.set_strategy(std::make_unique<CalcStrategyNone>());
 		break;
 	}
-    return calcCtx.set_strategy(std::make_unique<CalcStrategyNone>());
 }
