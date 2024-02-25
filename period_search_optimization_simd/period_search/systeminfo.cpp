@@ -173,8 +173,8 @@ float getTotalSystemMemory()
 	MEMORYSTATUSEX status;
 	status.dwLength = sizeof(status);
 	GlobalMemoryStatusEx(&status);
-	auto memory = status.ullTotalPhys;
-	auto memoryGb = memory / 1024 / 1024 / 1024;
+	float memory = (float)status.ullTotalPhys;
+	float memoryGb = memory / 1024 / 1024 / 1024;
 
 	return memoryGb;
 }
@@ -184,8 +184,8 @@ float getTotalSystemMemory()
 {
 	long pages = sysconf(_SC_PHYS_PAGES);
 	long page_size = sysconf(_SC_PAGE_SIZE);
-	auto memory = (float)(pages * page_size);
-	auto memoryGb = memory / 1024 / 1024 / 1024;
+	float memory = (float)(pages * page_size);
+	float memoryGb = memory / 1024 / 1024 / 1024;
 
 	return memoryGb;
 }

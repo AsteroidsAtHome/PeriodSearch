@@ -12,7 +12,7 @@
 int CalcStrategyNone::gauss_errc(double** a, int n, double b[])
 {
 	int *indxc, *indxr, *ipiv;
-	int i, icol = 0, irow = 0, j, k, l, ll, ipivsize;
+	int i, icol = 0, irow = 0, j, k, l, ll;
 	double big, dum, pivinv, temp;
 
 	indxc = vector_int(n + 1);

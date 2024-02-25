@@ -620,7 +620,7 @@ int main(int argc, char** argv) {
 	getSystemInfo();
 #else
 	std::cerr << "CPU: " << GetCpuInfo() << std::endl;
-	std::cerr << "RAM: " << getTotalSystemMemory() << "GB" << std::endl;
+	std::cerr << "RAM: " << roundf(getTotalSystemMemory() * 100) / 100 << " GB" << std::endl;
 #endif
 
 	// --- Set desired CPU SIMD optimization ---
