@@ -12,11 +12,7 @@
 #include <malloc.h>
 #endif
 
-//#ifdef NO_SSE3
 #include <emmintrin.h>
-//#else
-//#include <pmmintrin.h>
-//#endif
 #include "CalcStrategySse2.hpp"
 
 const  __m128i avx_ones = _mm_set_epi16(1, 1, 1, 1, 1, 1, 1, 1);
