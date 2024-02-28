@@ -20,7 +20,8 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 
 	static double* atry, * beta, * da; //beta, da are zero indexed
 
-	double temp;
+	//double temp;
+	double trial_chisq;
 
 	/* dealocates memory when usen in period_search */
 	if (Deallocate == 1)
@@ -61,7 +62,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			Alamda = Alamda_start; /* initial alambda */
 			//printf("Alamda: %0.6f\n", Alamda);
 
-			temp = calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
+			calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma, trial_chisq);
 			//printf("% 0.6f\n", temp);
 
 //#ifdef AVX512
@@ -73,7 +74,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 //			temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
 //	#endif
 //#endif
-			Ochisq = temp;
+			Ochisq = trial_chisq;
 			for (j = 1; j <= ma; j++)
 			{
 				atry[j] = a[j];
@@ -93,7 +94,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			da[j] = beta[j];
 		}
 
-		err_code = calcCtx.CalculateGaussErrc(covar, mfit, da);
+		calcCtx.CalculateGaussErrc(covar, mfit, da, err_code);
 
 //#ifdef AVX512
 //	err_code = gauss_errc_avx512(covar, mfit, da);
@@ -105,7 +106,6 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 //	#endif
 //#endif
 		if (err_code != 0) return(err_code);
-
 
 		j = 0;
 		for (l = 1; l <= ma; l++)
@@ -126,7 +126,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 		}
 	}
 
-	temp = calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
+	calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma, trial_chisq);
 
 //#ifdef AVX512
 //	temp = mrqcof_avx512(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
@@ -137,7 +137,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 //		temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
 //	#endif
 //#endif
-	Chisq = temp;
+	Chisq = trial_chisq;
 
 
 	if (Lastcall == 1)
@@ -148,7 +148,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 		return(0);
 	}
 
-	if (temp < Ochisq)
+	if (trial_chisq < Ochisq)
 	{
 		Alamda = Alamda / Alamda_incr;
 		for (j = 0; j < mfit; j++)

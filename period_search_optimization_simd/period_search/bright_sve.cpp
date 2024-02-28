@@ -15,13 +15,14 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+//double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
 	int ncoef0, i, j, k,
 		incl[MAX_N_FAC], //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
 		incl_count = 0;
 
-	double cos_alpha, br, cl, cls, alpha, dnom, tmpdyda,
+	double cos_alpha, cl, cls, alpha, dnom, tmpdyda, // br,
 		e[4], e0[4],
 		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1], s,
 		dbr[MAX_N_FAC], //IS ZERO INDEXED
@@ -141,5 +142,5 @@ double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[],
 	br *= Scale;
 	//printf("% 0.6f\n", br);
 
-	return(br);
+	//return(br);
 }

@@ -14,19 +14,20 @@
 #if defined(__GNUC__)
 __attribute__((target("avx,fma")))
 #endif
-double CalcStrategyFma::conv(int nc, double dres[], int ma)
+
+void CalcStrategyFma::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    double res;
+    //double res;
     //__m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
 
-    res = 0;
+    result = 0;
     for (j = 1; j <= ma; j++)
         dres[j] = 0;
 
     for (i = 0; i < Numfac; i++)
     {
-        res += Area[i] * Nor[nc - 1][i];
+        result += Area[i] * Nor[nc - 1][i];
         __m256d avx_Darea = _mm256_set1_pd(Darea[i]);
         __m256d avx_Nor = _mm256_set1_pd(Nor[nc - 1][i]);
         double *Dg_row = Dg[i];
@@ -42,5 +43,5 @@ double CalcStrategyFma::conv(int nc, double dres[], int ma)
         }
     }
 
-    return(res);
+    //return(res);
 }

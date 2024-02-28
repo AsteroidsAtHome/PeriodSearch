@@ -14,19 +14,20 @@
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-double CalcStrategyAvx512::conv(int nc, double dres[], int ma)
+
+void CalcStrategyAvx512::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    double res;
+    //double res;
     //__m512d ymm0 = _mm512_set_pd(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
-    res = 0;
+    result = 0;
     for (j = 1; j <= ma; j++)
         dres[j] = 0;
 
     for (i = 0; i < Numfac; i++)
     {
-        res += Area[i] * Nor[nc - 1][i];
+        result += Area[i] * Nor[nc - 1][i];
         __m512d avx_Darea = _mm512_set1_pd(Darea[i]);
         __m512d avx_Nor = _mm512_set1_pd(Nor[nc - 1][i]);
         double *Dg_row = Dg[i];
@@ -42,5 +43,5 @@ double CalcStrategyAvx512::conv(int nc, double dres[], int ma)
         }
     }
 
-    return(res);
+    //return(res);
 }

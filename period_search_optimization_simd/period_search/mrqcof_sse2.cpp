@@ -31,9 +31,10 @@
 #if defined(__GNUC__)
 __attribute__((target("sse2")))
 #endif
-double CalcStrategySse2::mrqcof(double** x1, double** x2, double x3[], double y[],
+
+void CalcStrategySse2::mrqcof(double** x1, double** x2, double x3[], double y[],
 			  double sig[], double a[], int ia[], int ma,
-		  double** alpha, double beta[], int mfit, int lastone, int lastma)
+		  double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
@@ -76,9 +77,14 @@ double CalcStrategySse2::mrqcof(double** x1, double** x2, double x3[], double y[
 			}
 
 			if (i < Lcurves)
-				ymod = CalcStrategySse2::bright(xx1, xx2, x3[np], a, dyda, ma);
+			{
+				//ymod = CalcStrategySse2::bright(xx1, xx2, x3[np], a, dyda, ma);
+				CalcStrategySse2::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
+			}
 			else
-				ymod = CalcStrategySse2::conv(jp, dyda, ma);
+			{
+				CalcStrategySse2::conv(jp, dyda, ma, ymod);
+			}
 
 			ytemp[jp] = ymod;
 
@@ -276,6 +282,7 @@ double CalcStrategySse2::mrqcof(double** x1, double** x2, double x3[], double y[
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
 
-	return trial_chisq;
+	//return trial_chisq;
+	//mrq = trial_chisq;
 }
 

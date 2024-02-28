@@ -74,12 +74,13 @@
 #if defined(__GNUC__)
 __attribute__((target("avx")))
 #endif
-double CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+//double CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
     int ncoef0, i, j, k,
         incl_count = 0;
 
-    double cos_alpha, br, cl, cls, alpha,
+    double cos_alpha, cl, cls, alpha, //br,
         e[4], e0[4],
         php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
         de[4][4], de0[4][4], tmat[4][4],
@@ -312,5 +313,5 @@ double CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[],
     }
     printf("};\n"); */
 
-    return(br);
+    //return(br);
 }

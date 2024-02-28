@@ -3,6 +3,7 @@
 #include <immintrin.h>
 #include "CalcStrategy.hpp"
 #include "CalcStrategyAvx.hpp"
+#include "constants.h"
 
 #ifndef CSF
 #define CSF
@@ -13,27 +14,33 @@ public:
 
 	CalcStrategyFma() {};
 
-	virtual double mrqcof(double** x1, double** x2, double x3[], double y[],
+	virtual void mrqcof(double** x1, double** x2, double x3[], double y[],
 		double sig[], double a[], int ia[], int ma,
-		double** alpha, double beta[], int mfit, int lastone, int lastma);
+		double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq);
 
-	virtual double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+	virtual void bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br);
 
-	virtual double conv(int nc, double dres[], int ma);
+	virtual void conv(int nc, double dres[], int ma, double &result);
 
 	virtual void curv(double cg[]);
 
-	virtual int gauss_errc(double** a, int n, double b[]);
+	virtual void gauss_errc(double** a, int n, double b[], int &error);
 
 	__m256d mm256_msub_pd(__m256d a, __m256d b, __m256d c)
 	{
 		__m256d dst = _mm256_fmsub_pd(a, b, c);
 	}
 
+	//TODO: Change to return result by reference:
+	// void mm256_madd_pd(__m256d a, __m256d b, __m256d c, __m256d &dst)
 	__m256d mm256_madd_pd(__m256d a, __m256d b, __m256d c)
 	{
 		__m256d dst = _mm256_fmadd_pd(a, b, c);
 	}
+
+//private:
+//	__m256d* Dg_row[MAX_N_FAC + 3]{};
+//	__m256d dbr[MAX_N_FAC + 3]{};
 };
 
 #endif

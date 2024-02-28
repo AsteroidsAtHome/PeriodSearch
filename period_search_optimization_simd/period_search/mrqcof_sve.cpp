@@ -23,9 +23,10 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[],
+
+void CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma)
+	double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
@@ -75,9 +76,14 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 			}
 
 			if (i < Lcurves)
-				ymod = CalcStrategySve::bright(xx1, xx2, x3[np], a, dyda, ma);
+			{
+				//ymod = CalcStrategySve::bright(xx1, xx2, x3[np], a, dyda, ma);
+				CalcStrategySve::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
+			}
 			else
-				ymod = CalcStrategySve::conv(jp, dyda, ma);
+			{
+				CalcStrategySve::conv(jp, dyda, ma, ymod);
+			}
 
 			//printf("[%3d][%3d] % 0.6f\n", i, jp, ymod);
 			/*if(jp == 1)
@@ -117,7 +123,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
             }
 		    /* save lightcurves */
 
-            if (Lastcall == 1) 
+            if (Lastcall == 1)
 	          Yout[np] = ymod;
       	} /* jp, lpoints */
 
@@ -187,7 +193,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 							svbool_t pg = svwhilelt_b64(m, l + 1);
                             svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][k]);
                             svfloat64_t avx_dyda = svld1_f64(pg, &dyda[m]);
-    
+
                             svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
 
                             svst1_f64(pg, &alpha[j][k], avx_result);
@@ -212,7 +218,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 								svbool_t pg = svwhilelt_b64(m, lastone + 1);
                                 svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][kk]);
                                 svfloat64_t avx_dyda = svld1_f64(pg, &dyda[m]);
-    
+
                                 svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
 
                                 svst1_f64(pg, &alpha[j][kk], avx_result);
@@ -261,7 +267,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 							svbool_t pg = svwhilelt_b64(m, l + 1);
                             svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][k]);
                             svfloat64_t avx_dyda = svld1_f64(pg, &dyda[m]);
-    
+
                             svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
                             //avx_result = svadd_f64_x(pg, avx_alpha, svmul_f64_x(pg, avx_wt, avx_dyda));
 
@@ -269,7 +275,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 
                             k += cnt;
                         } /* m */
-                        
+
 						beta[j] = beta[j] + dy * wt;
 						j++;
 					} /* l */
@@ -286,7 +292,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 								svbool_t pg = svwhilelt_b64(m, lastone + 1);
                                 svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][kk]);
                                 svfloat64_t avx_dyda = svld1_f64(pg, &dyda[m]);
-    
+
                                 svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
 
                                 svst1_f64(pg, &alpha[j][kk], avx_result);
@@ -318,6 +324,7 @@ double CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[]
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
 
-	return trial_chisq;
+	//return trial_chisq;
+	//mrq = trial_chisq;
 }
 

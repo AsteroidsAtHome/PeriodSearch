@@ -178,7 +178,11 @@ Area[MAX_N_FAC + 8] __attribute__((aligned(64))),
 Darea[MAX_N_FAC + 8] __attribute__((aligned(64))),
 Dg[MAX_N_FAC + 16][MAX_N_PAR + 8] __attribute__((aligned(64)));
 #else
-__declspec(align(64)) double Nor[3][MAX_N_FAC + 8], Area[MAX_N_FAC + 8], Darea[MAX_N_FAC + 8], Dg[MAX_N_FAC + 16][MAX_N_PAR + 8]; //Nor,Dg ARE ZERO INDEXED
+__declspec(align(64))
+	double Nor[3][MAX_N_FAC + 8],
+			Area[MAX_N_FAC + 8],
+			Darea[MAX_N_FAC + 8],
+			Dg[MAX_N_FAC + 16][MAX_N_PAR + 8]; //Nor,Dg ARE ZERO INDEXED
 #endif
 
 #ifdef __GNUC__
@@ -211,74 +215,74 @@ double xx1[4], xx2[4], dy, sig2i, wt, ymod,
 //	return std::find(vec.begin(), vec.end(), option) != vec.end();
 //}
 
-int main(int argc, char** argv) {
-	int /*c,*/ nchars = 0, retval, nlines, ntestperiods, checkpoint_exists, n_start_from;
+int main(int argc, char** argv)
+{
+	int nchars = 0, nlines, ntestperiods, checkpoint_exists, n_start_from; //c, retval,
 	//    double fsize, fd;
 	char input_path[512], output_path[512], chkpt_path[512], buf[256];
 	MFILE out;
-	FILE* state, * infile;
+	//FILE* state; // , * infile;
 
-	int i, j, l, m, k, n, nrows, ndata, k2, ndir, i_temp, onlyrel,
-		n_iter_max, n_iter_min,
-		* ia, //ia is zero indexed
-		ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
+	int i, j, l, m, k, n, nrows, ndir, i_temp, //onlyrel, // ndata,  k2,
+		n_iter_max, n_iter_min, //* ia, //ia is zero indexed
+		ia_prd, ia_par[4]{}, ia_cl, // ia_beta_pole, ia_lambda_pole, ial0, ial0_abs,
 		lc_number,
-		** ifp, new_conw, max_test_periods;
+		new_conw, max_test_periods; //**ifp,
 
 	double per_start, per_step_coef, per_end,
-		freq, freq_start, freq_step, freq_end, jd_min, jd_max,
+		freq, freq_start, freq_step, freq_end, // jd_min, jd_max,
 		dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
 		totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-		* t, * f, * at, * af, sum_dark_facet, ave_dark_facet;
+		sum_dark_facet, ave_dark_facet; //* t, * f, * at, * af,
 
-	double jd_0, jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, c_axis,
-		prd, cl, al0, al0_abs, ave, e0len, elen, cos_alpha,
+	double jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, // a, b, c_axis, //jd_0,
+		prd, cl, e0len, elen, cos_alpha, // al0, al0_abs, average,
 		dth, dph, rfit, escl,
-		* brightness, e[4], e0[4], ** ee,
-		** ee0, * cg, * cg_first, ** covar,
-		** aalpha, * sig, chck[4],
-		* tim, * al,
-		beta_pole[N_POLES + 1], lambda_pole[N_POLES + 1], par[4], rchisq, * weight_lc;
+		e[4]{}, e0[4]{}, // ** ee,** ee0, ** covar, ** aalpha, * tim, * brightness, * sig, * cg, * cg_first,
+		chck[4]{}, //* al,
+		 par[4]{}, rchisq; // , * weight_lc, lambda_pole[N_POLES + 1]{}, beta_pole[N_POLES + 1]{},
 
-	char* str_temp;
+	char *str_temp = (char*)malloc(MAX_LINE_LENGTH);
 
-	str_temp = (char*)malloc(MAX_LINE_LENGTH);
+	double **ee = matrix_double(MAX_N_OBS, 3);
+	double **ee0 = matrix_double(MAX_N_OBS, 3);
+	double **covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
+	double **aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 8);
+	double *tim = vector_double(MAX_N_OBS);
+	double *brightness = vector_double(MAX_N_OBS);
+	double *sig = vector_double(MAX_N_OBS);
+	double *cg = vector_double(MAX_N_PAR);
+	double *cg_first = vector_double(MAX_N_PAR);
+	double *t = vector_double(MAX_N_FAC);
+	double *f = vector_double(MAX_N_FAC);
+	double *at = vector_double(MAX_N_FAC);
+	double *af = vector_double(MAX_N_FAC);
 
-	ee = matrix_double(MAX_N_OBS, 3);
-	ee0 = matrix_double(MAX_N_OBS, 3);
-	covar = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR);
-	aalpha = aligned_matrix_double(MAX_N_PAR, MAX_N_PAR + 8);
-	ifp = matrix_int(MAX_N_FAC, 4);
+	int **ifp = matrix_int(MAX_N_FAC, 4);
+	int *ia = vector_int(MAX_N_PAR); //ia is zero indexed
 
-	tim = vector_double(MAX_N_OBS);
-	brightness = vector_double(MAX_N_OBS);
-	sig = vector_double(MAX_N_OBS);
-	cg = vector_double(MAX_N_PAR);
-	cg_first = vector_double(MAX_N_PAR);
-	t = vector_double(MAX_N_FAC);
-	f = vector_double(MAX_N_FAC);
-	at = vector_double(MAX_N_FAC);
-	af = vector_double(MAX_N_FAC);
+	// lambda_pole[1] = 0;    beta_pole[1] = 0;
+	// lambda_pole[2] = 90;   beta_pole[2] = 0;
+	// lambda_pole[3] = 180;  beta_pole[3] = 0;
+	// lambda_pole[4] = 270;  beta_pole[4] = 0;
+	// lambda_pole[5] = 60;   beta_pole[5] = 60;
+	// lambda_pole[6] = 180;  beta_pole[6] = 60;
+	// lambda_pole[7] = 300;  beta_pole[7] = 60;
+	// lambda_pole[8] = 60;   beta_pole[8] = -60;
+	// lambda_pole[9] = 180;  beta_pole[9] = -60;
+	// lambda_pole[10] = 300; beta_pole[10] = -60;
 
-	ia = vector_int(MAX_N_PAR);
+	double lambda_pole[N_POLES + 1] = { 0.0, 0.0, 90.0, 180.0, 270.0, 60.0, 180.0, 300.0, 60.0, 180.0, 300.0 };
+	double beta_pole[N_POLES + 1] = { 0.0, 0.0, 0.0, 0.0, 0.0, 60.0, 60.0, 60.0, -60.0, -60.0, -60.0 };
 
-	lambda_pole[1] = 0;    beta_pole[1] = 0;
-	lambda_pole[2] = 90;   beta_pole[2] = 0;
-	lambda_pole[3] = 180;  beta_pole[3] = 0;
-	lambda_pole[4] = 270;  beta_pole[4] = 0;
-	lambda_pole[5] = 60;   beta_pole[5] = 60;
-	lambda_pole[6] = 180;  beta_pole[6] = 60;
-	lambda_pole[7] = 300;  beta_pole[7] = 60;
-	lambda_pole[8] = 60;   beta_pole[8] = -60;
-	lambda_pole[9] = 180;  beta_pole[9] = -60;
-	lambda_pole[10] = 300; beta_pole[10] = -60;
 
-	ia_lambda_pole = ia_beta_pole = 1;
+	// ia_lambda_pole = ia_beta_pole = 1;
+	int ia_lambda_pole = 1, ia_beta_pole = 1;
 
 	//wiringPiSetupSys();
 	//pinMode(LED, OUTPUT);
 
-	retval = boinc_init();
+	int retval = boinc_init();
 	if (retval)
 	{
 		fprintf(stderr, "%s boinc_init returned %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval);
@@ -286,9 +290,8 @@ int main(int argc, char** argv) {
 	}
 
 	// open the input file (resolve logical name first)
-	//
 	boinc_resolve_filename(input_filename, input_path, sizeof(input_path));
-	infile = boinc_fopen(input_path, "r");
+	FILE *infile = boinc_fopen(input_path, "r");
 	if (!infile) {
 		fprintf(stderr,
 			"%s Couldn't find input file, resolved name %s.\n",
@@ -305,7 +308,7 @@ int main(int argc, char** argv) {
 		// If so seek input file and truncate output file
 		//
 	boinc_resolve_filename(checkpoint_file, chkpt_path, sizeof(chkpt_path));
-	state = boinc_fopen(chkpt_path, "r");
+	FILE *state = boinc_fopen(chkpt_path, "r");
 	if (state) {
 		n = fscanf(state, "%d %d %lf %lf %d", &nlines, &new_conw, &conw_r, &sum_dark_facet, &ntestperiods);
 		fclose(state);
@@ -344,34 +347,46 @@ int main(int argc, char** argv) {
 	boinc_register_timer_callback(update_shmem);
 #endif
 
+	int err = 0;
 
-	/* period interval (hrs) fixed or free */
-	fscanf(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);          fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* epoch of zero time t0 */
-	fscanf(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* initial fixed rotation angle fi0 */
-	fscanf(infile, "%lf", &Phi_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* the weight factor for conv. reg. */
-	fscanf(infile, "%lf", &conw);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* degree and order of the Laplace series */
-	fscanf(infile, "%d %d", &Lmax, &Mmax);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* nr. of triangulation rows per octant */
-	fscanf(infile, "%d", &nrows);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+	/* Period interval (hrs) fixed or free */
+	err = fscanf_s(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);	fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Epoch of zero time t0 */
+	err = fscanf_s(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Initial fixed rotation angle fi0 */
+	err = fscanf_s(infile, "%lf", &Phi_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* The weight factor for conv. reg. */
+	err = fscanf_s(infile, "%lf", &conw);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Degree and order of the Laplace series */
+	err = fscanf_s(infile, "%d %d", &Lmax, &Mmax);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Number of triangulation rows per octant */
+	err = fscanf_s(infile, "%d", &nrows);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+
 	/* Initial guesses for phase funct. params. */
-	fscanf(infile, "%lf %d", &par[1], &ia_par[1]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-	fscanf(infile, "%lf %d", &par[2], &ia_par[2]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-	fscanf(infile, "%lf %d", &par[3], &ia_par[3]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[1], &ia_par[1]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[2], &ia_par[2]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[3], &ia_par[3]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
+
 	/* Initial Lambert coeff. (L-S=1) */
-	fscanf(infile, "%lf %d", &cl, &ia_cl);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* maximum number of iterations (when > 1) or
+	err = fscanf_s(infile, "%lf %d", &cl, &ia_cl);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Maximum number of iterations (when > 1) or
 	   minimum difference in dev to stop (when < 1) */
-	fscanf(infile, "%lf", &stop_condition);                       fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* minimum number of iterations when stop_condition < 1 */
-	fscanf(infile, "%d", &n_iter_min);                            fgets(str_temp, MAX_LINE_LENGTH, infile);
-	/* multiplicative factor for Alamda */
-	fscanf(infile, "%lf", &Alamda_incr);                          fgets(str_temp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &stop_condition);                       fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Minimum number of iterations when stop_condition < 1 */
+	err = fscanf_s(infile, "%d", &n_iter_min);                            fgets(str_temp, MAX_LINE_LENGTH, infile);
+
+	/* Multiplicative factor for Alamda */
+	err = fscanf_s(infile, "%lf", &Alamda_incr);                          fgets(str_temp, MAX_LINE_LENGTH, infile);
+
 	/* Alamda initial value*/
-	fscanf(infile, "%lf", &Alamda_start);                         fgets(str_temp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &Alamda_start);                         fgets(str_temp, MAX_LINE_LENGTH, infile);
 
 	if (boinc_is_standalone())
 	{
@@ -389,35 +404,39 @@ int main(int argc, char** argv) {
 		printf("%g  initial Alamda \n\n", Alamda_start);
 	}
 
-
 	/* lightcurves + geometry file */
 	/* number of lightcurves and the first realtive one */
-	fscanf(infile, "%d", &Lcurves);
+	err = fscanf_s(infile, "%d", &Lcurves);
 
 	if (Lcurves > MAX_LC)
 	{
 		fprintf(stderr, "\nError: Number of lcs  is greater than MAX_LC = %d\n", MAX_LC); fflush(stderr); exit(2);
 	}
 
-	al = vector_double(Lcurves);
-	weight_lc = vector_double(Lcurves);
+	double *al = vector_double(Lcurves);
+	double *weight_lc = vector_double(Lcurves);
 
-	ndata = 0; /* total number of data */
-	k2 = 0;   /* index */
-	al0 = al0_abs = PI; /* the smallest solar phase angle */
-	ial0 = ial0_abs = -1; /* initialization, index of al0 */
-	jd_min = 1e20; /* initial minimum and minimum JD */
-	jd_max = -1e40;
-	onlyrel = 1;
-	jd_0 = jd_00;
-	a = a0; b = b0; c_axis = c0;
+	int ndata = 0;			/* total number of data */
+	int k2 = 0;				/* index */
+	double al0 = PI;		/* the smallest solar phase angle */
+	double al0_abs = PI;
+	int ial0 = -1;			/* initialization, index of al0 */
+	int ial0_abs = -1;
+	double jd_min = 1e20;	/* initial minimum JD (Julian date)*/
+	double jd_max = -1e40;	/* initial maximum JD (Julian date)*/
+	int onlyrel = 1;
+	double jd_0 = jd_00;
+	double a = a0;
+	double b = b0;
+	double c_axis = c0;
 
-	/* loop over lightcurves */
+	/* Loop over lightcurves */
 	for (i = 1; i <= Lcurves; i++)
 	{
-		ave = 0; /* average */
-		fscanf(infile, "%d %d", &Lpoints[i], &i_temp); /* points in this lightcurve */
+		double average = 0; /* average */
+		err = fscanf_s(infile, "%d %d", &Lpoints[i], &i_temp); /* points in this lightcurve */
 		fgets(str_temp, MAX_LINE_LENGTH, infile);
+
 		Inrel[i] = 1 - i_temp;
 		if (Inrel[i] == 0)
 			onlyrel = 0;
@@ -437,9 +456,9 @@ int main(int argc, char** argv) {
 				fprintf(stderr, "\nError: Number of data is greater than MAX_N_OBS = %d\n", MAX_N_OBS); fflush(stderr); exit(2);
 			}
 
-			fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
-			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
-			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
+			err = fscanf_s(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); /* JD, brightness */
+			err = fscanf_s(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]); /* ecliptic astr_tempocentric coord. of the Sun in AU */
+			err = fscanf_s(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]); /* ecliptic astrocentric coord. of the Earth in AU */
 
 			/* selects the minimum and maximum JD */
 			if (tim[ndata] < jd_min) jd_min = tim[ndata];
@@ -449,7 +468,7 @@ int main(int argc, char** argv) {
 			e0len = sqrt(e0[1] * e0[1] + e0[2] * e0[2] + e0[3] * e0[3]);
 			elen = sqrt(e[1] * e[1] + e[2] * e[2] + e[3] * e[3]);
 
-			ave += brightness[ndata];
+			average += brightness[ndata];
 
 			/* normalization of distance vectors */
 			for (k = 1; k <= 3; k++)
@@ -480,7 +499,7 @@ int main(int argc, char** argv) {
 		/*printArray(ee, ndata, 3, "ee");
 		printArray(ee0, ndata, 3, "ee0");*/
 
-		ave /= Lpoints[i];
+		average /= Lpoints[i];
 		// For unit test reference only
 		//printf("ave: %.30f\n", ave);
 
@@ -491,7 +510,7 @@ int main(int argc, char** argv) {
 		for (j = 1; j <= Lpoints[i]; j++)
 		{
 			k2++;
-			sig[k2] = ave;
+			sig[k2] = average;
 		}
 
 	} /* i, all lightcurves */

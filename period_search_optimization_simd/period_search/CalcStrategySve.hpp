@@ -16,17 +16,17 @@ public:
 
 	CalcStrategySve() {};
 
-	virtual double mrqcof(double** x1, double** x2, double x3[], double y[],
+	virtual void mrqcof(double** x1, double** x2, double x3[], double y[],
 		double sig[], double a[], int ia[], int ma,
-		double** alpha, double beta[], int mfit, int lastone, int lastma);
+		double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq);
 
-	virtual double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
+	virtual void bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br);
 
-	virtual double conv(int nc, double dres[], int ma);
+	virtual void conv(int nc, double dres[], int ma, double &result);
 
 	virtual void curv(double cg[]);
 
-	virtual int gauss_errc(double** a, int n, double b[]);
+	virtual void gauss_errc(double** a, int n, double b[], int &error);
 };
 
 #endif

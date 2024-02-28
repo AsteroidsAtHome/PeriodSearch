@@ -32,9 +32,10 @@
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-double CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[],
+
+void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
-    double **alpha, double beta[], int mfit, int lastone, int lastma)
+    double **alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
     int i, j, k, l, m, np, np1, np2, jp, ic;
 
@@ -78,10 +79,15 @@ double CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double 
                 xx2[ic] = x2[np][ic];
             }
 
-            if (i < Lcurves)
-                ymod = calcCtx.CalculateBright(xx1, xx2, x3[np], a, dyda, ma);
-            else
-                ymod = calcCtx.CalculateConv(jp, dyda, ma);
+			if (i < Lcurves)
+			{
+                //ymod = calcCtx.CalculateBright(xx1, xx2, x3[np], a, dyda, ma);
+                calcCtx.CalculateBright(xx1, xx2, x3[np], a, dyda, ma, ymod);
+			}
+			else
+			{
+				calcCtx.CalculateConv(jp, dyda, ma, ymod);
+			}
 
             ytemp[jp] = ymod;
 
@@ -286,6 +292,7 @@ double CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double 
         for (k = 0; k <= j - 1; k++)
             alpha[k][j] = alpha[j][k];
 
-    return trial_chisq;
+    //return trial_chisq;
+	//mrq = trial_chisq;
 }
 

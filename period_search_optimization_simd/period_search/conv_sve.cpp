@@ -13,22 +13,29 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-double CalcStrategySve::conv(int nc, double dres[], int ma)
+
+void CalcStrategySve::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    double res;
+    //double res;
 
-    res = 0;
+    result = 0;
     for (j = 1; j <= ma; j++)
+	{
         dres[j] = 0;
+	}
 
     size_t cnt = svcntd();
-    for (i = 0; i < Numfac; i++) {
-        res += Area[i] * Nor[nc - 1][i];
+
+    for (i = 0; i < Numfac; i++)
+	{
+        result += Area[i] * Nor[nc - 1][i];
         double *Dg_row = Dg[i];
 		svfloat64_t avx_Darea = svdup_n_f64(Darea[i]);
 		svfloat64_t avx_Nor = svdup_n_f64(Nor[nc - 1][i]);
-		for (j = 0; j < Ncoef; j += cnt) {
+
+		for (j = 0; j < Ncoef; j += cnt)
+		{
 			svbool_t pg = svwhilelt_b64(j, Ncoef);
     		svfloat64_t avx_dres = svld1_f64(pg, &dres[j]);
     		svfloat64_t avx_Dg = svld1_f64(pg, &Dg_row[j]);
@@ -37,5 +44,6 @@ double CalcStrategySve::conv(int nc, double dres[], int ma)
     		svst1_f64(pg, &dres[j], avx_dres);
 		}
     }
-    return res;
+
+    //return res;
 }

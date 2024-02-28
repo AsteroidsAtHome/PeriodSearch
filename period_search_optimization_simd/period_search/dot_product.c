@@ -1,4 +1,4 @@
-/* dot product of two vectors 
+/* dot product of two vectors
    input: vectors a, b
    output: dot product a.b
 
@@ -15,4 +15,3 @@ double dot_product(double a[4], double b[4])
   return(c);
 
 }
-

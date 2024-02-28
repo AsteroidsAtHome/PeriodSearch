@@ -70,115 +70,164 @@
 // end of inner_calc_dsmu
 
 
+//double bright_fma(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 #if defined(__GNUC__)
 __attribute__((target("avx,fma")))
 #endif
+//double CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
 	int ncoef0, i, j, k,
 		incl_count = 0;
 
 	double cos_alpha, cl, cls, alpha, //br,
-		e[4], e0[4],
-		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-		de[4][4], de0[4][4], tmat[4][4],
-		dtm[4][4][4];
+		e[4]{}, e0[4]{},
+		php[N_PHOT_PAR + 1]{}, dphp[N_PHOT_PAR + 1]{},
+		de[4][4]{}, de0[4][4]{}, tmat[4][4]{},
+		dtm[4][4][4]{};
 
-	__m256d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
+	__m256d* Dg_row[MAX_N_FAC + 3]{}, dbr[MAX_N_FAC + 3]{};
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]); /* Lambert */
-	cls = cg[ncoef];       /* Lommel-Seeliger */
+	cl = exp(cg[ncoef - 1]);		/* Lambert */
+	cls = cg[ncoef];				/* Lommel-Seeliger */
 	cos_alpha = dot_product(ee, ee0);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php); /* computes also Scale */
+	phasec(dphp, alpha, php);		/* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
-	//   br = 0;
-	   /* Directions (and ders.) in the rotating system */
+	br = 0;
 
+	/* Directions (and ders.) in the rotating system */
 	for (i = 1; i <= 3; i++)
 	{
 		e[i] = 0;
 		e0[i] = 0;
 		for (j = 1; j <= 3; j++)
 		{
-			e[i] = e[i] + tmat[i][j] * ee[j];
-			e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			//e[i] = e[i] + tmat[i][j] * ee[j];
+			e[i] += tmat[i][j] * ee[j];
+			//e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			e0[i] += tmat[i][j] * ee0[j];
+
 			de[i][j] = 0;
 			de0[i][j] = 0;
 			for (k = 1; k <= 3; k++)
 			{
-				de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
-				de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				//de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
+				de[i][j] += dtm[j][i][k] * ee[k];
+				//de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				de0[i][j] += dtm[j][i][k] * ee0[k];
 			}
 		}
 	}
 
 	/*Integrated brightness (phase coeff. used later) */
-	__m256d avx_e1 = _mm256_broadcast_sd(&e[1]);
-	__m256d avx_e2 = _mm256_broadcast_sd(&e[2]);
-	__m256d avx_e3 = _mm256_broadcast_sd(&e[3]);
-	__m256d avx_e01 = _mm256_broadcast_sd(&e0[1]);
-	__m256d avx_e02 = _mm256_broadcast_sd(&e0[2]);
-	__m256d avx_e03 = _mm256_broadcast_sd(&e0[3]);
-	__m256d avx_de11 = _mm256_broadcast_sd(&de[1][1]);
-	__m256d avx_de12 = _mm256_broadcast_sd(&de[1][2]);
-	__m256d avx_de13 = _mm256_broadcast_sd(&de[1][3]);
-	__m256d avx_de21 = _mm256_broadcast_sd(&de[2][1]);
-	__m256d avx_de22 = _mm256_broadcast_sd(&de[2][2]);
-	__m256d avx_de23 = _mm256_broadcast_sd(&de[2][3]);
-	__m256d avx_de31 = _mm256_broadcast_sd(&de[3][1]);
-	__m256d avx_de32 = _mm256_broadcast_sd(&de[3][2]);
-	__m256d avx_de33 = _mm256_broadcast_sd(&de[3][3]);
-	__m256d avx_de011 = _mm256_broadcast_sd(&de0[1][1]);
-	__m256d avx_de012 = _mm256_broadcast_sd(&de0[1][2]);
-	__m256d avx_de013 = _mm256_broadcast_sd(&de0[1][3]);
-	__m256d avx_de021 = _mm256_broadcast_sd(&de0[2][1]);
-	__m256d avx_de022 = _mm256_broadcast_sd(&de0[2][2]);
-	__m256d avx_de023 = _mm256_broadcast_sd(&de0[2][3]);
-	__m256d avx_de031 = _mm256_broadcast_sd(&de0[3][1]);
-	__m256d avx_de032 = _mm256_broadcast_sd(&de0[3][2]);
-	__m256d avx_de033 = _mm256_broadcast_sd(&de0[3][3]);
+	//__m256d avx_e1 = _mm256_broadcast_sd(&e[1]);
+	//__m256d avx_e2 = _mm256_broadcast_sd(&e[2]);
+	//__m256d avx_e3 = _mm256_broadcast_sd(&e[3]);
+	//__m256d avx_e01 = _mm256_broadcast_sd(&e0[1]);
+	//__m256d avx_e02 = _mm256_broadcast_sd(&e0[2]);
+	//__m256d avx_e03 = _mm256_broadcast_sd(&e0[3]);
+	//__m256d avx_de11 = _mm256_broadcast_sd(&de[1][1]);
+	//__m256d avx_de12 = _mm256_broadcast_sd(&de[1][2]);
+	//__m256d avx_de13 = _mm256_broadcast_sd(&de[1][3]);
+	//__m256d avx_de21 = _mm256_broadcast_sd(&de[2][1]);
+	//__m256d avx_de22 = _mm256_broadcast_sd(&de[2][2]);
+	//__m256d avx_de23 = _mm256_broadcast_sd(&de[2][3]);
+	//__m256d avx_de31 = _mm256_broadcast_sd(&de[3][1]);
+	//__m256d avx_de32 = _mm256_broadcast_sd(&de[3][2]);
+	//__m256d avx_de33 = _mm256_broadcast_sd(&de[3][3]);
+	//__m256d avx_de011 = _mm256_broadcast_sd(&de0[1][1]);
+	//__m256d avx_de012 = _mm256_broadcast_sd(&de0[1][2]);
+	//__m256d avx_de013 = _mm256_broadcast_sd(&de0[1][3]);
+	//__m256d avx_de021 = _mm256_broadcast_sd(&de0[2][1]);
+	//__m256d avx_de022 = _mm256_broadcast_sd(&de0[2][2]);
+	//__m256d avx_de023 = _mm256_broadcast_sd(&de0[2][3]);
+	//__m256d avx_de031 = _mm256_broadcast_sd(&de0[3][1]);
+	//__m256d avx_de032 = _mm256_broadcast_sd(&de0[3][2]);
+	//__m256d avx_de033 = _mm256_broadcast_sd(&de0[3][3]);
 
-	__m256d avx_tiny = _mm256_set1_pd(TINY);
-	__m256d avx_cl = _mm256_set1_pd(cl), avx_cl1 = _mm256_set_pd(0, 0, 1, cl), avx_cls = _mm256_set1_pd(cls), avx_11 = _mm256_set1_pd(1.0);
-	__m256d avx_Scale = _mm256_broadcast_sd(&Scale);
-	__m256d res_br = _mm256_setzero_pd();
-	__m256d avx_dyda1 = _mm256_setzero_pd();
-	__m256d avx_dyda2 = _mm256_setzero_pd();
-	__m256d avx_dyda3 = _mm256_setzero_pd();
-	__m256d avx_d = _mm256_setzero_pd();
-	__m256d avx_d1 = _mm256_setzero_pd();
+	__m256d avx_e1 (_mm256_broadcast_sd(&e[1]));
+	__m256d avx_e2 (_mm256_broadcast_sd(&e[2]));
+	__m256d avx_e3 (_mm256_broadcast_sd(&e[3]));
+	__m256d avx_e01 (_mm256_broadcast_sd(&e0[1]));
+	__m256d avx_e02 (_mm256_broadcast_sd(&e0[2]));
+	__m256d avx_e03 (_mm256_broadcast_sd(&e0[3]));
+	__m256d avx_de11 (_mm256_broadcast_sd(&de[1][1]));
+	__m256d avx_de12 (_mm256_broadcast_sd(&de[1][2]));
+	__m256d avx_de13 (_mm256_broadcast_sd(&de[1][3]));
+	__m256d avx_de21 (_mm256_broadcast_sd(&de[2][1]));
+	__m256d avx_de22 (_mm256_broadcast_sd(&de[2][2]));
+	__m256d avx_de23 (_mm256_broadcast_sd(&de[2][3]));
+	__m256d avx_de31 (_mm256_broadcast_sd(&de[3][1]));
+	__m256d avx_de32 (_mm256_broadcast_sd(&de[3][2]));
+	__m256d avx_de33 (_mm256_broadcast_sd(&de[3][3]));
+	__m256d avx_de011 (_mm256_broadcast_sd(&de0[1][1]));
+	__m256d avx_de012 (_mm256_broadcast_sd(&de0[1][2]));
+	__m256d avx_de013 (_mm256_broadcast_sd(&de0[1][3]));
+	__m256d avx_de021 (_mm256_broadcast_sd(&de0[2][1]));
+	__m256d avx_de022 (_mm256_broadcast_sd(&de0[2][2]));
+	__m256d avx_de023 (_mm256_broadcast_sd(&de0[2][3]));
+	__m256d avx_de031 (_mm256_broadcast_sd(&de0[3][1]));
+	__m256d avx_de032 (_mm256_broadcast_sd(&de0[3][2]));
+	__m256d avx_de033 (_mm256_broadcast_sd(&de0[3][3]));
+
+	//__m256d avx_tiny = _mm256_set1_pd(TINY);
+	//__m256d avx_cl = _mm256_set1_pd(cl);
+	//__m256d avx_cl1 = _mm256_set_pd(0, 0, 1, cl);
+	//__m256d avx_cls = _mm256_set1_pd(cls);
+	//__m256d avx_11 = _mm256_set1_pd(1.0);
+
+	__m256d avx_tiny (_mm256_set1_pd(TINY));
+	__m256d avx_cl = (_mm256_set1_pd(cl));
+	__m256d avx_cl1 (_mm256_set_pd(0, 0, 1, cl));
+	__m256d avx_cls (_mm256_set1_pd(cls));
+	__m256d avx_11 (_mm256_set1_pd(1.0));
+
+	//__m256d avx_Scale = _mm256_broadcast_sd(&Scale);
+	//__m256d res_br = _mm256_setzero_pd();
+	//__m256d avx_dyda1 = _mm256_setzero_pd();
+	//__m256d avx_dyda2 = _mm256_setzero_pd();
+	//__m256d avx_dyda3 = _mm256_setzero_pd();
+	//__m256d avx_d = _mm256_setzero_pd();
+	//__m256d avx_d1 = _mm256_setzero_pd();
+
+	__m256d avx_Scale (_mm256_broadcast_sd(&Scale));
+	__m256d res_br (_mm256_setzero_pd());
+	__m256d avx_dyda1 (_mm256_setzero_pd());
+	__m256d avx_dyda2 (_mm256_setzero_pd());
+	__m256d avx_dyda3 (_mm256_setzero_pd());
+	__m256d avx_d (_mm256_setzero_pd());
+	__m256d avx_d1 (_mm256_setzero_pd());
+
 	double g[4];
 
 	for (i = 0; i < Numfac; i += 4)
 	{
-		__m256d avx_lmu, avx_lmu0, cmpe, cmpe0, cmp;
-		__m256d avx_Nor1 = _mm256_load_pd(&Nor[0][i]);
-		__m256d avx_Nor2 = _mm256_load_pd(&Nor[1][i]);
-		__m256d avx_Nor3 = _mm256_load_pd(&Nor[2][i]);
+		//__m256d avx_lmu, avx_lmu0, cmpe, cmpe0, cmp;
+		__m256d avx_Nor1(_mm256_load_pd(&Nor[0][i]));
+		__m256d avx_Nor2 (_mm256_load_pd(&Nor[1][i]));
+		__m256d avx_Nor3 (_mm256_load_pd(&Nor[2][i]));
 		__m256d avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr;
 		__m256d avx_Area;
 
-		avx_lmu = _mm256_mul_pd(avx_e1, avx_Nor1);
+		__m256d avx_lmu ( _mm256_mul_pd(avx_e1, avx_Nor1));
 		avx_lmu = _mm256_fmadd_pd(avx_e2, avx_Nor2, avx_lmu);
-		//avx_lmu = _mm256_add_pd(avx_lmu, _mm256_mul_pd(avx_e2, avx_Nor2));
 		avx_lmu = _mm256_fmadd_pd(avx_e3, avx_Nor3, avx_lmu);
-		//avx_lmu = _mm256_add_pd(avx_lmu, _mm256_mul_pd(avx_e3, avx_Nor3));
-		avx_lmu0 = _mm256_mul_pd(avx_e01, avx_Nor1);
-		avx_lmu0 = _mm256_fmadd_pd(avx_e02, avx_Nor2, avx_lmu0);
-		//avx_lmu0 = _mm256_add_pd(avx_lmu0, _mm256_mul_pd(avx_e02, avx_Nor2));
-		avx_lmu0 = _mm256_fmadd_pd(avx_e03, avx_Nor3, avx_lmu0);
-		//avx_lmu0 = _mm256_add_pd(avx_lmu0, _mm256_mul_pd(avx_e03, avx_Nor3));
 
-		cmpe = _mm256_cmp_pd(avx_lmu, avx_tiny, _CMP_GT_OS);
-		cmpe0 = _mm256_cmp_pd(avx_lmu0, avx_tiny, _CMP_GT_OS);
-		cmp = _mm256_and_pd(cmpe, cmpe0);
+		__m256d avx_lmu0 (_mm256_mul_pd(avx_e01, avx_Nor1));
+		avx_lmu0 = _mm256_fmadd_pd(avx_e02, avx_Nor2, avx_lmu0);
+		avx_lmu0 = _mm256_fmadd_pd(avx_e03, avx_Nor3, avx_lmu0);
+
+		__m256d cmpe (_mm256_cmp_pd(avx_lmu, avx_tiny, _CMP_GT_OS));
+		__m256d cmpe0 (_mm256_cmp_pd(avx_lmu0, avx_tiny, _CMP_GT_OS));
+		__m256d cmp (_mm256_and_pd(cmpe, cmpe0));
+
 		int icmp = _mm256_movemask_pd(cmp);
 
 		if (icmp)
@@ -189,7 +238,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 			avx_dsmu = _mm256_blendv_pd(_mm256_setzero_pd(), avx_dsmu, cmp);
 			avx_dsmu0 = _mm256_blendv_pd(_mm256_setzero_pd(), avx_dsmu0, cmp);
 			avx_lmu = _mm256_blendv_pd(_mm256_setzero_pd(), avx_lmu, cmp);
-			avx_lmu0 = _mm256_blendv_pd(avx_11, avx_lmu0, cmp); //abychom nedelili nulou
+			avx_lmu0 = _mm256_blendv_pd(avx_11, avx_lmu0, cmp); //abychom nedelili nulou | so as not to divide by zero
 
 			_mm256_store_pd(g, avx_pdbr);
 			if (icmp & 1)
@@ -226,7 +275,12 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 	br = g[0];
 
 	/* Derivatives of brightness w.r.t. g-coeffs */
-	int ncoef03 = ncoef0 - 3, dgi = 0, cyklus1 = (ncoef03 / 12) * 12;
+	//int ncoef03 = ncoef0 - 3;
+	int ncoef03(ncoef0 - 3);
+	//int dgi = 0;
+	int dgi(0);
+	//int cyklus1 = (ncoef03 / 12) * 12;
+	int cyklus1((ncoef03 / 12) * 12);
 
 	for (i = 0; i < cyklus1; i += 12) //3 * 4doubles
 	{
@@ -258,6 +312,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		tmp3 = _mm256_mul_pd(tmp3, avx_Scale);
 		_mm256_store_pd(&dyda[i + 8], tmp3);
 	}
+
 	for (; i < ncoef03; i += 4) //1 * 4doubles
 	{
 		__m256d tmp1 = _mm256_setzero_pd();
@@ -287,6 +342,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		tmp1 = _mm256_mul_pd(tmp1, avx_Scale);
 		_mm256_store_pd(&dyda[i], tmp1);
 	}
+
 	/* Ders. of brightness w.r.t. rotation parameters */
 	avx_dyda1 = _mm256_hadd_pd(avx_dyda1, avx_dyda2);
 	avx_dyda1 = _mm256_add_pd(avx_dyda1, _mm256_permute2f128_pd(avx_dyda1, avx_dyda1, 1));
@@ -299,6 +355,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 	avx_dyda3 = _mm256_mul_pd(avx_dyda3, avx_Scale);
 	_mm256_store_pd(g, avx_dyda3);
 	dyda[ncoef0 - 3 + 3 - 1] = g[0];
+
 	/* Ders. of br. w.r.t. cl, cls */
 	avx_d = _mm256_hadd_pd(avx_d, avx_d1);
 	__m256d avx_dperm = _mm256_permute2f128_pd(avx_d, avx_d, 1);
@@ -312,12 +369,15 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 
 	/* Ders. of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
+	{
 		dyda[ncoef0 + i - 1] = br * dphp[i];
+	}
+
 	/*     dyda[ncoef0+1-1] = br * dphp[1];
 		 dyda[ncoef0+2-1] = br * dphp[2];
 		 dyda[ncoef0+3-1] = br * dphp[3];*/
 
-		 /* Scaled brightness */
+	/* Scaled brightness */
 	br *= Scale;
 
 	/*printf("\ndyda[208]:\n");

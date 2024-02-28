@@ -36,9 +36,10 @@ constexpr auto MIN(T1 X, T2 Y) { return ((X) < (Y) ? (X) : (Y)); }
 #if defined(__GNUC__)
 __attribute__((target("avx,fma")))
 #endif
-double CalcStrategyFma::mrqcof(double **x1, double **x2, double x3[], double y[],
+
+void CalcStrategyFma::mrqcof(double **x1, double **x2, double x3[], double y[],
     double sig[], double a[], int ia[], int ma,
-    double **alpha, double beta[], int mfit, int lastone, int lastma)
+    double **alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
     int i, j, k, l, m, np, np1, np2, jp, ic;
 
@@ -60,6 +61,7 @@ double CalcStrategyFma::mrqcof(double **x1, double **x2, double x3[], double y[]
             alpha[j][k] = 0;
         beta[j] = 0;
     }
+
     trial_chisq = 0;
     np = 0;
     np1 = 0;
@@ -85,11 +87,12 @@ double CalcStrategyFma::mrqcof(double **x1, double **x2, double x3[], double y[]
             if (i < Lcurves)
 			{
                 //ymod = bright_fma(xx1, xx2, x3[np], a, dyda, ma);
-                ymod = CalcStrategyFma::bright(xx1, xx2, x3[np], a, dyda, ma);
+                //ymod = CalcStrategyFma::bright(xx1, xx2, x3[np], a, dyda, ma);
+                CalcStrategyFma::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
 			}
 			else
 			{    //ymod = conv_fma(jp, dyda, ma);
-				ymod = CalcStrategyFma::conv(jp, dyda, ma);
+				CalcStrategyFma::conv(jp, dyda, ma, ymod);
 			}
 
             ytemp[jp] = ymod;
@@ -310,6 +313,7 @@ double CalcStrategyFma::mrqcof(double **x1, double **x2, double x3[], double y[]
         for (k = 0; k <= j - 1; k++)
             alpha[k][j] = alpha[j][k];
 
-    return trial_chisq;
+    //return trial_chisq;
+	//mrq = trial_chisq;
 }
 

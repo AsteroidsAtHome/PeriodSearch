@@ -42,7 +42,7 @@ extern double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
 		ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
 		dave[MAX_N_PAR + 1 + 4],
 		dave2[MAX_N_PAR + 1 + 4],
-		coef, ave, trial_chisq, wght;
+		coef, ave, wght; //trial_chisq,
 
 	extern struct SIMDSupport
 	{

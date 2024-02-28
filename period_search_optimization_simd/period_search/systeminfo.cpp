@@ -146,7 +146,7 @@ void getSystemInfo()
     int64_t physical_memory;
     size_t length;
     length = sizeof(int64_t);
-	
+
 	cerr << "CPU: ";
 	if(sysctlbyname("machdep.cpu.brand_string", &cpuBrand[0], &len, 0, 0)==0)
 	{
@@ -168,13 +168,15 @@ void getSystemInfo()
 #endif
 
 #ifdef _WIN32
-float getTotalSystemMemory()
+double getTotalSystemMemory()
 {
-	MEMORYSTATUSEX status;
-	status.dwLength = sizeof(status);
+	MEMORYSTATUSEX status = { sizeof status };
+	//status.dwLength = sizeof(status);
 	GlobalMemoryStatusEx(&status);
-	float memory = (float)status.ullTotalPhys;
-	float memoryGb = memory / 1024 / 1024 / 1024;
+	//float memory = (float)status.ullTotalPhys;
+
+	//double memory = status.ullTotalPhys;
+	auto memoryGb = (unsigned long long)status.ullTotalPhys / (1024.0 * 1024.0 * 1024.0);
 
 	return memoryGb;
 }

@@ -1,3 +1,5 @@
+/* from Numerical Recipes */
+
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 
 #include <math.h>
@@ -9,15 +11,15 @@
 #include "CalcStrategyAvx.hpp"
 #include "CalcStrategyFma.hpp"
 
-int CalcStrategyFma::gauss_errc(double** a, int n, double b[])
+void CalcStrategyFma::gauss_errc(double** a, int n, double b[], int &error)
 {
-	return CalcStrategyAvx::gauss_errc(a, n, b);
+	CalcStrategyAvx::gauss_errc(a, n, b, error);
 }
 
 #if defined(__GNUC__)
 __attribute__((target("avx,fma")))
 #endif
-int CalcStrategyAvx::gauss_errc(double **a, int n, double b[])
+void CalcStrategyAvx::gauss_errc(double **a, int n, double b[], int &error)
 {
     int *indxc, *indxr, *ipiv;
     int i, icol = 0, irow = 0, j, k, l, ll;
@@ -45,7 +47,9 @@ int CalcStrategyAvx::gauss_errc(double **a, int n, double b[])
                         deallocate_vector((void *)ipiv);
                         deallocate_vector((void *)indxc);
                         deallocate_vector((void *)indxr);
-                        return(1);
+                        //return(1);
+						error = 1;
+						return;
                     }
                 }
             }
@@ -60,7 +64,9 @@ int CalcStrategyAvx::gauss_errc(double **a, int n, double b[])
             deallocate_vector((void *)ipiv);
             deallocate_vector((void *)indxc);
             deallocate_vector((void *)indxr);
-            return(2);
+            //return(2);
+			error = 2;
+			return;
         }
         pivinv = 1.0 / a[icol][icol];
         __m256d avx_pivinv = _mm256_set1_pd(pivinv);
@@ -108,7 +114,8 @@ int CalcStrategyAvx::gauss_errc(double **a, int n, double b[])
     deallocate_vector((void *)indxc);
     deallocate_vector((void *)indxr);
 
-    return(0);
+    //return(0);
+	error = 0;
+	return;
 }
 #undef SWAP
-/* from Numerical Recipes */

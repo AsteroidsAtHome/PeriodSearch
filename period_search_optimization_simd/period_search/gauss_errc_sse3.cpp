@@ -24,7 +24,7 @@ const  __m128i avx_ones = _mm_set_epi16(1, 1, 1, 1, 1, 1, 1, 1);
 #if defined(__GNUC__)
 __attribute__((target("sse3")))
 #endif
-int CalcStrategySse3::gauss_errc(double** a, int n, double b[])
+void CalcStrategySse3::gauss_errc(double** a, int n, double b[], int &error)
 {
 	int* indxc, * indxr;
 	short* ipiv;
@@ -68,7 +68,9 @@ int CalcStrategySse3::gauss_errc(double** a, int n, double b[])
 #endif
 						deallocate_vector((void*)indxc);
 						deallocate_vector((void*)indxr);
-						return(1);
+						//return(1);
+						error = 1;
+						return;
 					}
 					__m128i avx_iszero = _mm_cmpeq_epi16(avx_ipiv, avx_zeros);
 					ria = _mm_movemask_epi8(avx_iszero);
@@ -172,7 +174,9 @@ int CalcStrategySse3::gauss_errc(double** a, int n, double b[])
 #endif
 			deallocate_vector((void*)indxc);
 			deallocate_vector((void*)indxr);
-			return(2);
+			//return(2);
+			error = 2;
+			return;
 		}
 		pivinv = 1.0 / a[icol][icol];
 		__m128d avx_pivinv;
@@ -221,6 +225,8 @@ int CalcStrategySse3::gauss_errc(double** a, int n, double b[])
 	deallocate_vector((void*)indxc);
 	deallocate_vector((void*)indxr);
 
-	return(0);
+	//return(0);
+	error = 0;
+	return;
 }
 #undef SWAP

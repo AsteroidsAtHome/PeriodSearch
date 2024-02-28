@@ -12,7 +12,7 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-int CalcStrategySve::gauss_errc(double** a, int n, double b[])
+void CalcStrategySve::gauss_errc(double** a, int n, double b[], int &error)
 {
 	int *indxc, *indxr, *ipiv;
 	int i, icol = 0, irow = 0, j, k, l, ll, ipivsize;
@@ -48,7 +48,9 @@ int CalcStrategySve::gauss_errc(double** a, int n, double b[])
 						deallocate_vector((void*)ipiv);
 						deallocate_vector((void*)indxc);
 						deallocate_vector((void*)indxr);
-						return(1);
+						//return(1);
+						error = 1;
+						return;
 					}
 				}
 			}
@@ -68,7 +70,9 @@ int CalcStrategySve::gauss_errc(double** a, int n, double b[])
 			deallocate_vector((void*)ipiv);
 			deallocate_vector((void*)indxc);
 			deallocate_vector((void*)indxr);
-			return(2);
+			//return(2);
+			error = 2;
+			return;
 		}
 		pivinv = 1.0 / a[icol][icol];
 
@@ -119,6 +123,8 @@ int CalcStrategySve::gauss_errc(double** a, int n, double b[])
 	deallocate_vector((void*)indxc);
 	deallocate_vector((void*)indxr);
 
-	return(0);
+	//return(0);
+	error = 0;
+	return;
 }
 #undef SWAP
