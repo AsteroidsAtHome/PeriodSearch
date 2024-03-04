@@ -182,12 +182,12 @@ double getTotalSystemMemory()
 }
 
 #else
-float getTotalSystemMemory()
+double getTotalSystemMemory()
 {
 	long pages = sysconf(_SC_PHYS_PAGES);
 	long page_size = sysconf(_SC_PAGE_SIZE);
-	float memory = (float)(pages * page_size);
-	float memoryGb = memory / 1024 / 1024 / 1024;
+	double memory = (double)(pages * page_size);
+	double memoryGb = memory / 1024 / 1024 / 1024;
 
 	return memoryGb;
 }
