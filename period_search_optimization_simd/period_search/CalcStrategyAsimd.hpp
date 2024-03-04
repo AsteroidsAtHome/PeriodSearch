@@ -18,7 +18,7 @@ public:
 
 	virtual void bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br);
 
-	virtual void conv(int nc, double dres[], int ma, double &resul);
+	virtual void conv(int nc, double dres[], int ma, double &result);
 
 	virtual void curv(double cg[]);
 
