@@ -28,7 +28,7 @@ void GetSupportedSIMDs()
 	  uint64_t hwcap = getauxval(AT_HWCAP);
       CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
 	  CPUopt.hasSVE = hwcap & HWCAP_SVE;
-	#elif
+	#else
 	  CPUopt.hasASIMD = false;
 	  CPUopt.hasSVE = false;
 	#endif

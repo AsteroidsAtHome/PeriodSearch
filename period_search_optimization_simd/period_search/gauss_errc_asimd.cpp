@@ -12,7 +12,7 @@
 #if defined(__GNUC__)
 __attribute__((__target__("arch=armv8-a+simd")))
 #endif
-int CalcStrategyAsimd::gauss_errc(double** a, int n, double b[])
+void CalcStrategyAsimd::gauss_errc(double** a, int n, double b[], int &error)
 {
 	int *indxc, *indxr, *ipiv;
 	int i, icol = 0, irow = 0, j, k, l, ll, ipivsize;
@@ -46,7 +46,8 @@ int CalcStrategyAsimd::gauss_errc(double** a, int n, double b[])
 						deallocate_vector((void*)ipiv);
 						deallocate_vector((void*)indxc);
 						deallocate_vector((void*)indxr);
-						return(1);
+						error = 1;
+						return;
 					}
 				}
 			}
@@ -66,7 +67,8 @@ int CalcStrategyAsimd::gauss_errc(double** a, int n, double b[])
 			deallocate_vector((void*)ipiv);
 			deallocate_vector((void*)indxc);
 			deallocate_vector((void*)indxr);
-			return(2);
+			error = 2;
+			return;
 		}
 		pivinv = 1.0 / a[icol][icol];
 
@@ -119,6 +121,7 @@ int CalcStrategyAsimd::gauss_errc(double** a, int n, double b[])
 	deallocate_vector((void*)indxc);
 	deallocate_vector((void*)indxr);
 
-	return(0);
+    error = 0;
+	return;
 }
 #undef SWAP

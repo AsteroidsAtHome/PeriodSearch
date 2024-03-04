@@ -23,9 +23,9 @@
 #if defined(__GNUC__)
 __attribute__((__target__("arch=armv8-a+simd")))
 #endif
-double CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[],
+void CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
-	double** alpha, double beta[], int mfit, int lastone, int lastma)
+	double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
@@ -73,9 +73,9 @@ double CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y
 			}
 
 			if (i < Lcurves)
-				ymod = CalcStrategyAsimd::bright(xx1, xx2, x3[np], a, dyda, ma);
+				CalcStrategyAsimd::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
 			else
-				ymod = CalcStrategyAsimd::conv(jp, dyda, ma);
+				CalcStrategyAsimd::conv(jp, dyda, ma, ymod);
 
 			//printf("[%3d][%3d] % 0.6f\n", i, jp, ymod);
 			/*if(jp == 1)
@@ -306,6 +306,6 @@ double CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
 
-	return trial_chisq;
+	//return trial_chisq;
 }
 

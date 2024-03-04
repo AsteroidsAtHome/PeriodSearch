@@ -13,16 +13,17 @@
 #if defined(__GNUC__)
 __attribute__((__target__("arch=armv8-a+simd")))
 #endif
-double CalcStrategyAsimd::conv(int nc, double dres[], int ma)
+void CalcStrategyAsimd::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    double res = 0;
+    //double res = 0;
+    result = 0;
 
     for (j = 1; j <= ma; j++)
         dres[j] = 0;
 
     for (i = 0; i < Numfac; i++) {
-        res += Area[i] * Nor[nc - 1][i];
+        result += Area[i] * Nor[nc - 1][i];
         double *Dg_row = Dg[i];
         float64x2_t avx_Darea = vdupq_n_f64(Darea[i]);
         float64x2_t avx_Nor = vdupq_n_f64(Nor[nc - 1][i]);
@@ -35,5 +36,5 @@ double CalcStrategyAsimd::conv(int nc, double dres[], int ma)
             vst1q_f64(&dres[j], avx_dres);
         }
     }
-    return res;
+    //return res;
 }

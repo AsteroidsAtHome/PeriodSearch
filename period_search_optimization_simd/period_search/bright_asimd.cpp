@@ -73,11 +73,11 @@
 #if defined(__GNUC__)
 __attribute__((__target__("arch=armv8-a+simd")))
 #endif
-double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+void CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
    int ncoef0, i, j, k, incl_count=0;
 
-   double cos_alpha, br, cl, cls, alpha,
+   double cos_alpha, cl, cls, alpha, // br
           e[4], e0[4],
           php[N_PHOT_PAR+1], dphp[N_PHOT_PAR+1],
 	  	  de[4][4], de0[4][4], tmat[4][4],
@@ -356,5 +356,5 @@ double CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[
    /* Scaled brightness */
    br *= Scale;
 
-   return(br);
+   //return(br);
 }
