@@ -75,24 +75,24 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
+void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int ncoef0, i, j, k,
-		incl_count = 0;
+	int i, j, k; //ncoef0,
+	incl_count = 0;
 
-	double cos_alpha, br, cl, cls, alpha,
-		e[4], e0[4],
-		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-		de[4][4], de0[4][4], tmat[4][4],
-		dtm[4][4][4];
+	//double cos_alpha, cl, cls, alpha, //br
+	//	e[4], e0[4],
+	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
+	//	de[4][4], de0[4][4], tmat[4][4],
+	//	dtm[4][4][4];
 
-	svfloat64_t *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
+	//svfloat64_t *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]); /* Lambert */
-	cls = cg[ncoef];       /* Lommel-Seeliger */
-	cos_alpha = dot_product(ee, ee0);
-	alpha = acos(cos_alpha);
+	cl = exp(cg[ncoef - 1]);			/* Lambert */
+    cls = cg[ncoef];					/* Lommel-Seeliger */
+    //cos_alpha = dot_product(ee, ee0);
+    dot_product_new(ee, ee0, cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
@@ -109,14 +109,14 @@ double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[],
 		e0[i] = 0;
 		for (j = 1; j <= 3; j++)
 		{
-			e[i] = e[i] + tmat[i][j] * ee[j];
-			e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			e[i] += tmat[i][j] * ee[j];
+			e0[i] += tmat[i][j] * ee0[j];
 			de[i][j] = 0;
 			de0[i][j] = 0;
 			for (k = 1; k <= 3; k++)
 			{
-				de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
-				de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				de[i][j] += dtm[j][i][k] * ee[k];
+				de0[i][j] += dtm[j][i][k] * ee0[k];
 			}
 		}
 	}
@@ -327,5 +327,5 @@ double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[],
 	}
 	printf("};\n"); */
 
-	return(br);
+	//return(br);
 }

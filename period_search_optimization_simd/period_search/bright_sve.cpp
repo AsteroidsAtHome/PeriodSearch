@@ -15,32 +15,31 @@
 #if defined(__GNUC__) && !(defined __x86_64__ || defined(__i386__) || defined(_WIN32))
 __attribute__((__target__("+sve")))
 #endif
-//double CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int ncoef0, i, j, k,
-		incl[MAX_N_FAC], //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
-		incl_count = 0;
+	int i, j, k;
+	incl_count = 0;
 
-	double cos_alpha, cl, cls, alpha, dnom, tmpdyda, // br,
-		e[4], e0[4],
-		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1], s,
-		dbr[MAX_N_FAC], //IS ZERO INDEXED
-		de[4][4], de0[4][4], tmat[4][4],
-		dtm[4][4][4];
+	//double cos_alpha, cl, cls, alpha, dnom, tmpdyda, //br,
+	//	e[4]{}, e0[4]{},
+	//	php[N_PHOT_PAR + 1]{}, dphp[N_PHOT_PAR + 1]{}, s,
+	//	dbr[MAX_N_FAC]{}, //IS ZERO INDEXED
+	//	de[4][4]{}, de0[4][4]{}, tmat[4][4]{},
+	//	dtm[4][4][4]{};
 
 	double tmpdyda1 = 0, tmpdyda2 = 0, tmpdyda3 = 0;
 	double tmpdyda4 = 0, tmpdyda5 = 0;
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]); /* Lambert */
-	cls = cg[ncoef];       /* Lommel-Seeliger */
-	cos_alpha = dot_product(ee, ee0);
+	cl = exp(cg[ncoef - 1]);			/* Lambert */
+	cls = cg[ncoef];					/* Lommel-Seeliger */
+	//cos_alpha = dot_product(ee, ee0);
+	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php); /* computes also Scale */
+	phasec(dphp, alpha, php);			/* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
@@ -52,14 +51,14 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 		e0[i] = 0;
 		for (j = 1; j <= 3; j++)
 		{
-			e[i] = e[i] + tmat[i][j] * ee[j];
-			e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			e[i] += tmat[i][j] * ee[j];
+			e0[i] += tmat[i][j] * ee0[j];
 			de[i][j] = 0;
 			de0[i][j] = 0;
 			for (k = 1; k <= 3; k++)
 			{
-				de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
-				de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				de[i][j] += dtm[j][i][k] * ee[k];
+				de0[i][j] += dtm[j][i][k] * ee0[k];
 			}
 		}
 	}
@@ -78,7 +77,7 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 		{
 			dnom = lmu + lmu0;
 			s = lmu * lmu0 * (cl + cls / dnom);
-			br = br + Area[i] * s;
+			br += Area[i] * s;
 			//
 			incl[incl_count] = i;
 			dbr[incl_count++] = Darea[i] * s;
@@ -98,19 +97,19 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 				//sum3 = sum3 + Nor[i][j] * de[j][3];
 				//sum30 = sum30 + Nor[i][j] * de0[j][3];
 
-				sum1  = sum1 +  Nor[j-1][i] * de[j][1];
-				sum10 = sum10 + Nor[j-1][i] * de0[j][1];
-				sum2  = sum2 +  Nor[j-1][i] * de[j][2];
-				sum20 = sum20 + Nor[j-1][i] * de0[j][2];
-				sum3  = sum3 +  Nor[j-1][i] * de[j][3];
-				sum30 = sum30 + Nor[j-1][i] * de0[j][3];
+				sum1  +=  Nor[j-1][i] * de[j][1];
+				sum10 +=  Nor[j-1][i] * de0[j][1];
+				sum2  +=  Nor[j-1][i] * de[j][2];
+				sum20 +=  Nor[j-1][i] * de0[j][2];
+				sum3  +=  Nor[j-1][i] * de[j][3];
+				sum30 +=  Nor[j-1][i] * de0[j][3];
 			}
 
-			tmpdyda1 = tmpdyda1 + Area[i] * (dsmu * sum1 + dsmu0 * sum10);
-			tmpdyda2 = tmpdyda2 + Area[i] * (dsmu * sum2 + dsmu0 * sum20);
-			tmpdyda3 = tmpdyda3 + Area[i] * (dsmu * sum3 + dsmu0 * sum30);
-			tmpdyda4 = tmpdyda4 + lmu * lmu0 * Area[i];
-			tmpdyda5 = tmpdyda5 + Area[i] * lmu * lmu0 / (lmu + lmu0);
+			tmpdyda1 += Area[i] * (dsmu * sum1 + dsmu0 * sum10);
+			tmpdyda2 += Area[i] * (dsmu * sum2 + dsmu0 * sum20);
+			tmpdyda3 += Area[i] * (dsmu * sum3 + dsmu0 * sum30);
+			tmpdyda4 += lmu * lmu0 * Area[i];
+			tmpdyda5 += Area[i] * lmu * lmu0 / (lmu + lmu0);
 		}
 	}
 
@@ -121,7 +120,7 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 		tmpdyda = 0;
 		for (j = 0; j < incl_count; j++)
 		{
-			tmpdyda = tmpdyda + dbr[j] * Dg[incl[j]][i - 1];
+			tmpdyda += dbr[j] * Dg[incl[j]][i - 1];
 		}
 		dyda[i - 1] = Scale * tmpdyda;
 	}
