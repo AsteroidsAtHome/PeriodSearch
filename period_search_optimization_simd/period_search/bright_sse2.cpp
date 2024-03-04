@@ -10,11 +10,7 @@
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
-//#ifdef NO_SSE3
 #include <emmintrin.h>
-//#else
-//#include <pmmintrin.h>
-//#endif
 #include "CalcStrategySse2.hpp"
 
 #define INNER_CALC \
@@ -126,7 +122,6 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 
 	/*Integrated brightness (phase coeff. used later) */
 
-//#ifdef NO_SSE3 // SSE2
 	__m128d avx_e1 = _mm_load1_pd(&e[1]);
 	__m128d avx_e2 = _mm_load1_pd(&e[2]);
 	__m128d avx_e3 = _mm_load1_pd(&e[3]);
@@ -190,18 +185,10 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 				{
 					//0
 					Dg_row[incl_count] = (__m128d*) & Dg[i];
-//#ifdef NO_SSE3
 					dbr[incl_count++] = _mm_set1_pd(_mm_cvtsd_f64(avx_pdbr));
-//#else
-//					dbr[incl_count++] = _mm_movedup_pd(avx_pdbr);
-//#endif
 					//1
 					Dg_row[incl_count] = (__m128d*) & Dg[i + 1];
-//#ifdef NO_SSE3
 					dbr[incl_count++] = _mm_set1_pd(_mm_cvtsd_f64(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1)));
-//#else
-//					dbr[incl_count++] = _mm_movedup_pd(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1));
-//#endif
 				}
 				else
 				{
@@ -212,11 +199,7 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 					avx_lmu0 = _mm_shuffle_pd(avx_lmu0, avx_11, 0); //abychom nedelili nulou
 					//0
 					Dg_row[incl_count] = (__m128d*) & Dg[i];
-//#ifdef NO_SSE3
 					dbr[incl_count++] = _mm_set1_pd(_mm_cvtsd_f64(avx_pdbr));
-//#else
-//					dbr[incl_count++] = _mm_movedup_pd(avx_pdbr);
-//#endif
 				}
 			INNER_CALC
 		}
@@ -230,11 +213,7 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 			avx_lmu0 = _mm_shuffle_pd(avx_11, avx_lmu0, _MM_SHUFFLE2(1, 0));
 			//1
 			Dg_row[incl_count] = (__m128d*) & Dg[i + 1];
-//#ifdef NO_SSE3
 			dbr[incl_count++] = _mm_set1_pd(_mm_cvtsd_f64(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1)));
-//#else
-//			dbr[incl_count++] = _mm_movedup_pd(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1));
-//#endif
 			INNER_CALC
 		}
 	}
@@ -248,11 +227,7 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 	Dg_row[incl_count + 2] = Dg_row[0];
 	Dg_row[incl_count + 3] = Dg_row[0];
 
-//#ifdef NO_SSE3
 	res_br = _mm_add_pd(res_br, _mm_shuffle_pd(res_br, _mm_setzero_pd(), 1));
-//#else
-//	res_br = _mm_hadd_pd(res_br, res_br);
-//#endif
 
 	br = _mm_cvtsd_f64(res_br);
 
@@ -352,36 +327,24 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 		_mm_store_pd(&dyda[i + 2], tmp2);
 	}
 	/* Ders. of brightness w.r.t. rotation parameters */
-//#ifdef NO_SSE3
 	avx_dyda1 = _mm_shuffle_pd(
 		  _mm_add_pd(avx_dyda1, _mm_shuffle_pd(avx_dyda1, _mm_setzero_pd(), 1)),
 		  _mm_add_pd(avx_dyda2, _mm_shuffle_pd(avx_dyda2, _mm_setzero_pd(), 1)),
 		  0);
-//#else
-//	avx_dyda1 = _mm_hadd_pd(avx_dyda1, avx_dyda2);
-//#endif
 
 	avx_dyda1 = _mm_mul_pd(avx_dyda1, avx_Scale);
 	_mm_storeu_pd(&dyda[ncoef0 - 3 + 1 - 1], avx_dyda1); //unaligned memory because of odd index
 
-//#ifdef NO_SSE3
 	avx_dyda3 = _mm_add_pd(avx_dyda3, _mm_shuffle_pd(avx_dyda3, _mm_setzero_pd(), 1));
-//#else
-//	avx_dyda3 = _mm_hadd_pd(avx_dyda3, avx_dyda3);
-//#endif
 
 	avx_dyda3 = _mm_mul_pd(avx_dyda3, avx_Scale);
 	dyda[ncoef0 - 3 + 3 - 1] = _mm_cvtsd_f64(avx_dyda3);
 	/* Ders. of br. w.r.t. cl, cls */
 
-//#ifdef NO_SSE3
 	avx_d = _mm_shuffle_pd(
 		  _mm_add_pd(avx_d, _mm_shuffle_pd(avx_d, _mm_setzero_pd(), 1)),
 		  _mm_add_pd(avx_d1, _mm_shuffle_pd(avx_d1, _mm_setzero_pd(), 1)),
 		  0);
-//#else
-//	avx_d = _mm_hadd_pd(avx_d, avx_d1);
-//#endif
 
 	avx_d = _mm_mul_pd(avx_d, avx_Scale);
 	avx_d = _mm_mul_pd(avx_d, avx_cl1);

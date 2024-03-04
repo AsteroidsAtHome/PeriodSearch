@@ -6,11 +6,7 @@
 #include <cmath>
 #include "globals.h"
 #include "constants.h"
-//#ifdef NO_SSE3
-//#include <emmintrin.h>
-//#else
 #include <pmmintrin.h>
-//#endif
 #include "CalcStrategySse3.hpp"
 
 #if defined(__GNUC__)

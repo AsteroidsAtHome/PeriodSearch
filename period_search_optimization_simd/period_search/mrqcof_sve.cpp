@@ -140,8 +140,8 @@ void CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[],
 				{
 					coef = sig[np1] * Lpoints[i] / ave;
 
-					svfloat64_t avx_coef = svdup_n_f64(coef);
-                    svfloat64_t avx_ytemp = svdup_f64(ytemp[jp]);
+					avx_coef = svdup_n_f64(coef);
+                    avx_ytemp = svdup_f64(ytemp[jp]);
 
                     for (l = 1; l <= ma; l += cnt) {
 						svbool_t pg = svwhilelt_b64(l, ma + 1);
