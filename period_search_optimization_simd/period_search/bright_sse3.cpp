@@ -80,26 +80,27 @@ __attribute__((target("sse3")))
 //double CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int ncoef0, i, j, k,
-		incl_count = 0;
+	int i, j, k;  //ncoef0,
+	incl_count = 0;
 
-	double cos_alpha, cl, cls, alpha, //br,
-		e[4], e0[4],
-		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-		de[4][4], de0[4][4], tmat[4][4],
-		dtm[4][4][4];
+	//double cos_alpha, cl, cls, alpha, //br,
+	//	e[4], e0[4],
+	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
+	//	de[4][4], de0[4][4], tmat[4][4],
+	//	dtm[4][4][4];
 
-	__m128d* Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
+	//__m128d* Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]); /* Lambert */
-	cls = cg[ncoef];       /* Lommel-Seeliger */
-	cos_alpha = dot_product(ee, ee0);
+	cl = exp(cg[ncoef - 1]);			/* Lambert */
+	cls = cg[ncoef];					/* Lommel-Seeliger */
+	//cos_alpha = dot_product(ee, ee0);
+	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php); /* computes also Scale */
+	phasec(dphp, alpha, php);			/* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
@@ -112,47 +113,20 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 		e0[i] = 0;
 		for (j = 1; j <= 3; j++)
 		{
-			e[i] = e[i] + tmat[i][j] * ee[j];
-			e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			e[i] += tmat[i][j] * ee[j];
+			e0[i] += tmat[i][j] * ee0[j];
 			de[i][j] = 0;
 			de0[i][j] = 0;
 			for (k = 1; k <= 3; k++)
 			{
-				de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
-				de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				de[i][j] += dtm[j][i][k] * ee[k];
+				de0[i][j] += dtm[j][i][k] * ee0[k];
 			}
 		}
 	}
 
 	/*Integrated brightness (phase coeff. used later) */
 
-//#ifdef NO_SSE3 // SSE2
-//	__m128d avx_e1 = _mm_load1_pd(&e[1]);
-//	__m128d avx_e2 = _mm_load1_pd(&e[2]);
-//	__m128d avx_e3 = _mm_load1_pd(&e[3]);
-//	__m128d avx_e01 = _mm_load1_pd(&e0[1]);
-//	__m128d avx_e02 = _mm_load1_pd(&e0[2]);
-//	__m128d avx_e03 = _mm_load1_pd(&e0[3]);
-//	__m128d avx_de11 = _mm_load1_pd(&de[1][1]);
-//	__m128d avx_de12 = _mm_load1_pd(&de[1][2]);
-//	__m128d avx_de13 = _mm_load1_pd(&de[1][3]);
-//	__m128d avx_de21 = _mm_load1_pd(&de[2][1]);
-//	__m128d avx_de22 = _mm_load1_pd(&de[2][2]);
-//	__m128d avx_de23 = _mm_load1_pd(&de[2][3]);
-//	__m128d avx_de31 = _mm_load1_pd(&de[3][1]);
-//	__m128d avx_de32 = _mm_load1_pd(&de[3][2]);
-//	__m128d avx_de33 = _mm_load1_pd(&de[3][3]);
-//	__m128d avx_de011 = _mm_load1_pd(&de0[1][1]);
-//	__m128d avx_de012 = _mm_load1_pd(&de0[1][2]);
-//	__m128d avx_de013 = _mm_load1_pd(&de0[1][3]);
-//	__m128d avx_de021 = _mm_load1_pd(&de0[2][1]);
-//	__m128d avx_de022 = _mm_load1_pd(&de0[2][2]);
-//	__m128d avx_de023 = _mm_load1_pd(&de0[2][3]);
-//	__m128d avx_de031 = _mm_load1_pd(&de0[3][1]);
-//	__m128d avx_de032 = _mm_load1_pd(&de0[3][2]);
-//	__m128d avx_de033 = _mm_load1_pd(&de0[3][3]);
-//	__m128d avx_Scale = _mm_load1_pd(&Scale);
-//#else	//SSE3
 	__m128d avx_e1 = _mm_loaddup_pd(&e[1]);
 	__m128d avx_e2 = _mm_loaddup_pd(&e[2]);
 	__m128d avx_e3 = _mm_loaddup_pd(&e[3]);

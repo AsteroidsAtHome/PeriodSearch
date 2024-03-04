@@ -107,13 +107,13 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 			//	}
 			//}
 			if (Inrel[i] == 1)
-				ave = ave + ymod;
+				ave += ymod;
 
 			for (l = 1; l <= ma; l++)
 			{
 				dytemp[jp][l] = dyda[l - 1];
 				//if (Inrel[i] == 1)
-				dave[l] = dave[l] + dyda[l - 1];
+				dave[l] += dyda[l - 1];
 			}
 			/* save lightcurves */
 
@@ -136,7 +136,7 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 						dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave);
 					}
 
-					ytemp[jp] = coef * ytemp[jp];
+					ytemp[jp] *= coef;
 					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
 					dytemp[jp][1] = 0;
 				}

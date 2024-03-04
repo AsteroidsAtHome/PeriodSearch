@@ -16,7 +16,7 @@
     <ClCompile Include="period_search\CpuInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\dot_product.c">
+    <ClCompile Include="period_search\dot_product.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\ellfit.c">
@@ -210,6 +210,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\Makefile" />
+    <None Include="period_search\cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

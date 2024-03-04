@@ -577,7 +577,7 @@
     <ClCompile Include="period_search\curv_avx_fma.cpp" />
     <ClCompile Include="period_search\curv_avx512.cpp" />
     <ClCompile Include="period_search\curv_sse2.cpp" />
-    <ClCompile Include="period_search\dot_product.c" />
+    <ClCompile Include="period_search\dot_product.cpp" />
     <ClCompile Include="period_search\ellfit.c" />
     <ClCompile Include="period_search\EnumHelpers.cpp" />
     <ClCompile Include="period_search\gauss_errc.cpp" />
@@ -627,6 +627,7 @@
     <Image Include="period_search\logo_Nta_icon.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="period_search\cpp.hint" />
     <None Include="period_search\Makefile" />
   </ItemGroup>
   <ItemGroup>

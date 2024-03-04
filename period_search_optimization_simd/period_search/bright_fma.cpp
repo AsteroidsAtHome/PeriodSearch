@@ -75,21 +75,24 @@ __attribute__((target("avx,fma")))
 #endif
 void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int ncoef0, i, j, k,
-		incl_count = 0;
+	int  i, j, k; // ncoef0,
+	incl_count = 0;
 
-	double cos_alpha, cl, cls, alpha, //br,
-		e[4], e0[4],
-		php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-		de[4][4], de0[4][4], tmat[4][4],
-		dtm[4][4][4];
+	//double cos_alpha, cl, cls, alpha, //br,
+	//	e[4], e0[4],
+	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
+	//	de[4][4], de0[4][4], tmat[4][4],
+	//	dtm[4][4][4];
 
-	__m256d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
+	//__m256d* Dg_row[MAX_N_FAC + 3]{};
+	//__m256d dbr[MAX_N_FAC + 3]{};
 
 	ncoef0 = ncoef - 2 - Nphpar;
 	cl = exp(cg[ncoef - 1]); /* Lambert */
 	cls = cg[ncoef];       /* Lommel-Seeliger */
-	cos_alpha = dot_product(ee, ee0);
+
+	//cos_alpha = dot_product(ee, ee0);
+	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
@@ -107,14 +110,14 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		e0[i] = 0;
 		for (j = 1; j <= 3; j++)
 		{
-			e[i] = e[i] + tmat[i][j] * ee[j];
-			e0[i] = e0[i] + tmat[i][j] * ee0[j];
+			e[i] += tmat[i][j] * ee[j];
+			e0[i] += tmat[i][j] * ee0[j];
 			de[i][j] = 0;
 			de0[i][j] = 0;
 			for (k = 1; k <= 3; k++)
 			{
-				de[i][j] = de[i][j] + dtm[j][i][k] * ee[k];
-				de0[i][j] = de0[i][j] + dtm[j][i][k] * ee0[k];
+				de[i][j] += dtm[j][i][k] * ee[k];
+				de0[i][j] += dtm[j][i][k] * ee0[k];
 			}
 		}
 	}
@@ -237,7 +240,6 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		for (j = 0; j < incl_count; j += 2)
 		{
 			__m256d *Dgrow, *Dgrow1, pdbr, pdbr1;
-
 			Dgrow = &Dg_row[j][dgi];
 			pdbr = dbr[j];
 			Dgrow1 = &Dg_row[j + 1][dgi];
@@ -250,6 +252,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 			tmp3 = _mm256_fmadd_pd(pdbr1, Dgrow1[2], _mm256_fmadd_pd(pdbr, Dgrow[2], tmp3));
 			//tmp3 = _mm256_add_pd(_mm256_add_pd(tmp3, _mm256_mul_pd(pdbr, Dgrow[2])), _mm256_mul_pd(pdbr1, Dgrow1[2]));
 		}
+
 		dgi += 3;
 		tmp1 = _mm256_mul_pd(tmp1, avx_Scale);
 		_mm256_store_pd(&dyda[i], tmp1);
@@ -258,6 +261,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		tmp3 = _mm256_mul_pd(tmp3, avx_Scale);
 		_mm256_store_pd(&dyda[i + 8], tmp3);
 	}
+
 	for (; i < ncoef03; i += 4) //1 * 4doubles
 	{
 		__m256d tmp1 = _mm256_setzero_pd();
@@ -265,28 +269,19 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		for (j = 0; j < incl_count; j += 2)
 		{
 			__m256d *Dgrow, *Dgrow1, pdbr, pdbr1;
-
 			Dgrow = &Dg_row[j][dgi];
 			pdbr = dbr[j];
 			Dgrow1 = &Dg_row[j + 1][dgi];
 			pdbr1 = dbr[j + 1];
 
-			//tmp1 = _mm256_add_pd(_mm256_add_pd(tmp1, _mm256_mul_pd(pdbr, Dgrow[0])), _mm256_mul_pd(pdbr1, Dgrow1[0]));
-			//auto a1 = _mm256_mul_pd(pdbr, Dgrow[0]);
-			//auto c1 = _mm256_add_pd(tmp1, a1);
-			//
-			//auto b1 = _mm256_mul_pd(pdbr1, Dgrow1[0]);
-			//tmp1 = _mm256_add_pd(c1, b1);
-
-			//auto c = _mm256_fmadd_pd(pdbr, Dgrow[0], tmp1);
-			//tmp1 = _mm256_fmadd_pd(pdbr1, Dgrow1[0], c);
-
 			tmp1 = _mm256_fmadd_pd(pdbr1, Dgrow1[0], _mm256_fmadd_pd(pdbr, Dgrow[0], tmp1));
 		}
+
 		dgi++;
 		tmp1 = _mm256_mul_pd(tmp1, avx_Scale);
 		_mm256_store_pd(&dyda[i], tmp1);
 	}
+
 	/* Ders. of brightness w.r.t. rotation parameters */
 	avx_dyda1 = _mm256_hadd_pd(avx_dyda1, avx_dyda2);
 	avx_dyda1 = _mm256_add_pd(avx_dyda1, _mm256_permute2f128_pd(avx_dyda1, avx_dyda1, 1));
@@ -312,21 +307,12 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 
 	/* Ders. of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
+	{
 		dyda[ncoef0 + i - 1] = br * dphp[i];
-	/*     dyda[ncoef0+1-1] = br * dphp[1];
-		 dyda[ncoef0+2-1] = br * dphp[2];
-		 dyda[ncoef0+3-1] = br * dphp[3];*/
+	}
 
 		 /* Scaled brightness */
 	br *= Scale;
-
-	/*printf("\ndyda[208]:\n");
-	printf("_dyda[] ={");
-	for(int q = 0; q <=207; q++)
-	{
-		printf("%.30f, ", dyda[q]);
-	}
-	printf("};\n"); */
 
 	//return(br);
 }

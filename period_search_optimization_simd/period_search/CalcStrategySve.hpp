@@ -10,7 +10,7 @@
 #ifndef CSSVE
 #define CSSVE
 
-class CalcStrategySve : public CalcStrategy
+class alignas(64) CalcStrategySve : public CalcStrategy
 {
 public:
 
