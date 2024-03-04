@@ -2,7 +2,9 @@
 #include <memory>
 #include <iostream>
 #include "Enums.h"
-#include <immintrin.h>
+#if defined __x86_64__ || defined(__i386__) || defined(_WIN32)
+  #include <immintrin.h>
+#endif
 #include "constants.h"
 
 /**
