@@ -91,7 +91,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 
 			if (Inrel[i]/* == 1*/)
 			{
-				ave = ave + ymod;
+				ave += ymod;
 				for (l = 1; l <= ma; l += 2) //last odd value is not problem
 				{
 					__m128d avx_dyda = _mm_load_pd(&dyda[l - 1]), avx_dave = _mm_loadu_pd(&dave[l]);
@@ -134,7 +134,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 					}
 					//			if (l==ma) dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave); //last odd value is not problem
 
-					ytemp[jp] = coef * ytemp[jp];
+					ytemp[jp] *= coef;
 					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
 					dytemp[jp][1] = 0;
 				}
@@ -155,8 +155,8 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 					double sig2iwght = sig2i * wght;
 					//l=0
 					wt = dyda[0] * sig2iwght;
-					alpha[j][0] = alpha[j][0] + wt * dyda[0];
-					beta[j] = beta[j] + dy * wt;
+					alpha[j][0] += wt * dyda[0];
+					beta[j] += dy * wt;
 					j++;
 					//
 					for (l = 1; l <= lastone; l++)  //line of ones
@@ -165,7 +165,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 						__m128d avx_wt = _mm_set1_pd(wt);
 						k = 0;
 						//m=0
-						alpha[j][k] = alpha[j][k] + wt * dyda[0];
+						alpha[j][k] += wt * dyda[0];
 						k++;
 						for (m = 1; m <= l; m += 2)
 						{
@@ -174,7 +174,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 							_mm_storeu_pd(&alpha[j][k], avx_alpha);
 							k += 2;
 						} /* m */
-						beta[j] = beta[j] + dy * wt;
+						beta[j] += dy * wt;
 						j++;
 					} /* l */
 					for (; l <= lastma; l++)  //rest parameters
@@ -185,7 +185,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 							__m128d avx_wt = _mm_set1_pd(wt);
 							k = 0;
 							//m=0
-							alpha[j][k] = alpha[j][k] + wt * dyda[0];
+							alpha[j][k] += wt * dyda[0];
 							k++;
 							int kk = k;
 							for (m = 1; m <= lastone; m += 2)
@@ -199,14 +199,15 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 							for (m = lastone + 1; m <= l; m++)
 								if (ia[m])
 								{
-									alpha[j][k] = alpha[j][k] + wt * dyda[m];
+									alpha[j][k] += wt * dyda[m];
 									k++;
 								}
-							beta[j] = beta[j] + dy * wt;
+							beta[j] += dy * wt;
 							j++;
 						}
 					} /* l */
-					trial_chisq = trial_chisq + dy * dy * sig2iwght;
+
+					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}
 			else //relative ia[0]==0
@@ -239,7 +240,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 							_mm_store_pd(&alpha[j][k], avx_alpha);
 							k += 2;
 						} /* m */
-						beta[j] = beta[j] + dy * wt;
+						beta[j] += dy * wt;
 						j++;
 					} /* l */
 					for (; l <= lastma; l++)  //rest parameters
@@ -262,14 +263,15 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 							for (m = lastone + 1; m <= l; m++)
 								if (ia[m])
 								{
-									alpha[j][k] = alpha[j][k] + wt * dyda[m];
+									alpha[j][k] += wt * dyda[m];
 									k++;
 								}
-							beta[j] = beta[j] + dy * wt;
+							beta[j] += dy * wt;
 							j++;
 						}
 					} /* l */
-					trial_chisq = trial_chisq + dy * dy * sig2iwght;
+
+					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}
 		} /* Lastcall != 1 */

@@ -2,10 +2,6 @@
 #include <memory>
 #include <iostream>
 #include "Enums.h"
-#if defined __x86_64__ || defined(__i386__) || defined(_WIN32)
-  #include <immintrin.h>
-#endif
-#include "constants.h"
 
 /**
  * The Strategy interface declares operations common to all supported versions
@@ -14,7 +10,7 @@
  * The Context uses this interface to call the algorithm defined by Concrete
  * Strategies.
  */
-class alignas(64) CalcStrategy
+class CalcStrategy
 {
 public:
 	virtual ~CalcStrategy() = default;
@@ -30,23 +26,6 @@ public:
 	virtual void curv(double cg[]) = 0;
 
 	virtual void gauss_errc(double** a, int n, double b[], int &error) = 0;
-
-//protected:
-//	double alpha;
-//	double cos_alpha;
-//	double cl;
-//	double cls;
-//	double e[4]{};
-//	double e0[4]{};
-//	double php[N_PHOT_PAR + 1]{};
-//	double dphp[N_PHOT_PAR + 1]{};
-//	double de[4][4];
-//	double de0[4][4]{};
-//	double tmat[4][4]{};
-//	double dtm[4][4][4]{};
-//
-//	int	ncoef0;
-//	int incl_count;
 };
 
 /**

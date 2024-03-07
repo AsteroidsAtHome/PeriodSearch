@@ -16,7 +16,7 @@
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline __m512d hadd_pd(__m512d a, __m512d b) {
+inline static __m512d hadd_pd(__m512d a, __m512d b) {
   __m512i idx1 = _mm512_set_epi64(14, 6, 12, 4, 10, 2, 8, 0);
   __m512i idx2 = _mm512_set_epi64(15, 7, 13, 5, 11, 3, 9, 1);
   return _mm512_add_pd(_mm512_mask_permutex2var_pd(a, 0xff, idx1, b), _mm512_mask_permutex2var_pd(a, 0xff, idx2, b));
@@ -25,7 +25,7 @@ inline __m512d hadd_pd(__m512d a, __m512d b) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
+inline static __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
 	__m512i result = _mm512_ternarylogic_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(b), _mm512_srai_epi64(_mm512_castpd_si512(c), 63), 0xd8);
 
 	return _mm512_castsi512_pd(result);
@@ -35,7 +35,7 @@ inline __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
 #if defined(__GNUC__)
 __attribute__((target("avx512dq,avx512f")))
 #endif
-inline __m512d cmp_pd(__m512d a, __m512d b) {
+inline static __m512d cmp_pd(__m512d a, __m512d b) {
 	__m512i result = _mm512_movm_epi64(_mm512_cmp_pd_mask(a, b, _CMP_GT_OS));
 
 	return _mm512_castsi512_pd(result);
@@ -44,14 +44,14 @@ inline __m512d cmp_pd(__m512d a, __m512d b) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline int movemask_pd(__m512d a) {
+inline static int movemask_pd(__m512d a) {
 	return (int) _mm512_cmpneq_epi64_mask(_mm512_setzero_si512(), _mm512_and_si512(_mm512_set1_epi64(0x8000000000000000ULL), _mm512_castpd_si512(a)));
 }
 
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline __m512d permute4(__m512d a) {
+inline static __m512d permute4(__m512d a) {
   //1 2 3 4 5 6 7 8
   //5 6 7 8 1 2 3 4
   __m512i idx = _mm512_set_epi32(0, 11, 0, 10, 0, 9, 0, 8, 0, 7, 0, 6, 0, 5, 0, 4);
@@ -61,7 +61,7 @@ inline __m512d permute4(__m512d a) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline __m512d permute3(__m512d a) {
+inline static __m512d permute3(__m512d a) {
   //1 2 3 4 5 6 7 8
   //3 4 5 6 7 8 1 2
   __m512i idx = _mm512_set_epi32(0, 9, 0, 8, 0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2);
@@ -71,7 +71,7 @@ inline __m512d permute3(__m512d a) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline __m512d hpermute_add_pd(__m512d a) {
+inline static __m512d hpermute_add_pd(__m512d a) {
   __m512d tmp = _mm512_add_pd(a, permute3(a));
   return _mm512_add_pd(tmp, permute4(tmp));
 }
@@ -118,6 +118,7 @@ inline __m512d hpermute_add_pd(__m512d a) {
 			avx_d=_mm512_fmadd_pd(_mm512_mul_pd(avx_lmu,avx_lmu0),avx_Area, avx_d); \
 			avx_d1=_mm512_add_pd(avx_d1,_mm512_div_pd(_mm512_mul_pd(_mm512_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm512_add_pd(avx_lmu,avx_lmu0)));
 // end of inner_calc
+
 #define INNER_CALC_DSMU \
 	  avx_Area=_mm512_load_pd(&Area[i]); \
 	  avx_dnom=_mm512_add_pd(avx_lmu,avx_lmu0); \
@@ -132,14 +133,13 @@ inline __m512d hpermute_add_pd(__m512d a) {
 	  avx_dsmu0=_mm512_fmadd_pd(avx_cl,avx_lmu, _mm512_mul_pd(avx_cls,avx_powdnom));
 // end of inner_calc_dsmu
 
-
 #if defined(__GNUC__)
 __attribute__((target("avx512dq,avx512f")))
 #endif
 //double CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int i, j, k; //ncoef0,
+	int i, j, k; // ncoef0,
 	incl_count = 0;
 
 	//double cos_alpha, cl, cls, alpha, //br,
@@ -151,20 +151,20 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 	//__m512d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]);			/* Lambert */
-	cls = cg[ncoef];					/* Lommel-Seeliger */
+	cl = exp(cg[ncoef - 1]); /* Lambert */
+	cls = cg[ncoef];       /* Lommel-Seeliger */
 	//cos_alpha = dot_product(ee, ee0);
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);			/* computes also Scale */
+	phasec(dphp, alpha, php); /* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
 	//   br = 0;
-	   /* Directions (and ders.) in the rotating system */
+	/* Directions (and ders.) in the rotating system */
 
 	for (i = 1; i <= 3; i++)
 	{
@@ -232,14 +232,10 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 
 		avx_lmu = _mm512_mul_pd(avx_e1, avx_Nor1);
 		avx_lmu = _mm512_fmadd_pd(avx_e2, avx_Nor2, avx_lmu);
-		//avx_lmu = _mm512_add_pd(avx_lmu, _mm512_mul_pd(avx_e2, avx_Nor2));
 		avx_lmu = _mm512_fmadd_pd(avx_e3, avx_Nor3, avx_lmu);
-		//avx_lmu = _mm512_add_pd(avx_lmu, _mm512_mul_pd(avx_e3, avx_Nor3));
 		avx_lmu0 = _mm512_mul_pd(avx_e01, avx_Nor1);
 		avx_lmu0 = _mm512_fmadd_pd(avx_e02, avx_Nor2, avx_lmu0);
-		//avx_lmu0 = _mm512_add_pd(avx_lmu0, _mm512_mul_pd(avx_e02, avx_Nor2));
 		avx_lmu0 = _mm512_fmadd_pd(avx_e03, avx_Nor3, avx_lmu0);
-		//avx_lmu0 = _mm512_add_pd(avx_lmu0, _mm512_mul_pd(avx_e03, avx_Nor3));
 
 		cmpe = cmp_pd(avx_lmu, avx_tiny);
 		cmpe0 = cmp_pd(avx_lmu0, avx_tiny);
@@ -302,9 +298,7 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 	}
 
 	dbr[incl_count] = _mm512_setzero_pd();
-	//   dbr[incl_count+1]=_mm512_setzero_pd();
 	Dg_row[incl_count] = Dg_row[0];
-	//   Dg_row[incl_count+1] = Dg_row[0];
 	res_br = hadd_pd(res_br, res_br);
 	res_br = hpermute_add_pd(res_br);
 	_mm512_storeu_pd(g, res_br);
@@ -369,6 +363,7 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 	avx_dyda3 = _mm512_mul_pd(avx_dyda3, avx_Scale);
 	_mm512_store_pd(g, avx_dyda3);
 	dyda[ncoef0 - 3 + 3 - 1] = g[0];
+
 	/* Ders. of br. w.r.t. cl, cls */
 	avx_d = hadd_pd(avx_d, avx_d1);
 	avx_d = hpermute_add_pd(avx_d);
@@ -381,20 +376,9 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 	/* Ders. of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
 		dyda[ncoef0 + i - 1] = br * dphp[i];
-	/*     dyda[ncoef0+1-1] = br * dphp[1];
-		 dyda[ncoef0+2-1] = br * dphp[2];
-		 dyda[ncoef0+3-1] = br * dphp[3];*/
 
-		 /* Scaled brightness */
+	/* Scaled brightness */
 	br *= Scale;
-
-	/*printf("\ndyda[208]:\n");
-	printf("_dyda[] ={");
-	for(int q = 0; q <=207; q++)
-	{
-		printf("%.30f, ", dyda[q]);
-	}
-	printf("};\n"); */
 
 	//return(br);
 }

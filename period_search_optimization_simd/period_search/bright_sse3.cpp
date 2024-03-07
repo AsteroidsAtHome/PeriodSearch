@@ -73,10 +73,9 @@
 #if defined(__GNUC__)
 __attribute__((target("sse3")))
 #endif
-//double CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int i, j, k;  //ncoef0,
+	int i, j, k; // ncoef0,
 	incl_count = 0;
 
 	//double cos_alpha, cl, cls, alpha, //br,
@@ -88,15 +87,15 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 	//__m128d* Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]);			/* Lambert */
-	cls = cg[ncoef];					/* Lommel-Seeliger */
+	cl = exp(cg[ncoef - 1]); /* Lambert */
+	cls = cg[ncoef];       /* Lommel-Seeliger */
 	//cos_alpha = dot_product(ee, ee0);
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);			/* computes also Scale */
+	phasec(dphp, alpha, php); /* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
@@ -123,6 +122,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 
 	/*Integrated brightness (phase coeff. used later) */
 
+	//SSE3
 	__m128d avx_e1 = _mm_loaddup_pd(&e[1]);
 	__m128d avx_e2 = _mm_loaddup_pd(&e[2]);
 	__m128d avx_e3 = _mm_loaddup_pd(&e[3]);
@@ -187,6 +187,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 					//0
 					Dg_row[incl_count] = (__m128d*) & Dg[i];
 					dbr[incl_count++] = _mm_movedup_pd(avx_pdbr);
+
 					//1
 					Dg_row[incl_count] = (__m128d*) & Dg[i + 1];
 					dbr[incl_count++] = _mm_movedup_pd(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1));
@@ -202,6 +203,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 					Dg_row[incl_count] = (__m128d*) & Dg[i];
 					dbr[incl_count++] = _mm_movedup_pd(avx_pdbr);
 				}
+
 			INNER_CALC
 		}
 		else if (icmp & 2)
@@ -215,6 +217,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 			//1
 			Dg_row[incl_count] = (__m128d*) & Dg[i + 1];
 			dbr[incl_count++] = _mm_movedup_pd(_mm_shuffle_pd(avx_pdbr, avx_pdbr, 1));
+
 			INNER_CALC
 		}
 	}
@@ -229,7 +232,6 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 	Dg_row[incl_count + 3] = Dg_row[0];
 
 	res_br = _mm_hadd_pd(res_br, res_br);
-
 	br = _mm_cvtsd_f64(res_br);
 
 	/* Derivatives of brightness w.r.t. g-coeffs */
@@ -261,7 +263,6 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 
 		for (j = 4; j < incl_count; j += 4)
 		{
-
 			Dgrow = &Dg_row[j][dgi];
 			pdbr = dbr[j];
 			Dgrow1 = &Dg_row[j + 1][dgi];
@@ -277,6 +278,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 			tmp4 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_add_pd(tmp4, _mm_mul_pd(pdbr, Dgrow[3])), _mm_mul_pd(pdbr1, Dgrow1[3])), _mm_mul_pd(pdbr2, Dgrow2[3])), _mm_mul_pd(pdbr3, Dgrow3[3]));
 			tmp5 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_add_pd(tmp5, _mm_mul_pd(pdbr, Dgrow[4])), _mm_mul_pd(pdbr1, Dgrow1[4])), _mm_mul_pd(pdbr2, Dgrow2[4])), _mm_mul_pd(pdbr3, Dgrow3[4]));
 		}
+
 		dgi += 5;
 		tmp1 = _mm_mul_pd(tmp1, avx_Scale);
 		_mm_store_pd(&dyda[i], tmp1);
@@ -289,6 +291,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 		tmp5 = _mm_mul_pd(tmp5, avx_Scale);
 		_mm_store_pd(&dyda[i + 8], tmp5);
 	}
+
 	for (; i < ncoef03; i += 4) //2 * 2doubles
 	{
 		__m128d tmp1;
@@ -306,6 +309,7 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 
 		tmp1 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(pdbr, Dgrow[0]), _mm_mul_pd(pdbr1, Dgrow1[0])), _mm_mul_pd(pdbr2, Dgrow2[0])), _mm_mul_pd(pdbr3, Dgrow3[0]));
 		tmp2 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(pdbr, Dgrow[1]), _mm_mul_pd(pdbr1, Dgrow1[1])), _mm_mul_pd(pdbr2, Dgrow2[1])), _mm_mul_pd(pdbr3, Dgrow3[1]));
+
 		for (j = 4; j < incl_count; j += 4)
 		{
 
@@ -321,26 +325,24 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 			tmp1 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_add_pd(tmp1, _mm_mul_pd(pdbr, Dgrow[0])), _mm_mul_pd(pdbr1, Dgrow1[0])), _mm_mul_pd(pdbr2, Dgrow2[0])), _mm_mul_pd(pdbr3, Dgrow3[0]));
 			tmp2 = _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_add_pd(tmp2, _mm_mul_pd(pdbr, Dgrow[1])), _mm_mul_pd(pdbr1, Dgrow1[1])), _mm_mul_pd(pdbr2, Dgrow2[1])), _mm_mul_pd(pdbr3, Dgrow3[1]));
 		}
+
 		dgi += 2;
 		tmp1 = _mm_mul_pd(tmp1, avx_Scale);
 		_mm_store_pd(&dyda[i], tmp1);
 		tmp2 = _mm_mul_pd(tmp2, avx_Scale);
 		_mm_store_pd(&dyda[i + 2], tmp2);
 	}
+
 	/* Ders. of brightness w.r.t. rotation parameters */
 	avx_dyda1 = _mm_hadd_pd(avx_dyda1, avx_dyda2);
-
 	avx_dyda1 = _mm_mul_pd(avx_dyda1, avx_Scale);
 	_mm_storeu_pd(&dyda[ncoef0 - 3 + 1 - 1], avx_dyda1); //unaligned memory because of odd index
-
 	avx_dyda3 = _mm_hadd_pd(avx_dyda3, avx_dyda3);
-
 	avx_dyda3 = _mm_mul_pd(avx_dyda3, avx_Scale);
 	dyda[ncoef0 - 3 + 3 - 1] = _mm_cvtsd_f64(avx_dyda3);
+
 	/* Ders. of br. w.r.t. cl, cls */
-
 	avx_d = _mm_hadd_pd(avx_d, avx_d1);
-
 	avx_d = _mm_mul_pd(avx_d, avx_Scale);
 	avx_d = _mm_mul_pd(avx_d, avx_cl1);
 	_mm_storeu_pd(&dyda[ncoef - 1 - 1], avx_d); //unaligned memory because of odd index
@@ -348,11 +350,8 @@ void CalcStrategySse3::bright(double ee[], double ee0[], double t, double cg[], 
 	/* Ders. of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
 		dyda[ncoef0 + i - 1] = br * dphp[i];
-	/*     dyda[ncoef0+1-1] = br * dphp[1];
-		 dyda[ncoef0+2-1] = br * dphp[2];
-		 dyda[ncoef0+3-1] = br * dphp[3];*/
 
-		 /* Scaled brightness */
+	/* Scaled brightness */
 	br *= Scale;
 
 	//return(br);

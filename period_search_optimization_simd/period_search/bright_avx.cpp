@@ -70,14 +70,12 @@
 // end of inner_calc_dsmu
 
 
-//double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 #if defined(__GNUC__)
 __attribute__((target("avx")))
 #endif
-//double CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
 void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int i, j, k; //ncoef0,
+	int  i, j, k; //ncoef0,
     incl_count = 0;
 
     //double cos_alpha, cl, cls, alpha, //br,
@@ -86,13 +84,11 @@ void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], d
     //    de[4][4], de0[4][4], tmat[4][4],
     //    dtm[4][4][4];
 
-	//__m256d* Dg_row[MAX_N_FAC + 3]{};
-	//__m256d dbr[MAX_N_FAC + 3]{};
+    //__m256d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
     ncoef0 = ncoef - 2 - Nphpar;
     cl = exp(cg[ncoef - 1]);			/* Lambert */
     cls = cg[ncoef];					/* Lommel-Seeliger */
-    //cos_alpha = dot_product(ee, ee0);
     dot_product_new(ee, ee0, cos_alpha);
     alpha = acos(cos_alpha);
     for (i = 1; i <= Nphpar; i++)
@@ -217,9 +213,7 @@ void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], d
     }
 
     dbr[incl_count] = _mm256_setzero_pd();
-    //   dbr[incl_count+1]=_mm256_setzero_pd();
     Dg_row[incl_count] = Dg_row[0];
-    //   Dg_row[incl_count+1] = Dg_row[0];
     res_br = _mm256_hadd_pd(res_br, res_br);
     res_br = _mm256_add_pd(res_br, _mm256_permute2f128_pd(res_br, res_br, 1));
     _mm256_storeu_pd(g, res_br);
@@ -274,6 +268,7 @@ void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], d
         tmp1 = _mm256_mul_pd(tmp1, avx_Scale);
         _mm256_store_pd(&dyda[i], tmp1);
     }
+
     /* Ders. of brightness w.r.t. rotation parameters */
     avx_dyda1 = _mm256_hadd_pd(avx_dyda1, avx_dyda2);
     avx_dyda1 = _mm256_add_pd(avx_dyda1, _mm256_permute2f128_pd(avx_dyda1, avx_dyda1, 1));
@@ -286,11 +281,11 @@ void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], d
     avx_dyda3 = _mm256_mul_pd(avx_dyda3, avx_Scale);
     _mm256_store_pd(g, avx_dyda3);
     dyda[ncoef0 - 3 + 3 - 1] = g[0];
+
     /* Ders. of br. w.r.t. cl, cls */
     avx_d = _mm256_hadd_pd(avx_d, avx_d1);
     __m256d avx_dperm = _mm256_permute2f128_pd(avx_d, avx_d, 1);
     avx_d = _mm256_add_pd(avx_d, avx_dperm);
-    //avx_d = _mm256_add_pd(avx_d, _mm256_permute2f128_pd(avx_d, avx_d, 1));
     avx_d = _mm256_mul_pd(avx_d, avx_Scale);
     avx_d = _mm256_mul_pd(avx_d, avx_cl1);
     _mm256_store_pd(g, avx_d);
@@ -300,20 +295,9 @@ void CalcStrategyAvx::bright(double ee[], double ee0[], double t, double cg[], d
     /* Ders. of br. w.r.t. phase function params. */
     for (i = 1; i <= Nphpar; i++)
         dyda[ncoef0 + i - 1] = br * dphp[i];
-    /*     dyda[ncoef0+1-1] = br * dphp[1];
-         dyda[ncoef0+2-1] = br * dphp[2];
-         dyda[ncoef0+3-1] = br * dphp[3];*/
 
-         /* Scaled brightness */
+    /* Scaled brightness */
     br *= Scale;
-
-    /*printf("\ndyda[208]:\n");
-    printf("_dyda[] ={");
-    for(int q = 0; q <=207; q++)
-    {
-        printf("%.30f, ", dyda[q]);
-    }
-    printf("};\n"); */
 
     //return(br);
 }

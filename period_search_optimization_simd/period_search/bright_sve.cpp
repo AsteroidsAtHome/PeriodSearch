@@ -20,12 +20,12 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 	int i, j, k;
 	incl_count = 0;
 
-	//double cos_alpha, cl, cls, alpha, dnom, tmpdyda, //br,
-	//	e[4]{}, e0[4]{},
-	//	php[N_PHOT_PAR + 1]{}, dphp[N_PHOT_PAR + 1]{}, s,
-	//	dbr[MAX_N_FAC]{}, //IS ZERO INDEXED
-	//	de[4][4]{}, de0[4][4]{}, tmat[4][4]{},
-	//	dtm[4][4][4]{};
+	double cos_alpha, cl, cls, alpha, dnom, tmpdyda, //br,
+		e[4]{}, e0[4]{},
+		php[N_PHOT_PAR + 1]{}, dphp[N_PHOT_PAR + 1]{}, s,
+		dbr[MAX_N_FAC]{}, //IS ZERO INDEXED
+		de[4][4]{}, de0[4][4]{}, tmat[4][4]{},
+		dtm[4][4][4]{};
 
 	double tmpdyda1 = 0, tmpdyda2 = 0, tmpdyda3 = 0;
 	double tmpdyda4 = 0, tmpdyda5 = 0;

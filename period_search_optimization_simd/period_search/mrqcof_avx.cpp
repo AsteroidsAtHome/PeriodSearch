@@ -217,6 +217,7 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 							j++;
 						}
 					} /* l */
+
 					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}
@@ -286,6 +287,7 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 							j++;
 						}
 					} /* l */
+
 					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}

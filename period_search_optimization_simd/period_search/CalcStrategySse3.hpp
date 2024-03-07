@@ -2,13 +2,17 @@
 
 #include <immintrin.h>
 #include "CalcStrategy.hpp"
+#include "constants.h"
 
 #ifndef CSS3
 #define CSS3
 
-class alignas(64) CalcStrategySse3 : public CalcStrategy
+class CalcStrategySse3 : public CalcStrategy
 {
 public:
+#if defined _WIN32
+#pragma warning(disable:26495)
+#endif
 
 	CalcStrategySse3() {};
 
@@ -25,24 +29,25 @@ public:
 	virtual void gauss_errc(double** a, int n, double b[], int &error);
 
 private:
-	__m128d* Dg_row[MAX_N_FAC + 3]{};
-	__m128d dbr[MAX_N_FAC + 3]{};
+	__m128d* Dg_row[MAX_N_FAC + 3];
+	__m128d dbr[MAX_N_FAC + 3];
 
-	double alpha = 0.0;
-	double cos_alpha = 0.0;
-	double cl = 0.0;
-	double cls = 0.0;
-	double e[4]{};
-	double e0[4]{};
-	double php[N_PHOT_PAR + 1]{};
-	double dphp[N_PHOT_PAR + 1]{};
-	double de[4][4]{};
-	double de0[4][4]{};
-	double tmat[4][4]{};
-	double dtm[4][4][4]{};
+	double php[N_PHOT_PAR + 1];
+	double dphp[N_PHOT_PAR + 1];
 
-	int	ncoef0 = 0;
-	int incl_count = 0;
+	double e[4], e0[4];
+	double de[4][4];
+	double de0[4][4];
+	double tmat[4][4];
+	double dtm[4][4][4];
+
+	double cos_alpha;
+	double cl;
+	double cls;
+	double alpha;
+
+	int ncoef0;
+	int incl_count;
 };
 
 #endif

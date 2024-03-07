@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CalcStrategy.hpp"
+#include "constants.h"
 #if defined __x86_64__ || defined(__i386__) || _WIN32
   #include "sve_emulator.hpp"
 #else
@@ -10,7 +11,7 @@
 #ifndef CSSVE
 #define CSSVE
 
-class alignas(64) CalcStrategySve : public CalcStrategy
+class CalcStrategySve : public CalcStrategy
 {
 public:
 
@@ -29,31 +30,10 @@ public:
 	virtual void gauss_errc(double** a, int n, double b[], int &error);
 
 private:
-	double dbr[MAX_N_FAC]{}; //IS ZERO INDEXED
-	double tmpdyda = 0.0;
-	double dnom = 0.0;
-	double s = 0.0;
+	int incl[MAX_N_FAC]; //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
 
-	int incl[MAX_N_FAC]{}; //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
-
-	//svfloat64_t* Dg_row[MAX_N_FAC + 3]{};
-	//svfloat64_t dbr[MAX_N_FAC + 3]{};
-
-	double alpha = 0.0;
-	double cos_alpha = 0.0;
-	double cl = 0.0;
-	double cls = 0.0;
-	double e[4]{};
-	double e0[4]{};
-	double php[N_PHOT_PAR + 1]{};
-	double dphp[N_PHOT_PAR + 1]{};
-	double de[4][4]{};
-	double de0[4][4]{};
-	double tmat[4][4]{};
-	double dtm[4][4][4]{};
-
-	int	ncoef0 = 0;
-	int incl_count = 0;
+	int incl_count;
+	int ncoef0;
 };
 
 #endif

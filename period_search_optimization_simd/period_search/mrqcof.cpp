@@ -20,10 +20,6 @@
 //dave[MAX_N_PAR + 1],
 //coef, ave = 0, trial_chisq, wght;
 
-//double CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
-//	double sig[], double a[], int ia[], int ma,
-//	double** alpha, double beta[], int mfit, int lastone, int lastma)
-
 void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
@@ -158,8 +154,8 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 					double sig2iwght = sig2i * wght;
 					//l=0
 					wt = dyda[0] * sig2iwght;
-					alpha[j][0] = alpha[j][0] + wt * dyda[0];
-					beta[j] = beta[j] + dy * wt;
+					alpha[j][0] += wt * dyda[0];
+					beta[j] += dy * wt;
 					j++;
 					//
 					for (l = 1; l <= lastone; l++)  //line of ones
@@ -167,14 +163,14 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 						wt = dyda[l] * sig2iwght;
 						k = 0;
 						//m=0
-						alpha[j][k] = alpha[j][k] + wt * dyda[0];
+						alpha[j][k] += wt * dyda[0];
 						k++;
 						for (m = 1; m <= l; m++)
 						{
-							alpha[j][k] = alpha[j][k] + wt * dyda[m];
+							alpha[j][k] += wt * dyda[m];
 							k++;
 						} /* m */
-						beta[j] = beta[j] + dy * wt;
+						beta[j] += dy * wt;
 						j++;
 					} /* l */
 					for (; l <= lastma; l++)  //rest parameters
@@ -184,7 +180,7 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 							wt = dyda[l] * sig2iwght;
 							k = 0;
 							//m=0
-							alpha[j][k] = alpha[j][k] + wt * dyda[0];
+							alpha[j][k] += wt * dyda[0];
 							k++;
 							int kk = k;
 							for (m = 1; m <= lastone; m++)
@@ -197,15 +193,16 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 							{
 								if (ia[m])
 								{
-									alpha[j][k] = alpha[j][k] + wt * dyda[m];
+									alpha[j][k] += wt * dyda[m];
 									k++;
 								}
 							} /* m */
-							beta[j] = beta[j] + dy * wt;
+							beta[j] += dy * wt;
 							j++;
 						}
 					} /* l */
-					trial_chisq = trial_chisq + dy * dy * sig2iwght;
+
+					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}
 			else //relative ia[0]==0
@@ -232,10 +229,10 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 						//
 						for (m = 1; m <= l; m++)
 						{
-							alpha[j][k] = alpha[j][k] + wt * dyda[m];
+							alpha[j][k] += wt * dyda[m];
 							k++;
 						} /* m */
-						beta[j] = beta[j] + dy * wt;
+						beta[j] += dy * wt;
 						j++;
 					} /* l */
 					for (; l <= lastma; l++)  //rest parameters
@@ -248,7 +245,7 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 							int kk = 0;
 							for (m = 1; m <= lastone; m++)
 							{
-								alpha[j][kk] = alpha[j][kk] + wt * dyda[m];
+								alpha[j][kk] += wt * dyda[m];
 								kk++;
 							} /* m */
 							// k += lastone;
@@ -257,15 +254,16 @@ void CalcStrategyNone::mrqcof(double** x1, double** x2, double x3[], double y[],
 							{
 								if (ia[m])
 								{
-									alpha[j][k] = alpha[j][k] + wt * dyda[m];
+									alpha[j][k] += wt * dyda[m];
 									k++;
 								}
 							} /* m */
-							beta[j] = beta[j] + dy * wt;
+							beta[j] += dy * wt;
 							j++;
 						}
 					} /* l */
-					trial_chisq = trial_chisq + dy * dy * sig2iwght;
+
+					trial_chisq += dy * dy * sig2iwght;
 				} /* jp */
 			}
 		} /* Lastcall != 1 */
