@@ -8,14 +8,6 @@
 #include "constants.h"
 #include <immintrin.h>
 #include "CalcStrategyAvx.hpp"
-#include "CalcStrategyFma.hpp"
-
-// NOTE: Same for AVX and FMA
-
-void CalcStrategyFma::curv(double cg[])
-{
-	CalcStrategyAvx::curv(cg);
-}
 
 #if defined(__GNUC__)
 __attribute__((target("avx")))

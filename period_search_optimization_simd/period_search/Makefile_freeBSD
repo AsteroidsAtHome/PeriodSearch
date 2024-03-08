@@ -21,7 +21,7 @@ CFLAGS=$(OPTFLAGS) -w -s -lexecinfo
 LDFLAGS=-lm
 MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512.o bright_fma.o \
     bright_sse2.o bright_sse3.o conv.o conv_avx.o conv_avx512.o conv_fma.o conv_sse2.o \
-    conv_sse3.o covsrt.o CpuInfo.o curv.o curv_sse3.o curv_avx_fma.o curv_avx512.o \
+    conv_sse3.o covsrt.o CpuInfo.o curv.o curv_sse3.o curv_avx.o curv_fma.o curv_avx512.o \
     curv_sse2.o dot_product.o ellfit.o EnumHelpers.o gauss_errc.o gauss_errc_avx_fma.o \
     gauss_errc_avx512.o gauss_errc_sse2.o gauss_errc_sse3.o lubksb.o ludcmp.o matrix.o \
     memory.o mrqcof.o mrqcof_avx.o mrqcof_avx512.o mrqcof_fma.o mrqcof_sse2.o \
