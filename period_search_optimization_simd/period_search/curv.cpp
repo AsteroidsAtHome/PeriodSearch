@@ -23,7 +23,7 @@ void CalcStrategyNone::curv(double cg[])
             double fsum;
 			n++;
             fsum = cg[n] * Fc[i][0];
-            g = g + Pleg[i][l][0] * fsum;
+            g += Pleg[i][l][0] * fsum;
           }
       //
 	  for (m = 1; m <= Mmax; m++)
@@ -33,8 +33,8 @@ void CalcStrategyNone::curv(double cg[])
 			n++;
             fsum = cg[n] * Fc[i][m];
 	        n++;
-            fsum = fsum + cg[n] * Fs[i][m];
-            g = g + Pleg[i][l][m] * fsum;
+            fsum += cg[n] * Fs[i][m];
+            g += Pleg[i][l][m] * fsum;
           }
       g = exp(g);
       Area[i-1] = Darea[i-1] * g;

@@ -160,7 +160,7 @@ void CalcStrategySve::bright(double ee[], double ee0[], double t, double cg[], d
 	svfloat64_t avx_dyda3 = svdup_n_f64(0.0);
 	svfloat64_t avx_d = svdup_n_f64(0.0);
 	svfloat64_t avx_d1 = svdup_n_f64(0.0);
-	size_t cnt = svcntd();
+	int cnt = svcntd();
 	double g[cnt];
 
 	for (i = 0; i < Numfac; i += cnt)

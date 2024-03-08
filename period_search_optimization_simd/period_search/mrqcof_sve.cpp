@@ -30,7 +30,7 @@ void CalcStrategySve::mrqcof(double** x1, double** x2, double x3[], double y[],
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
-	size_t cnt = svcntd();
+	int cnt = svcntd();
 
 	/* N.B. curv and blmatrix called outside bright
 	   because output same for all points */

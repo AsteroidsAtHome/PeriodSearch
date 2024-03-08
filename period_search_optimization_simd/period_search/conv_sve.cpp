@@ -19,13 +19,14 @@ void CalcStrategySve::conv(int nc, double dres[], int ma, double &result)
     int i, j;
     //double res;
 
+	int cnt = svcntd();
+
     result = 0;
     for (j = 1; j <= ma; j++)
 	{
         dres[j] = 0;
 	}
 
-    size_t cnt = svcntd();
 
     for (i = 0; i < Numfac; i++)
 	{
