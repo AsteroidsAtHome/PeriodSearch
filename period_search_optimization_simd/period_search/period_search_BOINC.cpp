@@ -102,6 +102,24 @@ UC_SHMEM* shmem;
 //#define	LED	17
 //#endif
 
+#if !defined _WIN32
+#include <stdarg.h>
+
+int fscanf_s(FILE *file, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    int result = vfscanf(file, format, args);
+    va_end(args);
+
+    if (result == EOF) {
+		fprintf(stderr, "\nError: reading input\n"); fflush(stderr); exit(2);
+    } else if (result == 0) {
+		fprintf(stderr, "\nError: input format mismatch\n"); fflush(stderr); exit(2);
+    }
+	return result;
+}
+#endif
+
 CalcContext calcCtx(std::make_unique<CalcStrategyNone>());
 SIMDSupport CPUopt;
 
