@@ -16,15 +16,6 @@
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline static __m512d hadd_pd(__m512d a, __m512d b) {
-  __m512i idx1 = _mm512_set_epi64(14, 6, 12, 4, 10, 2, 8, 0);
-  __m512i idx2 = _mm512_set_epi64(15, 7, 13, 5, 11, 3, 9, 1);
-  return _mm512_add_pd(_mm512_mask_permutex2var_pd(a, 0xff, idx1, b), _mm512_mask_permutex2var_pd(a, 0xff, idx2, b));
-}
-
-#if defined(__GNUC__)
-__attribute__((target("avx512f")))
-#endif
 inline static __m512d blendv_pd(__m512d a, __m512d b, __m512d c) {
 	__m512i result = _mm512_ternarylogic_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(b), _mm512_srai_epi64(_mm512_castpd_si512(c), 63), 0xd8);
 
@@ -51,30 +42,13 @@ inline static int movemask_pd(__m512d a) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline static __m512d permute4(__m512d a) {
-  //1 2 3 4 5 6 7 8
-  //5 6 7 8 1 2 3 4
-  __m512i idx = _mm512_set_epi32(0, 11, 0, 10, 0, 9, 0, 8, 0, 7, 0, 6, 0, 5, 0, 4);
-  return _mm512_mask_permutex2var_pd(a, 0xff, idx, a);
+inline double reduce_pd(__m512d a){
+    __m256d b = _mm256_add_pd(_mm512_castpd512_pd256(a), _mm512_extractf64x4_pd(a, 1));
+    __m128d d = _mm_add_pd(_mm256_castpd256_pd128(b), _mm256_extractf128_pd(b, 1));
+    double *f = (double*)&d;
+    return _mm_cvtsd_f64(d) + f[1];
 }
 
-#if defined(__GNUC__)
-__attribute__((target("avx512f")))
-#endif
-inline static __m512d permute3(__m512d a) {
-  //1 2 3 4 5 6 7 8
-  //3 4 5 6 7 8 1 2
-  __m512i idx = _mm512_set_epi32(0, 9, 0, 8, 0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2);
-  return _mm512_mask_permutex2var_pd(a, 0xff, idx, a);
-}
-
-#if defined(__GNUC__)
-__attribute__((target("avx512f")))
-#endif
-inline static __m512d hpermute_add_pd(__m512d a) {
-  __m512d tmp = _mm512_add_pd(a, permute3(a));
-  return _mm512_add_pd(tmp, permute4(tmp));
-}
 
 #define INNER_CALC \
 		 res_br=_mm512_add_pd(res_br,avx_pbr);	\
@@ -211,7 +185,9 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 	__m512d avx_de033 = _mm512_set1_pd(de0[3][3]);
 
 	__m512d avx_tiny = _mm512_set1_pd(TINY);
-	__m512d avx_cl = _mm512_set1_pd(cl), avx_cl1 = _mm512_set_pd(0, 0, 0, 0, 0, 0, 1, cl), avx_cls = _mm512_set1_pd(cls), avx_11 = _mm512_set1_pd(1.0);
+	__m512d avx_cl = _mm512_set1_pd(cl);
+	__m512d avx_cls = _mm512_set1_pd(cls);
+	__m512d avx_11 = _mm512_set1_pd(1.0);
 	__m512d avx_Scale = _mm512_set1_pd(Scale);
 	__m512d res_br = _mm512_setzero_pd();
 	__m512d avx_dyda1 = _mm512_setzero_pd();
@@ -299,10 +275,7 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 
 	dbr[incl_count] = _mm512_setzero_pd();
 	Dg_row[incl_count] = Dg_row[0];
-	res_br = hadd_pd(res_br, res_br);
-	res_br = hpermute_add_pd(res_br);
-	_mm512_storeu_pd(g, res_br);
-	br = g[0];
+	br = reduce_pd(res_br);
 
 	/* Derivatives of brightness w.r.t. g-coeffs */
 	int ncoef03 = ncoef0 - 3, dgi = 0, cyklus1 = (ncoef03 / 16) * 16;
@@ -352,26 +325,13 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
     }
 
 	/* Ders. of brightness w.r.t. rotation parameters */
-	avx_dyda1 = hadd_pd(avx_dyda1, avx_dyda2);
-	avx_dyda1 = hpermute_add_pd(avx_dyda1);
-	avx_dyda1 = _mm512_mul_pd(avx_dyda1, avx_Scale);
-	_mm512_store_pd(g, avx_dyda1);
-	dyda[ncoef0 - 3 + 1 - 1] = g[0];
-	dyda[ncoef0 - 3 + 2 - 1] = g[1];
-	avx_dyda3 = hadd_pd(avx_dyda3, avx_dyda3);
-	avx_dyda3 = hpermute_add_pd(avx_dyda3);
-	avx_dyda3 = _mm512_mul_pd(avx_dyda3, avx_Scale);
-	_mm512_store_pd(g, avx_dyda3);
-	dyda[ncoef0 - 3 + 3 - 1] = g[0];
+	dyda[ncoef0 - 3 + 1 - 1] = reduce_pd(avx_dyda1) * Scale;
+	dyda[ncoef0 - 3 + 2 - 1] = reduce_pd(avx_dyda2) * Scale;
+	dyda[ncoef0 - 3 + 3 - 1] = reduce_pd(avx_dyda3) * Scale;
 
 	/* Ders. of br. w.r.t. cl, cls */
-	avx_d = hadd_pd(avx_d, avx_d1);
-	avx_d = hpermute_add_pd(avx_d);
-	avx_d = _mm512_mul_pd(avx_d, avx_Scale);
-	avx_d = _mm512_mul_pd(avx_d, avx_cl1);
-	_mm512_store_pd(g, avx_d);
-	dyda[ncoef - 1 - 1] = g[0];
-	dyda[ncoef - 1] = g[1];
+	dyda[ncoef - 1 - 1] = reduce_pd(avx_d) * Scale * cl;
+	dyda[ncoef - 1] = reduce_pd(avx_d1) * Scale;
 
 	/* Ders. of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
