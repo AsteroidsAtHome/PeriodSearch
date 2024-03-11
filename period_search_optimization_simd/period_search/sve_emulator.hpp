@@ -106,3 +106,57 @@ static svfloat64_t svsub_f64_x(svbool_t t, svfloat64_t a, svfloat64_t b) {
         r.x[i] = (t.x[8 * i] ? a.x[i] - b.x[i] : a.x[i]);
     return r;
 }
+
+static double svaddv_f64(svbool_t t, svfloat64_t a) {
+    double r = 0.;
+    for (int i = 0; i < svcntd(); ++i) {
+        r += t.x[8 * i] ? a.x[i] : 0.;
+    }
+    return r;
+}
+
+static svfloat64_t svsel_f64(svbool_t m, svfloat64_t a, svfloat64_t b) {
+    svfloat64_t r;
+    for (int i = 0; i < svcntd(); ++i)
+        r.x[i] = (m.x[8 * i] ? a.x[i] : b.x[i]);
+    return r;
+}
+
+static svbool_t svcmpgt_f64(svbool_t m, svfloat64_t a, svfloat64_t b) {
+    svbool_t r;
+    for (int i = 0; i < svcntd(); ++i)
+        r.x[8 * i] = a.x[i] > b.x[i] ? true : false;
+    return r;
+}
+
+static svbool_t svand_z(svbool_t t, svbool_t a, svbool_t b) {
+    svbool_t r;
+    for (int i = 0; i < svcntd(); ++i)
+        r.x[8 * i] = a.x[8 * i] && b.x[8 * i];
+
+    return r;
+}
+
+static bool svptest_any(svbool_t t, svbool_t a) {
+    bool r = false;
+    for (int i = 0; i < svcntd(); ++i)
+        r |= a.x[8 * i];
+
+    return r;
+}
+
+/*
+static void print_vector(svbool_t t, svfloat64_t a) {
+    for (int i = 0; i < svcntd(); ++i) {
+        printf("[%d]=%2f, ", i, t.x[8 * i] ? a.x[i] : 0.);
+    }
+    printf("\n");
+}
+
+static void print_bool(svbool_t a) {
+    for (int i = 0; i < svcntd(); ++i) {
+        printf("[%d]=%d, ", i, a.x[8 * i]);
+    }
+    printf("\n");
+}
+*/
