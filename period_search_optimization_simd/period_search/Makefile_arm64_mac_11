@@ -54,7 +54,7 @@ LIBJPEG = ../../../jpeg-6b/libjpeg.a
 MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o \
     conv.o \
     covsrt.o CpuInfoArm.o curv.o \
-    bright_sve.o conv_sve.o curv_sve.o gauss_errc_sve.o mrqcof_sve.o bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
+    bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
     dot_product.o ellfit.o EnumHelpers.o gauss_errc.o \
     lubksb.o ludcmp.o matrix.o \
     memory.o mrqcof.o \

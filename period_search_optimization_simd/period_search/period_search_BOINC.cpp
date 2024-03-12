@@ -683,7 +683,6 @@ int main(int argc, char** argv)
 	//CPUopt.hasSSE3 = false;
 	//CPUopt.hasSSE2 = false;
 	//CPUopt.hasASIMD = false;
-	//CPUopt.hasSVE = false;
 
 	useOptimization = useOptimization == SIMDEnum::Undefined
 		? GetBestSupportedSIMD()

@@ -25,9 +25,6 @@ const std::string getSIMDEnumName(SIMDEnum simdEnum)
 		case SIMDEnum::OptASIMD:
 			result = "ASIMD";
 			break;
-		case SIMDEnum::OptSVE:
-			result = "SVE";
-			break;
 		case SIMDEnum::OptNONE:
 			result = "NONE";
 			break;
