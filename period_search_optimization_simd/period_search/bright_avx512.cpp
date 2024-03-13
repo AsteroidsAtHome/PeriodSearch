@@ -42,7 +42,7 @@ inline static int movemask_pd(__m512d a) {
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline double reduce_pd(__m512d a){
+inline static double reduce_pd(__m512d a){
     __m256d b = _mm256_add_pd(_mm512_castpd512_pd256(a), _mm512_extractf64x4_pd(a, 1));
     __m128d d = _mm_add_pd(_mm256_castpd256_pd128(b), _mm256_extractf128_pd(b, 1));
     double *f = (double*)&d;
