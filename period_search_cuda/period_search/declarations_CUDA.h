@@ -23,7 +23,7 @@ __device__ void mrqcof_matrix(freq_context *__restrict__ CUDA_LCC,
 							  double *__restrict__ a,
 							  int Lpoints, int bid);
 __device__ void mrqcof_curve1(freq_context *__restrict__ CUDA_LCC,
-							  double *__restrict__ a,
+							  double const *__restrict__ a,
 							  int Inrel, int Lpoints, int bid);
 __device__ double mrqcof_end(freq_context *__restrict__ CUDA_LCC,
 							 double *__restrict__ alpha);

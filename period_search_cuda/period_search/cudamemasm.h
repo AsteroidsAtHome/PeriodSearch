@@ -433,11 +433,10 @@ __device__ float inline __cvt_d_to_f(double a)
 
 __device__ double inline ___drcp_rn(double a)
 {
-  double res;
-  asm("rcp.approx.ftz.f64 %0, %1 ;" : "=d"(res) : "d"(a));
+  double res = 1.0 / a;
+  //asm("rcp.approx.f64.ftz %0, %1 ;" : "=d"(res) : "d"(a));
   return res;
 }
-
 
 __device__ unsigned int inline get_smid(void)
 {
