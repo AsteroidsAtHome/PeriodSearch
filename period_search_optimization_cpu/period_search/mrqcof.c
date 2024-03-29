@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "declarations.h"
 #include "constants.h"
+#include "arrayHelpers.hpp"
 
 /* comment the following line if no YORP */
 /*#define YORP*/
@@ -66,6 +67,13 @@ double mrqcof(double** x1, double** x2, double x3[], double y[],
 				ymod = bright(xx1, xx2, x3[np], a, dyda, ma);
 			else
 				ymod = conv(jp, dyda, ma);
+
+			//printf("[%3d][%3d] % 0.6f\n", i, jp, ymod);
+
+			//if (jp == 1)
+			//	printf("[%3d][%3d] % 0.6f\n", i, jp, dyda[1]);
+
+			//printArray(a, 56, "cg");
 
 			ytemp[jp] = ymod;
 
@@ -205,6 +213,8 @@ double mrqcof(double** x1, double** x2, double x3[], double y[],
 								if (ia[m])
 								{
 									k++;
+									if (j == 0 && k == 48)
+										printf("dyda[%d] % 0.6f\n", m, dyda[m]);
 									alpha[j][k] = alpha[j][k] + wt * dyda[m];
 								}
 							} /* m */

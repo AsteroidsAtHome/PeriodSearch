@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\areanorm.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\blmatrix.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\bright.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\conv.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\covsrt.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\curv.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\dot_product.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ellfit.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\gauss_errc.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\lubksb.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\ludcmp.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\matrix.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\memory.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\mrqcof.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\mrqmin.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\phasec.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\sphfunc.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\trifac.c">
+      <Filter>Source code</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\VersionInfo.cpp">
+      <Filter>Source code</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\constants.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\declarations.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\globals.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\resource.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\Version.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{fbb59205-bd69-48b4-8df8-b3b426a7e3ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{3b63ab7f-3c54-4fa2-89ae-d3e64134d755}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source code">
+      <UniqueIdentifier>{521fa054-7b50-45cc-ab9f-2cfd69d27c64}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="period_search\pssse3_vs2019.rc">
+      <Filter>Resource files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

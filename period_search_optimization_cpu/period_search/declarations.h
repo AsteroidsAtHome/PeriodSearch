@@ -1,6 +1,11 @@
 #pragma once
 
+#if defined _WIN32
+#include "Windows.h"
+#endif
+
 #include <string>
+
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
               double at[], double af[]);
