@@ -124,7 +124,10 @@ int Cc::GetSmxBlockCc8() const
 	case 6:
 	case 7:
 		smxBlock = 16;	// GeForce RTX 3080 etc.; Quadro A6000 | occupancy 100% = 16 blocks per SMX
-		break;	
+		break;
+	case 8:
+		smxBlock = 16;	// ZLuda
+		break;
 	case 9:
 		smxBlock = 24;	// GeForce RTX 4090, RTX 4080 16GB; RTX 6000 Ada | occupancy 100% = 24 blocks per SMX
 		break;
@@ -219,11 +222,6 @@ int Cc::GetSmxBlockCc3() const
 
 void Cc::Exit() const
 {
-	// TODO: Fix those parameters
-#if (CUDART_VERSION < 11000)
-	fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d). Supported Compute Capabilities are between 3.0 and 7.5.\n", deviceCcMajor, deviceCcMinor);
-#elif(CUDART_VERSION >= 11000 && CUDART_VERSION < 12000)
-	fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d). Supported Compute Capabilities are between 5.3 and 8.9.\n", deviceCcMajor, deviceCcMinor);
-#endif
+	fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d).\n", deviceCcMajor, deviceCcMinor);
 	exit(1);
 }
