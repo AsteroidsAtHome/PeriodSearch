@@ -4,7 +4,7 @@ BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-CXXFLAGS = -march=x86-64 -O3 -std=c++17 -w -s\
+CXXFLAGS = -march=x86-64 -O3 -std=c++17 -w -s -static\
 	-DAPP_GRAPHICS \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
@@ -15,7 +15,7 @@ CXXFLAGS = -march=x86-64 -O3 -std=c++17 -w -s\
 CC=g++
 CXX=g++
 OPTFLAGS=-march=x86-64 -O3 -std=c++17
-CFLAGS=$(OPTFLAGS) -w -s
+CFLAGS=$(OPTFLAGS) -w -s -static
 LDFLAGS=-lm
 MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512.o bright_fma.o \
     bright_sse2.o bright_sse3.o conv.o conv_avx.o conv_avx512.o conv_fma.o conv_sse2.o \

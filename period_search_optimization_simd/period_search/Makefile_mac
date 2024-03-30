@@ -57,14 +57,14 @@ MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o bright_avx.o bright_avx512
     mrqcof_sse3.o mrqmin.o phasec.o sphfunc.o systeminfo.o \
     trifac.o VersionInfo.o
 
-PROGS = Period_search_BOINC_macos_10215_x86_64_universal_Release
+PROGS = Period_search_BOINC_macos_10220_x86_64_universal_Release
 
 all: $(PROGS)
 
 clean:
 	/bin/rm -f $(PROGS) *.o libstdc++.a
 
-Period_search_BOINC_macos_10215_x86_64_universal_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
+Period_search_BOINC_macos_10220_x86_64_universal_Release: period_search_BOINC.cpp $(MY_LIBS) $(BOINC_BUILD_DIR)/libboinc_api.a $(BOINC_BUILD_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
 	$(BOINC_BUILD_DIR)/libboinc_api.a \
 	$(BOINC_BUILD_DIR)/libboinc.a -lm \
