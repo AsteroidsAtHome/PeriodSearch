@@ -18,7 +18,6 @@ __attribute__((target("sse3")))
 void CalcStrategySse3::conv(int nc, double dres[], int ma, double &result)
 {
 	int i, j;
-	//double res;
 
 	result = 0;
 	for (j = 1; j <= ma; j++)
@@ -42,6 +41,4 @@ void CalcStrategySse3::conv(int nc, double dres[], int ma, double &result)
 			_mm_store_pd(&dres[j], avx_dres);
 		}
 	}
-
-	//return(res);
 }

@@ -18,7 +18,6 @@ __attribute__((target("avx")))
 void CalcStrategyAvx::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    //double res;
 
     result = 0;
     for (j = 1; j <= ma; j++)
@@ -40,6 +39,4 @@ void CalcStrategyAvx::conv(int nc, double dres[], int ma, double &result)
             _mm256_store_pd(&dres[j], avx_dres);
         }
     }
-
-    //return(res);
 }

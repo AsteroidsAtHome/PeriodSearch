@@ -20,7 +20,6 @@ public:
 		double sig[], double a[], int ia[], int ma,
 		double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq);
 
-	//virtual double bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef);
 	virtual void bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br);
 
 	virtual void conv(int nc, double dres[], int ma, double &result);

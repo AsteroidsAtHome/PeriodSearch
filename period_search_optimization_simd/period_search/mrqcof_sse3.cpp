@@ -19,33 +19,22 @@ constexpr auto MIN(T1 X, T2 Y) { return ((X) < (Y) ? (X) : (Y)); }
 /* comment the following line if no YORP */
 /*#define YORP*/
 
-//#ifdef __GNUC__
-//double dyda[MAX_N_PAR + 4] __attribute__((aligned(16)));
-//#else
-//__declspec(align(16)) double dyda[MAX_N_PAR + 4]; //is zero indexed for aligned memory access
-//#endif
-//
-//double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-//ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 1],
-//dave[MAX_N_PAR + 1 + 1],
-//coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
-
 #if defined(__GNUC__)
 __attribute__((target("sse3")))
 #endif
+
 void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 			  double sig[], double a[], int ia[], int ma,
 		  double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
-	/* N.B. curv and blmatrix called outside bright
-	   because output same for all points */
+	/* N.B. curv and blmatrix called outside bright because output same for all points */
 	CalcStrategySse3::curv(a);
 
 	//   #ifdef YORP
 	//      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-	  // #else
+	//   #else
 	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
 	//   #endif
 
@@ -55,6 +44,7 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 			alpha[j][k] = 0;
 		beta[j] = 0;
 	}
+
 	trial_chisq = 0;
 	np = 0;
 	np1 = 0;
@@ -79,7 +69,6 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 
 			if (i < Lcurves)
 			{
-				//ymod = CalcStrategySse3::bright(xx1, xx2, x3[np], a, dyda, ma);
 				CalcStrategySse3::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
 			}
 			else
@@ -132,7 +121,6 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 						avx_dytemp = _mm_mul_pd(avx_dytemp, avx_coef);
 						_mm_storeu_pd(&dytemp[jp][l], avx_dytemp);
 					}
-					//			if (l==ma) dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave); //last odd value is not problem
 
 					ytemp[jp] *= coef;
 					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
@@ -284,8 +272,5 @@ void CalcStrategySse3::mrqcof(double** x1, double** x2, double x3[], double y[],
 	for (j = 1; j < mfit; j++)
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
-
-	//return trial_chisq;
-	//mrq = trial_chisq;
 }
 

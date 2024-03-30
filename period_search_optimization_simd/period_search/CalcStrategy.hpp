@@ -74,29 +74,22 @@ public:
 		{
 			std::cerr << "CalcContext: Strategy isn't set" << std::endl;
 		}
-
-		//return result;
 	}
 
 	void CalculateBright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 	{
-		//double result = 0.0;
 		if (strategy_)
 		{
-			//result = strategy_->bright(ee, ee0, t, cg, dyda, ncoef);
 			strategy_->bright(ee, ee0, t, cg, dyda, ncoef, br);
 		}
 		else
 		{
 			std::cerr << "CalcContext: Strategy isn't set" << std::endl;
 		}
-
-		//return result;
 	}
 
 	void CalculateConv(int nc, double dres[], int ma, double &result)
 	{
-		//double result = 0.0;
 		if (strategy_)
 		{
 			strategy_->conv(nc, dres, ma, result);
@@ -105,8 +98,6 @@ public:
 		{
 			std::cerr << "CalcContext: Strategy isn't set" << std::endl;
 		}
-
-		//return result;
 	}
 
 	void CalculateCurv(double cg[])
@@ -123,7 +114,6 @@ public:
 
 	void CalculateGaussErrc(double** a, int n, double b[], int &error)
 	{
-		//int result = 0;
 		if (strategy_)
 		{
 			strategy_->gauss_errc(a, n, b, error);
@@ -132,7 +122,5 @@ public:
 		{
 			std::cerr << "CalcContext: Strategy isn't set" << std::endl;
 		}
-
-		//return result;
 	}
 };

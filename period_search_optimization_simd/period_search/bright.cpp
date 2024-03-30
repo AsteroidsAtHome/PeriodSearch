@@ -1,7 +1,7 @@
 /* computes integrated brightness of all visible and iluminated areas
    and its derivatives
 
-   8.11.2006
+   8.11.2006 - Josef Durec
 */
 
 #include <math.h>
@@ -14,16 +14,8 @@
 
 void CalcStrategyNone::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int i, j, k; // ncoef0,
-	//incl[MAX_N_FAC]{}, //array of indexes of facets to Area, Dg, Nor. !!!!!!!!!!!incl IS ZERO INDEXED
+	int i, j, k;
 	incl_count = 0;
-
-	//double cos_alpha, cl, cls, alpha, dnom, tmpdyda, //br,
-	//	e[4]{}, e0[4]{},
-	//	php[N_PHOT_PAR + 1]{}, dphp[N_PHOT_PAR + 1]{}, s,
-	//	dbr[MAX_N_FAC]{}, //IS ZERO INDEXED
-	//	de[4][4]{}, de0[4][4]{}, tmat[4][4]{},
-	//	dtm[4][4][4]{};
 
 	tmpdyda1 = 0;
 	tmpdyda2 = 0;
@@ -34,9 +26,9 @@ void CalcStrategyNone::bright(double ee[], double ee0[], double t, double cg[], 
 	ncoef0 = ncoef - 2 - Nphpar;
 	cl = exp(cg[ncoef - 1]);				/* Lambert */
 	cls = cg[ncoef];						/* Lommel-Seeliger */
-	//cos_alpha = dot_product(ee, ee0);
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
+
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
@@ -129,6 +121,4 @@ void CalcStrategyNone::bright(double ee[], double ee0[], double t, double cg[], 
 
 	/* Scaled brightness */
 	br *= Scale;
-
-	//return(br);
 }

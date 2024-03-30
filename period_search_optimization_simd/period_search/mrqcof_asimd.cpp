@@ -15,34 +15,27 @@
 /* comment the following line if no YORP */
 /*#define YORP*/
 
-//double xx1[4], xx2[4], dy, sig2i, wt, dyda[MAX_N_PAR + 1], ymod,
-//ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1],
-//dave[MAX_N_PAR + 1],
-//coef, ave = 0, trial_chisq, wght;
-
 #if defined(__GNUC__)
 __attribute__((__target__("arch=armv8-a+simd")))
 #endif
+
 void CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** alpha, double beta[], int mfit, int lastone, int lastma, double &trial_chisq)
 {
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
-	/* N.B. curv and blmatrix called outside bright
-	   because output same for all points */
+	/* N.B. curv and blmatrix called outside bright because output same for all points */
 	CalcStrategyAsimd::curv(a);
 
 	//   #ifdef YORP
 	//      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-	  // #else
+	//   #else
 	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
 	//   #endif
 
-	//for (j = 1; j <= mfit; j++)
 	for (j = 0; j < mfit; j++)
 	{
-		//for (k = 1; k <= j; k++)
 		for (k = 0; k <= j; k++)
 		{
 			alpha[j][k] = 0;
@@ -73,33 +66,16 @@ void CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[]
 			}
 
 			if (i < Lcurves)
+			{
 				CalcStrategyAsimd::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
+			}
 			else
+			{
 				CalcStrategyAsimd::conv(jp, dyda, ma, ymod);
-
-			//printf("[%3d][%3d] % 0.6f\n", i, jp, ymod);
-			/*if(jp == 1)
-				printf("[%3d][%3d] % 0.6f\n", i, jp, dyda[1]);*/
-			//printArray(dyda, 208, "dyda");
+			}
 
 			ytemp[jp] = ymod;
 
-			//if (Inrel[i]/* == 1*/)
-			//{
-			//	ave = ave + ymod;
-			//	for (l = 1; l <= ma; l++)
-			//	{
-			//		dytemp[jp][l] = dyda[l - 1];
-			//		dave[l] += dyda[l - 1];
-			//	}
-			//}
-			//else
-			//{
-			//	for (l = 1; l <= ma; l++)
-			//	{
-			//		dytemp[jp][l] = dyda[l - 1];
-			//	}
-			//}
 			if (Inrel[i] == 1)
                 ave += ymod;
 
@@ -114,7 +90,7 @@ void CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[]
     		}
 		    /* save lightcurves */
 
-            if (Lastcall == 1) 
+            if (Lastcall == 1)
 	          Yout[np] = ymod;
       	} /* jp, lpoints */
 
@@ -305,7 +281,5 @@ void CalcStrategyAsimd::mrqcof(double** x1, double** x2, double x3[], double y[]
 	for (j = 1; j < mfit; j++)
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
-
-	//return trial_chisq;
 }
 

@@ -51,8 +51,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 102,20,0,1
- PRODUCTVERSION 102,20,0,1
+ FILEVERSION 102,20,1,1
+ PRODUCTVERSION 102,20,1,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +69,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Astronomical Institute at Charles University in Prague"
             VALUE "FileDescription", "Period search application with SIMD optimization"
-            VALUE "FileVersion", "102.20.0.1"
+            VALUE "FileVersion", "102.20.1.1"
             VALUE "InternalName", "Period_search_Windows_10.0_x64_simd.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2023 Astronomical Institute at Charles University in Prague"
+            VALUE "LegalCopyright", "Copyright (C) 2024 Astronomical Institute at Charles University in Prague"
             VALUE "OriginalFilename", "Period_search_Windows_10.0_x64_simd.exe"
             VALUE "ProductName", "Asteroids@home for BOINC"
-            VALUE "ProductVersion", "102.20.0.1"
+            VALUE "ProductVersion", "102.20.1.1"
         END
     END
     BLOCK "VarFileInfo"

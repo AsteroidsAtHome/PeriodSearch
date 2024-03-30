@@ -17,18 +17,6 @@
 /* comment the following line if no YORP */
 /*#define YORP*/
 
-//#ifdef __GNUC__
-//double dyda[MAX_N_PAR + 16] __attribute__((aligned(64)));
-//#else
-//__declspec(align(64)) double dyda[MAX_N_PAR + 16]; //is zero indexed for aligned memory access
-//#endif
-//
-//double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-//ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
-//dave[MAX_N_PAR + 1 + 4],
-//dave2[MAX_N_PAR + 1 + 4],
-//coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
-
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
@@ -39,15 +27,12 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
 {
     int i, j, k, l, m, np, np1, np2, jp, ic;
 
-    //__m512d zmm0 = _mm512_set_pd(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
-
-    /* N.B. curv and blmatrix called outside bright
-       because output same for all points */
+    /* N.B. curv and blmatrix called outside bright because output same for all points */
     calcCtx.CalculateCurv(a);
 
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-      // #else
+    //   #else
     blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
     //   #endif
 
@@ -57,6 +42,7 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
             alpha[j][k] = 0;
         beta[j] = 0;
     }
+
     trial_chisq = 0;
     np = 0;
     np1 = 0;
@@ -81,7 +67,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
 
 			if (i < Lcurves)
 			{
-                //ymod = calcCtx.CalculateBright(xx1, xx2, x3[np], a, dyda, ma);
                 calcCtx.CalculateBright(xx1, xx2, x3[np], a, dyda, ma, ymod);
 			}
 			else
@@ -106,7 +91,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
             for (l = 1; l <= ma; l++)
             {
                 dytemp[jp][l] = dyda[l - 1];
-                //				 if (Inrel[i]/* == 1*/) dave[l] = dave[l] + dyda[l-1];
             }
             /* save lightcurves */
 
@@ -133,7 +117,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
                         avx_dytemp = _mm512_mul_pd(avx_dytemp, avx_coef);
                         _mm512_storeu_pd(&dytemp[jp][l], avx_dytemp);
                     }
-                    //			if (l==ma) dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave); //last odd value is not problem
 
                     ytemp[jp] *= coef;
                     /* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
@@ -173,7 +156,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
                             __m512d avx_alpha = _mm512_loadu_pd(&alpha[j][k]);
                             __m512d avx_dyda = _mm512_loadu_pd(&dyda[m]);
                             avx_alpha = _mm512_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                            //avx_alpha = _mm512_add_pd(avx_alpha, _mm512_mul_pd(avx_wt, avx_dyda));
                             _mm512_storeu_pd(&alpha[j][k], avx_alpha);
                             k += 8;
                         } /* m */
@@ -196,7 +178,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
                                 __m512d avx_alpha = _mm512_loadu_pd(&alpha[j][kk]);
                             	__m512d avx_dyda = _mm512_loadu_pd(&dyda[m]);
                                 avx_alpha = _mm512_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                                //avx_alpha = _mm512_add_pd(avx_alpha, _mm512_mul_pd(avx_wt, avx_dyda));
                                 _mm512_storeu_pd(&alpha[j][kk], avx_alpha);
                                 kk += 8;
                             } /* m */
@@ -243,7 +224,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
                             __m512d avx_alpha = _mm512_load_pd(&alpha[j][k]);
                         	__m512d avx_dyda = _mm512_loadu_pd(&dyda[m]);
                             avx_alpha = _mm512_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                            //avx_alpha = _mm512_add_pd(avx_alpha, _mm512_mul_pd(avx_wt, avx_dyda));
                             _mm512_store_pd(&alpha[j][k], avx_alpha);
                             k += 8;
                         } /* m */
@@ -264,7 +244,6 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
                                 __m512d avx_alpha = _mm512_load_pd(&alpha[j][kk]);
                             	__m512d avx_dyda = _mm512_loadu_pd(&dyda[m]);
                                 avx_alpha = _mm512_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                                //avx_alpha = _mm512_add_pd(avx_alpha, _mm512_mul_pd(avx_wt, avx_dyda));
                                 _mm512_store_pd(&alpha[j][kk], avx_alpha);
                                 kk += 8;
                             } /* m */
@@ -293,8 +272,5 @@ void CalcStrategyAvx512::mrqcof(double **x1, double **x2, double x3[], double y[
     for (j = 1; j < mfit; j++)
         for (k = 0; k <= j - 1; k++)
             alpha[k][j] = alpha[j][k];
-
-    //return trial_chisq;
-	//mrq = trial_chisq;
 }
 

@@ -549,12 +549,20 @@
     <ClCompile Include="period_search\arrayHelpers.cpp" />
     <ClCompile Include="period_search\blmatrix.c" />
     <ClCompile Include="period_search\bright.cpp" />
+    <ClCompile Include="period_search\bright_asimd.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="period_search\bright_avx.cpp" />
     <ClCompile Include="period_search\bright_avx512.cpp" />
     <ClCompile Include="period_search\bright_fma.cpp" />
     <ClCompile Include="period_search\bright_sse2.cpp" />
     <ClCompile Include="period_search\bright_sse3.cpp" />
     <ClCompile Include="period_search\conv.cpp" />
+    <ClCompile Include="period_search\conv_asimd.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="period_search\conv_avx.cpp" />
     <ClCompile Include="period_search\conv_avx512.cpp" />
     <ClCompile Include="period_search\conv_fma.cpp" />
@@ -563,6 +571,10 @@
     <ClCompile Include="period_search\covsrt.c" />
     <ClCompile Include="period_search\CpuInfo.cpp" />
     <ClCompile Include="period_search\curv.cpp" />
+    <ClCompile Include="period_search\curv_asimd.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="period_search\curv_sse3.cpp" />
     <ClCompile Include="period_search\curv_avx.cpp" />
     <ClCompile Include="period_search\curv_fma.cpp" />
@@ -572,6 +584,10 @@
     <ClCompile Include="period_search\ellfit.c" />
     <ClCompile Include="period_search\EnumHelpers.cpp" />
     <ClCompile Include="period_search\gauss_errc.cpp" />
+    <ClCompile Include="period_search\gauss_errc_asimd.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="period_search\gauss_errc_avx_fma.cpp" />
     <ClCompile Include="period_search\gauss_errc_avx512.cpp" />
     <ClCompile Include="period_search\gauss_errc_sse2.cpp" />
@@ -581,6 +597,10 @@
     <ClCompile Include="period_search\matrix.c" />
     <ClCompile Include="period_search\memory.c" />
     <ClCompile Include="period_search\mrqcof.cpp" />
+    <ClCompile Include="period_search\mrqcof_asimd.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="period_search\mrqcof_avx.cpp" />
     <ClCompile Include="period_search\mrqcof_avx512.cpp" />
     <ClCompile Include="period_search\mrqcof_fma.cpp" />
@@ -596,6 +616,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\arrayHelpers.hpp" />
+    <ClInclude Include="period_search\CalcStrategyAsimd.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="period_search\CalcStrategyAvx512.hpp" />
     <ClInclude Include="period_search\CalcStrategyFma.hpp" />
     <ClInclude Include="period_search\CalcStrategyNone.hpp" />

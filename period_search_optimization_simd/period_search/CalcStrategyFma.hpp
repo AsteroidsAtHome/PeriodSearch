@@ -8,12 +8,13 @@
 #ifndef CSF
 #define CSF
 
-class CalcStrategyFma : public CalcStrategyAvx //public CalcStrategy
+class CalcStrategyFma : public CalcStrategyAvx
 {
 public:
 #if defined _WIN32
 #pragma warning(disable:26495)
 #endif
+
 	CalcStrategyFma() {};
 
 	virtual void mrqcof(double** x1, double** x2, double x3[], double y[],

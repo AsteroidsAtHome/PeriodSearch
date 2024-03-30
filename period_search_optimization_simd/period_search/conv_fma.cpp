@@ -18,8 +18,6 @@ __attribute__((target("avx,fma")))
 void CalcStrategyFma::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    //double res;
-    //__m256d ymm0 = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
 
     result = 0;
     for (j = 1; j <= ma; j++)
@@ -37,11 +35,8 @@ void CalcStrategyFma::conv(int nc, double dres[], int ma, double &result)
             __m256d avx_Dg = _mm256_load_pd(&Dg_row[j]);
 
             avx_dres = _mm256_fmadd_pd(_mm256_mul_pd(avx_Darea, avx_Dg), avx_Nor, avx_dres);
-            //avx_dres = _mm256_add_pd(avx_dres, _mm256_mul_pd(_mm256_mul_pd(avx_Darea, avx_Dg), avx_Nor));
 
             _mm256_store_pd(&dres[j], avx_dres);
         }
     }
-
-    //return(res);
 }

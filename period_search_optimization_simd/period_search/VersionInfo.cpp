@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #if defined __GNUC__
 const int _major = 102;
-const int _minor = 15;
-const int _build = 0;
+const int _minor = 20;
+const int _build = 1;
 const int _revision = 1;
 #else
 #include <windows.h>

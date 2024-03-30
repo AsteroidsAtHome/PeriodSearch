@@ -1,7 +1,8 @@
 /* computes integrated brightness of all visible and iluminated areas
    and its derivatives
 
-   8.11.2006
+   8.11.2006 - Josef Durec
+   29.2.2024 - Georgi Vidinski
 */
 
 #include <cmath>
@@ -75,21 +76,12 @@ __attribute__((target("avx,fma")))
 #endif
 void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
-	int i, j, k; //ncoef0,
+	int i, j, k;
 	incl_count = 0;
-
-	//double cos_alpha, cl, cls, alpha, //br,
-	//	e[4], e0[4],
-	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-	//	de[4][4], de0[4][4], tmat[4][4],
-	//	dtm[4][4][4];
-
-	//__m256d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
 
 	ncoef0 = ncoef - 2 - Nphpar;
 	cl = exp(cg[ncoef - 1]);				/* Lambert */
 	cls = cg[ncoef];						/* Lommel-Seeliger */
-	//cos_alpha = dot_product(ee, ee0);
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
@@ -99,8 +91,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
-	//   br = 0;
-	   /* Directions (and ders.) in the rotating system */
+    /* Directions (and ders.) in the rotating system */
 
 	for (i = 1; i <= 3; i++)
 	{
@@ -282,6 +273,7 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 	avx_dyda3 = _mm256_mul_pd(avx_dyda3, avx_Scale);
 	_mm256_store_pd(g, avx_dyda3);
 	dyda[ncoef0 - 3 + 3 - 1] = g[0];
+
 	/* Ders. of br. w.r.t. cl, cls */
 	avx_d = _mm256_hadd_pd(avx_d, avx_d1);
 	__m256d avx_dperm = _mm256_permute2f128_pd(avx_d, avx_d, 1);
@@ -310,6 +302,4 @@ void CalcStrategyFma::bright(double ee[], double ee0[], double t, double cg[], d
 		printf("%.30f, ", dyda[q]);
 	}
 	printf("};\n"); */
-
-	//return(br);
 }

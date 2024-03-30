@@ -1,7 +1,8 @@
 /* computes integrated brightness of all visible and iluminated areas
    and its derivatives
 
-   8.11.2006
+   8.11.2006 - Josef Durec
+   29.2.2024 - Georgi Vidinski
 */
 
 #include <cmath>
@@ -75,21 +76,11 @@ __attribute__((target("sse2")))
 #endif
 void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double& br)
 {
-	int i, j, k; // ncoef0,
+	int i, j, k;
 	incl_count = 0;
-
-	//double cos_alpha, cl, cls, alpha, //br,
-	//	e[4], e0[4],
-	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-	//	de[4][4], de0[4][4], tmat[4][4],
-	//	dtm[4][4][4];
-
-	//__m128d* Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
-
 	ncoef0 = ncoef - 2 - Nphpar;
 	cl = exp(cg[ncoef - 1]);				/* Lambert */
 	cls = cg[ncoef];						/* Lommel-Seeliger */
-	//cos_alpha = dot_product(ee, ee0);
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
@@ -99,7 +90,6 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
-	//   br = 0;
 	/* Directions (and ders.) in the rotating system */
 
 	for (i = 1; i <= 3; i++)
@@ -122,7 +112,7 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 
 	/*Integrated brightness (phase coeff. used later) */
 
-// SSE2
+	// SSE2
 	__m128d avx_e1 = _mm_load1_pd(&e[1]);
 	__m128d avx_e2 = _mm_load1_pd(&e[2]);
 	__m128d avx_e3 = _mm_load1_pd(&e[3]);
@@ -363,6 +353,4 @@ void CalcStrategySse2::bright(double ee[], double ee0[], double t, double cg[], 
 
 	/* Scaled brightness */
 	br *= Scale;
-
-	//return(br);
 }

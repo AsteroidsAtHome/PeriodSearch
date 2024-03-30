@@ -18,8 +18,6 @@ __attribute__((target("avx512f")))
 void CalcStrategyAvx512::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    //double res;
-    //__m512d ymm0 = _mm512_set_pd(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
 
     result = 0;
     for (j = 1; j <= ma; j++)
@@ -37,11 +35,8 @@ void CalcStrategyAvx512::conv(int nc, double dres[], int ma, double &result)
             __m512d avx_Dg = _mm512_load_pd(&Dg_row[j]);
 
             avx_dres = _mm512_fmadd_pd(_mm512_mul_pd(avx_Darea, avx_Dg), avx_Nor, avx_dres);
-            //avx_dres = _mm512_add_pd(avx_dres, _mm512_mul_pd(_mm512_mul_pd(avx_Darea, avx_Dg), avx_Nor));
 
             _mm512_store_pd(&dres[j], avx_dres);
         }
     }
-
-    //return(res);
 }

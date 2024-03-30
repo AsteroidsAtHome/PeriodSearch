@@ -1,7 +1,8 @@
 /* computes integrated brightness of all visible and iluminated areas
    and its derivatives
 
-   8.11.2006
+   8.11.2006 - Josef Durec
+   25.3.2024 - Pavel Rosicky
 */
 
 #include <cmath>
@@ -36,17 +37,17 @@ inline static __m512d cmp_pd(__m512d a, __m512d b) {
 __attribute__((target("avx512f")))
 #endif
 inline static int movemask_pd(__m512d a) {
-	return (int) _mm512_cmpneq_epi64_mask(_mm512_setzero_si512(), _mm512_and_si512(_mm512_set1_epi64(0x8000000000000000ULL), _mm512_castpd_si512(a)));
+	return (int)_mm512_cmpneq_epi64_mask(_mm512_setzero_si512(), _mm512_and_si512(_mm512_set1_epi64(0x8000000000000000ULL), _mm512_castpd_si512(a)));
 }
 
 #if defined(__GNUC__)
 __attribute__((target("avx512f")))
 #endif
-inline static double reduce_pd(__m512d a){
-    __m256d b = _mm256_add_pd(_mm512_castpd512_pd256(a), _mm512_extractf64x4_pd(a, 1));
-    __m128d d = _mm_add_pd(_mm256_castpd256_pd128(b), _mm256_extractf128_pd(b, 1));
-    double *f = (double*)&d;
-    return _mm_cvtsd_f64(d) + f[1];
+inline static double reduce_pd(__m512d a) {
+	__m256d b = _mm256_add_pd(_mm512_castpd512_pd256(a), _mm512_extractf64x4_pd(a, 1));
+	__m128d d = _mm_add_pd(_mm256_castpd256_pd128(b), _mm256_extractf128_pd(b, 1));
+	double* f = (double*)&d;
+	return _mm_cvtsd_f64(d) + f[1];
 }
 
 
@@ -110,34 +111,23 @@ inline static double reduce_pd(__m512d a){
 #if defined(__GNUC__)
 __attribute__((target("avx512dq,avx512f")))
 #endif
-//double CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef)
-void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
+void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double& br)
 {
-	int i, j, k; // ncoef0,
+	int i, j, k;
 	incl_count = 0;
 
-	//double cos_alpha, cl, cls, alpha, //br,
-	//	e[4], e0[4],
-	//	php[N_PHOT_PAR + 1], dphp[N_PHOT_PAR + 1],
-	//	de[4][4], de0[4][4], tmat[4][4],
-	//	dtm[4][4][4];
-
-	//__m512d *Dg_row[MAX_N_FAC + 3], dbr[MAX_N_FAC + 3];
-
 	ncoef0 = ncoef - 2 - Nphpar;
-	cl = exp(cg[ncoef - 1]); /* Lambert */
-	cls = cg[ncoef];       /* Lommel-Seeliger */
-	//cos_alpha = dot_product(ee, ee0);
+	cl = exp(cg[ncoef - 1]);				/* Lambert */
+	cls = cg[ncoef];						/* Lommel-Seeliger */
 	dot_product_new(ee, ee0, cos_alpha);
 	alpha = acos(cos_alpha);
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php); /* computes also Scale */
+	phasec(dphp, alpha, php);				/* computes also Scale */
 
 	matrix(cg[ncoef0], t, tmat, dtm);
 
-	//   br = 0;
 	/* Directions (and ders.) in the rotating system */
 
 	for (i = 1; i <= 3; i++)
@@ -222,7 +212,7 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 		{
 			INNER_CALC_DSMU
 
-			avx_pbr = blendv_pd(_mm512_setzero_pd(), avx_pbr, cmp);
+				avx_pbr = blendv_pd(_mm512_setzero_pd(), avx_pbr, cmp);
 			avx_dsmu = blendv_pd(_mm512_setzero_pd(), avx_dsmu, cmp);
 			avx_dsmu0 = blendv_pd(_mm512_setzero_pd(), avx_dsmu0, cmp);
 			avx_lmu = blendv_pd(_mm512_setzero_pd(), avx_lmu, cmp);
@@ -287,7 +277,7 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 
 		for (j = 0; j < incl_count; j += 2)
 		{
-			__m512d *Dgrow, *Dgrow1, pdbr, pdbr1;
+			__m512d* Dgrow, * Dgrow1, pdbr, pdbr1;
 
 			Dgrow = &Dg_row[j][dgi];
 			pdbr = dbr[j];
@@ -310,19 +300,19 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 
 		for (j = 0; j < incl_count; j += 2)
 		{
-			__m512d *Dgrow, *Dgrow1, pdbr, pdbr1;
+			__m512d* Dgrow, * Dgrow1, pdbr, pdbr1;
 
 			Dgrow = &Dg_row[j][dgi];
 			pdbr = dbr[j];
 			Dgrow1 = &Dg_row[j + 1][dgi];
 			pdbr1 = dbr[j + 1];
 
-		    tmp1 = _mm512_fmadd_pd(pdbr1, Dgrow1[0], _mm512_fmadd_pd(pdbr, Dgrow[0], tmp1));
+			tmp1 = _mm512_fmadd_pd(pdbr1, Dgrow1[0], _mm512_fmadd_pd(pdbr, Dgrow[0], tmp1));
 		}
 		dgi++;
 		tmp1 = _mm512_mul_pd(tmp1, avx_Scale);
 		_mm512_store_pd(&dyda[i], tmp1);
-    }
+	}
 
 	/* Ders. of brightness w.r.t. rotation parameters */
 	dyda[ncoef0 - 3 + 1 - 1] = reduce_pd(avx_dyda1) * Scale;
@@ -339,6 +329,4 @@ void CalcStrategyAvx512::bright(double ee[], double ee0[], double t, double cg[]
 
 	/* Scaled brightness */
 	br *= Scale;
-
-	//return(br);
 }

@@ -1,3 +1,5 @@
+/* from Numerical Recipes */
+
 #define SWAP(a,b) {swap=(a);(a)=(b);(b)=swap;}
 
 void covsrt(double **covar, int ma, int ia[], int mfit)
@@ -17,4 +19,3 @@ void covsrt(double **covar, int ma, int ia[], int mfit)
 	}
 }
 #undef SWAP
-/* from Numerical Recipes */
