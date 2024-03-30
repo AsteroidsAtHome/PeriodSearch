@@ -77,7 +77,6 @@ std::string GetCpuInfo()
 std::string GetCpuInfo()
 {
 	char CPUBrandString[0x40];
-	// std::string CPUBrandString;
 	unsigned int CPUInfo[4] = {0, 0, 0, 0};
 
 	__cpuid(0x80000000, CPUInfo[0], CPUInfo[1], CPUInfo[2], CPUInfo[3]);
@@ -222,11 +221,6 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 	{
 		simd = SIMDEnum::OptNONE;
 	}
-
-	// else
-	//{
-	//	simd = SIMDEnum::OptNONE;
-	// }
 
 	if (tempSimd != simd)
 	{

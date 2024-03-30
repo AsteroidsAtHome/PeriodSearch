@@ -21,17 +21,6 @@ constexpr auto MIN(T1 X, T2 Y) { return ((X) < (Y) ? (X) : (Y)); }
 /* comment the following line if no YORP */
 /*#define YORP*/
 
-//#ifdef __GNUC__
-//	double dyda[MAX_N_PAR + 8] __attribute__((aligned(32)));
-//#else
-//	__declspec(align(32)) double dyda[MAX_N_PAR + 8]; //is zero indexed for aligned memory access
-//#endif
-
-//double xx1[4], xx2[4], dy, sig2i, wt, ymod,
-//	ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
-//	dave[MAX_N_PAR + 1 + 4],
-//	coef, ave = 0, trial_chisq, wght;  //moved here due to 64 debugger bug in vs2010
-
 #if defined(__GNUC__)
 __attribute__((target("avx")))
 #endif
@@ -43,12 +32,11 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 	int i, j, k, l, m, np, np1, np2, jp, ic;
 
 	/* N.B. curv and blmatrix called outside bright because output same for all points */
-	//curv(a);
 	CalcStrategyAvx::curv(a);
 
 	//   #ifdef YORP
 	//      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
-	  // #else
+	//   #else
 	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
 	//   #endif
 
@@ -58,6 +46,7 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 			alpha[j][k] = 0;
 		beta[j] = 0;
 	}
+
 	trial_chisq = 0;
 	np = 0;
 	np1 = 0;
@@ -82,13 +71,10 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 
 			if (i < Lcurves)
 			{
-				//ymod = bright(xx1, xx2, x3[np], a, dyda, ma);
-				//ymod = CalcStrategyAvx::bright(xx1, xx2, x3[np], a, dyda, ma);
 				CalcStrategyAvx::bright(xx1, xx2, x3[np], a, dyda, ma, ymod);
 			}
 			else
 			{
-				//ymod = conv(jp, dyda, ma);
 				CalcStrategyAvx::conv(jp, dyda, ma, ymod);
 			}
 
@@ -109,7 +95,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 			for (l = 1; l <= ma; l++)
 			{
 				dytemp[jp][l] = dyda[l - 1];
-				//				 if (Inrel[i]/* == 1*/) dave[l] = dave[l] + dyda[l-1];
 			}
 			/* save lightcurves */
 
@@ -137,7 +122,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 						avx_dytemp = _mm256_mul_pd(avx_dytemp, avx_coef);
 						_mm256_storeu_pd(&dytemp[jp][l], avx_dytemp);
 					}
-					//			if (l==ma) dytemp[jp][l] = coef * (dytemp[jp][l] - ytemp[jp] * dave[l] / ave); //last odd value is not problem
 
 					ytemp[jp] *= coef;
 					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
@@ -177,8 +161,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 							__m256d avx_alpha = _mm256_loadu_pd(&alpha[j][k]);
 							__m256d avx_dyda = _mm256_loadu_pd(&dyda[m]);
 							avx_alpha = _mm256_add_pd(avx_alpha, _mm256_mul_pd(avx_wt, avx_dyda));
-							// TODO: Test this
-							//avx_alpha = CalcStrategyAvx::mm256_madd_pd(avx_wt, avx_dyda, avx_alpha);
 							_mm256_storeu_pd(&alpha[j][k], avx_alpha);
 							k += 4;
 						} /* m */
@@ -201,8 +183,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 								__m256d avx_alpha = _mm256_loadu_pd(&alpha[j][kk]);
 								__m256d avx_dyda = _mm256_loadu_pd(&dyda[m]);
 								avx_alpha = _mm256_add_pd(avx_alpha, _mm256_mul_pd(avx_wt, avx_dyda));
-								// TODO: Test this
-								//avx_alpha = CalcStrategyAvx::mm256_madd_pd(avx_wt, avx_dyda, avx_alpha);
 								_mm256_storeu_pd(&alpha[j][kk], avx_alpha);
 								kk += 4;
 							} /* m */
@@ -249,8 +229,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 							__m256d avx_alpha = _mm256_load_pd(&alpha[j][k]);
 							__m256d avx_dyda = _mm256_loadu_pd(&dyda[m]);
 							avx_alpha = _mm256_add_pd(avx_alpha, _mm256_mul_pd(avx_wt, avx_dyda));
-							// TODO: Test this
-							//avx_alpha = CalcStrategyAvx::mm256_madd_pd(avx_wt, avx_dyda, avx_alpha);
 							_mm256_store_pd(&alpha[j][k], avx_alpha);
 							k += 4;
 						} /* m */
@@ -271,8 +249,6 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 								__m256d avx_alpha = _mm256_load_pd(&alpha[j][kk]);
 								__m256d avx_dyda = _mm256_loadu_pd(&dyda[m]);
 								avx_alpha = _mm256_add_pd(avx_alpha, _mm256_mul_pd(avx_wt, avx_dyda));
-								// TODO: Test this
-								//avx_alpha = CalcStrategyAvx::mm256_madd_pd(avx_wt, avx_dyda, avx_alpha);
 								_mm256_store_pd(&alpha[j][kk], avx_alpha);
 								kk += 4;
 							} /* m */
@@ -301,8 +277,5 @@ void CalcStrategyAvx::mrqcof(double** x1, double** x2, double x3[], double y[],
 	for (j = 1; j < mfit; j++)
 		for (k = 0; k <= j - 1; k++)
 			alpha[k][j] = alpha[j][k];
-
-	//return trial_chisq;
-	//mrq = trial_chisq;
 }
 

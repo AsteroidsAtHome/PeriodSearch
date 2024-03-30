@@ -8,11 +8,7 @@
 #include <cstdio>
 #include "globals.h"
 #include "declarations.h"
-//#ifdef NO_SSE3
 #include <emmintrin.h>
-//#else
-//#include <pmmintrin.h>
-//#endif
 #include "CalcStrategySse2.hpp"
 
 #if defined(__GNUC__)
@@ -22,7 +18,6 @@ __attribute__((target("sse2")))
 void CalcStrategySse2::conv(int nc, double dres[], int ma, double &result)
 {
 	int i, j;
-	//double res;
 
 	result = 0;
 	for (j = 1; j <= ma; j++)
@@ -44,6 +39,4 @@ void CalcStrategySse2::conv(int nc, double dres[], int ma, double &result)
 			_mm_store_pd(&dres[j], avx_dres);
 		}
 	}
-
-	//return(res);
 }

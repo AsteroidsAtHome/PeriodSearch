@@ -7,13 +7,13 @@
 #ifndef CSA
 #define CSA
 
-
 class CalcStrategyAvx : public CalcStrategy
 {
 public:
 #if defined _WIN32
 #pragma warning(disable:26495)
 #endif
+
 	CalcStrategyAvx() {};
 
 	virtual void mrqcof(double** x1, double** x2, double x3[], double y[],

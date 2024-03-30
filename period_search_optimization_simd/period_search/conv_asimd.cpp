@@ -16,7 +16,6 @@ __attribute__((__target__("arch=armv8-a+simd")))
 void CalcStrategyAsimd::conv(int nc, double dres[], int ma, double &result)
 {
     int i, j;
-    //double res = 0;
     result = 0;
 
     for (j = 1; j <= ma; j++)
@@ -32,9 +31,7 @@ void CalcStrategyAsimd::conv(int nc, double dres[], int ma, double &result)
             float64x2_t avx_Dg = vld1q_f64(&Dg_row[j]);
 
             avx_dres = vfmaq_f64(avx_dres, vmulq_f64(avx_Darea, avx_Dg), avx_Nor);
-            //avx_dres = vaddq_f64(avx_dres, vmulq_f64(vmulq_f64(avx_Darea, avx_Dg), avx_Nor));
             vst1q_f64(&dres[j], avx_dres);
         }
     }
-    //return res;
 }

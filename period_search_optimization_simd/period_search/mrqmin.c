@@ -14,13 +14,9 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 	double sig[], double a[], int ia[], int ma,
 	double** covar, double** alpha)
 {
-
 	int j, k, l, err_code;
 	static int mfit, lastone, lastma; /* it is set in the first call*/
-
 	static double* atry, * beta, * da; //beta, da are zero indexed
-
-	//double temp;
 	double trial_chisq;
 
 	/* dealocates memory when usen in period_search */
@@ -60,20 +56,9 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			}
 
 			Alamda = Alamda_start; /* initial alambda */
-			//printf("Alamda: %0.6f\n", Alamda);
 
 			calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma, trial_chisq);
-			//printf("% 0.6f\n", temp);
 
-//#ifdef AVX512
-//			temp = mrqcof_avx512(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//#else
-//	#ifdef FMA
-//			temp = mrqcof_fma(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//	#else
-//			temp = mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma);
-//	#endif
-//#endif
 			Ochisq = trial_chisq;
 			for (j = 1; j <= ma; j++)
 			{
@@ -86,8 +71,6 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 			for (k = 0; k < mfit; k++)
 			{
 				covar[j][k] = alpha[j][k];
-				//if(j == 0 || j == 1)
-				//	printf("[%3d] [%3d] % 0.6f\n", j, k, alpha[j][k]);
 			}
 
 			covar[j][j] = alpha[j][j] * (1 + Alamda);
@@ -96,15 +79,6 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 
 		calcCtx.CalculateGaussErrc(covar, mfit, da, err_code);
 
-//#ifdef AVX512
-//	err_code = gauss_errc_avx512(covar, mfit, da);
-//#else
-//	#ifdef FMA
-//		err_code = gauss_errc_fma(covar, mfit, da);
-//	#else
-//		err_code = gauss_errc(covar, mfit, da);
-//	#endif
-//#endif
 		if (err_code != 0) return(err_code);
 
 		j = 0;
@@ -128,17 +102,7 @@ int mrqmin(double** x1, double** x2, double x3[], double y[],
 
 	calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma, trial_chisq);
 
-//#ifdef AVX512
-//	temp = mrqcof_avx512(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//#else
-//	#ifdef FMA
-//		temp = mrqcof_fma(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//	#else
-//		temp = mrqcof(x1, x2, x3, y, sig, atry, ia, ma, covar, da, mfit, lastone, lastma);
-//	#endif
-//#endif
 	Chisq = trial_chisq;
-
 
 	if (Lastcall == 1)
 	{

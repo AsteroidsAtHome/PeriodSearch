@@ -54,6 +54,7 @@
 #include "boinc_win.h"
 #include "VersionInfo.h"
 #include <Shlwapi.h>
+#include "WinBase.h"
 #else
 #include "config.h"
 #include <cstdio>
@@ -81,15 +82,6 @@
 #include "Enums.h"
 #include "CalcStrategy.hpp"
 #include "CalcStrategyNone.hpp"
-/*
-#if defined __x86_64__ || defined(__i386__) || defined(_WIN32)
-  #include "CalcStrategySse2.hpp"
-  #include "CalcStrategySse3.hpp"
-  #include "CalcStrategyAvx.hpp"
-  #include "CalcStrategyFma.hpp"
-  #include "CalcStrategyAvx512.hpp"
-#endif
-*/
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -209,15 +201,11 @@ double dyda[MAX_N_PAR + 16] __attribute__((aligned(64)));
 __declspec(align(64)) double dyda[MAX_N_PAR + 16]; //is zero indexed for aligned memory access
 #endif
 
-//double dyda[MAX_N_PAR + 1];
-
 double xx1[4], xx2[4], dy, sig2i, wt, ymod,
 	ytemp[MAX_LC_POINTS + 1], dytemp[MAX_LC_POINTS + 1][MAX_N_PAR + 1 + 4],
 	dave[MAX_N_PAR + 1 + 4],
 	dave2[MAX_N_PAR + 1 + 4],
 	coef, ave = 0, trial_chisq, wght;
-
-/*--------------------------------------------------------------*/
 
 //void blinkLed(int count) {
 //	for (int i = 0; i < count; i++) {
@@ -228,37 +216,30 @@ double xx1[4], xx2[4], dy, sig2i, wt, ymod,
 //	}
 //}
 
-//bool cmdOptionExists(std::vector<char> vec, char &option)
-//{
-//	return std::find(vec.begin(), vec.end(), option) != vec.end();
-//}
-
 int main(int argc, char** argv)
 {
-	int nchars = 0, nlines, ntestperiods, checkpoint_exists, n_start_from; //c, retval,
-	//    double fsize, fd;
+	int nchars = 0, nlines, ntestperiods, checkpoint_exists, n_start_from;
 	char input_path[512], output_path[512], chkpt_path[512], buf[256];
 	MFILE out;
-	//FILE* state; // , * infile;
 
-	int i, j, l, m, k, n, nrows, ndir, i_temp, //onlyrel, // ndata,  k2,
-		n_iter_max, n_iter_min, //* ia, //ia is zero indexed
-		ia_prd, ia_par[4]{}, ia_cl, // ia_beta_pole, ia_lambda_pole, ial0, ial0_abs,
+	int i, j, l, m, k, n, nrows, ndir, i_temp,
+		n_iter_max, n_iter_min,
+		ia_prd, ia_par[4]{}, ia_cl,
 		lc_number,
-		new_conw, max_test_periods; //**ifp,
+		new_conw, max_test_periods;
 
 	double per_start, per_step_coef, per_end,
-		freq, freq_start, freq_step, freq_end, // jd_min, jd_max,
+		freq, freq_start, freq_step, freq_end,
 		dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
 		totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
-		sum_dark_facet, ave_dark_facet; //* t, * f, * at, * af,
+		sum_dark_facet, ave_dark_facet;
 
-	double jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95, // a, b, c_axis, //jd_0,
-		prd, cl, e0len, elen, cos_alpha, // al0, al0_abs, average,
+	double jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95,
+		prd, cl, e0len, elen, cos_alpha,
 		dth, dph, rfit, escl,
-		e[4]{}, e0[4]{}, // ** ee,** ee0, ** covar, ** aalpha, * tim, * brightness, * sig, * cg, * cg_first,
-		chck[4]{}, //* al,
-		 par[4]{}, rchisq; // , * weight_lc, lambda_pole[N_POLES + 1]{}, beta_pole[N_POLES + 1]{},
+		e[4]{}, e0[4]{},
+		chck[4]{},
+		 par[4]{}, rchisq;
 
 	char *str_temp = (char*)malloc(MAX_LINE_LENGTH);
 
@@ -279,23 +260,13 @@ int main(int argc, char** argv)
 	int **ifp = matrix_int(MAX_N_FAC, 4);
 	int *ia = vector_int(MAX_N_PAR); //ia is zero indexed
 
-	// lambda_pole[1] = 0;    beta_pole[1] = 0;
-	// lambda_pole[2] = 90;   beta_pole[2] = 0;
-	// lambda_pole[3] = 180;  beta_pole[3] = 0;
-	// lambda_pole[4] = 270;  beta_pole[4] = 0;
-	// lambda_pole[5] = 60;   beta_pole[5] = 60;
-	// lambda_pole[6] = 180;  beta_pole[6] = 60;
-	// lambda_pole[7] = 300;  beta_pole[7] = 60;
-	// lambda_pole[8] = 60;   beta_pole[8] = -60;
-	// lambda_pole[9] = 180;  beta_pole[9] = -60;
-	// lambda_pole[10] = 300; beta_pole[10] = -60;
-
 	double lambda_pole[N_POLES + 1] = { 0.0, 0.0, 90.0, 180.0, 270.0, 60.0, 180.0, 300.0, 60.0, 180.0, 300.0 };
 	double beta_pole[N_POLES + 1] = { 0.0, 0.0, 0.0, 0.0, 0.0, 60.0, 60.0, 60.0, -60.0, -60.0, -60.0 };
 
 
 	// ia_lambda_pole = ia_beta_pole = 1;
-	int ia_lambda_pole = 1, ia_beta_pole = 1;
+	int ia_lambda_pole = 1;
+	int ia_beta_pole = 1;
 
 	//wiringPiSetupSys();
 	//pinMode(LED, OUTPUT);
@@ -559,8 +530,7 @@ int main(int argc, char** argv)
 		if (feof(infile)) break;
 	}
 
-	/* If input jd_0 <= 0 then the jd_0 is set to the day before the
-	   lowest JD in the data */
+	/* If input jd_0 <= 0 then the jd_0 is set to the day before the lowest JD in the data */
 	if (jd_0 <= 0)
 	{
 		jd_0 = (int)jd_min;
@@ -902,11 +872,7 @@ int main(int argc, char** argv)
 					{
 						Ochisq = Chisq;
 						calcCtx.CalculateCurv(cg);
-//#ifdef AVX512
-//						curv_avx512(cg);
-//#else
-//						curv(cg);
-//#endif
+
 						for (i = 1; i <= 3; i++)
 						{
 							chck[i] = 0;
@@ -1182,11 +1148,7 @@ int main(int argc, char** argv)
 				{
 					Ochisq = Chisq;
 					calcCtx.CalculateCurv(cg);
-//#ifdef AVX512
-//					curv_avx512(cg);
-//#else
-//					curv(cg);
-//#endif
+
 					for (i = 1; i <= 3; i++)
 					{
 						chck[i] = 0;
@@ -1305,7 +1267,9 @@ int main(int argc, char** argv)
 }
 
 #ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR Args, int WinMode) {
+
+int WINAPI WinMain(_In_ HINSTANCE hInst, _In_opt_ HINSTANCE hPrevInst, _In_ LPSTR Args, _In_ int WinMode)
+{
 	LPSTR command_line;
 	char* argv[100];
 	int argc;
@@ -1314,5 +1278,5 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR Args, int WinMode
 	argc = parse_command_line(command_line, argv);
 	return main(argc, argv);
 }
-#endif
 
+#endif

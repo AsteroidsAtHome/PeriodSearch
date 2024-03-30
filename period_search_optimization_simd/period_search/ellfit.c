@@ -37,8 +37,7 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
             pow(c * cos(at[i]), 2);
         er[i] = 2 * (log(a * b * c) - log(sum));
     }
-    /* Compute the sph. harm. values at each direction and
-       construct the matrix fmat from them */
+    /* Compute the sph. harm. values at each direction and construct the matrix fmat from them */
     for (i = 1; i <= ndir; i++)
     {
         n = 0;
@@ -77,8 +76,10 @@ void ellfit(double cg[], double a, double b, double c, int ndir, int ncoef, doub
     //printArray(fitmat, ncoef, ncoef, "fitmat[x][y]:");
 
     ludcmp(fitmat, ncoef, indx, d);
+
     //printArray(fitmat, ncoef, ncoef, "fitvec_after_lubksb");
     //printArray(fitvec, ncoef, "fitvec_before_lubksb");
+
     lubksb(fitmat, ncoef, indx, fitvec);
 
     // For Unit test reference only
