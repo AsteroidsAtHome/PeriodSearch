@@ -18,6 +18,12 @@
 *.vspscc
 *.vssscc
 
+#VSCode files
+.vscode/
+.vscode/*.*
+/.vscode/c_cpp_properties.json
+/.vscode/settings.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -134,3 +140,4 @@ period_search_BOINC*
 /*/*Profiler Results
 /*/GPUCache
 diag/
+
