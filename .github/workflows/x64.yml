@@ -1,0 +1,75 @@
+
+name: C/C++ CI
+
+on: [push, pull_request]
+
+env:
+  BOINC_DIR: ./boinc
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    name: >-
+      ${{ matrix.variant }} / ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { variant: 'cuda', os: 'ubuntu-latest', working-directory: './period_search_cuda/period_search', makefile: 'Makefile' }
+          - { variant: 'opencl', os: 'ubuntu-latest', working-directory: './period_search_opencl_amd/period_search', makefile: 'Makefile' }
+          - { variant: 'cpu', os: 'ubuntu-latest', working-directory: './period_search_optimization_simd/period_search', makefile: 'Makefile' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Print gcc version
+        run: |
+          gcc -v
+
+      - name: Prepare boinc libraries
+        run: |
+          git clone --depth 1 https://github.com/BOINC/boinc.git
+          cd ./boinc
+          sh ./_autosetup
+          sh ./configure --disable-server --disable-client --disable-manager
+          make -j
+
+      - name: Install opencl
+        if: success() && matrix.variant == 'opencl'
+        run: |
+          sudo apt-get install opencl-headers ocl-icd-opencl-dev pocl-opencl-icd
+
+          sed -i 's/OPENCL_PATH\s*=.*$/OPENCL_PATH = \/usr\/include\/CL/' ${{ matrix.working-directory }}/${{ matrix.makefile }}
+          sed -i 's/OPENCL_LIB_PATH\s*=.*$/OPENCL_LIB_PATH = \/usr\/lib\/x86_64-linux-gnu/' ${{ matrix.working-directory }}/${{ matrix.makefile }}
+
+      - name: Install cuda
+        if: success() && matrix.variant == 'cuda'
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get -y install cuda
+
+          sed -i 's/CUDA_PATH\s*=.*$/CUDA_PATH = \/usr\/local\/cuda/' ${{ matrix.working-directory }}/${{ matrix.makefile }}
+
+      - name: Run make
+        working-directory: ${{ matrix.working-directory }}
+        run: |
+          sed -i 's/BOINC_DIR\s*=.*$/BOINC_DIR = ..\/..\/boinc/' ${{ matrix.makefile }}
+          make -f ${{ matrix.makefile }} -j
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.variant }}_${{ matrix.os }}
+          retention-days: 1
+          path: |
+            ${{ matrix.working-directory }}/**/period_search_BOINC*
+            !${{ matrix.working-directory }}/period_search_BOINC.cpp
+            !${{ matrix.working-directory }}/period_search_BOINC.o
