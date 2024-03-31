@@ -8,11 +8,9 @@
 #include "CalcStrategyNone.hpp"
 #include "CalcStrategyAsimd.hpp"
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
   #include <sys/auxv.h>
-
-  #define AT_HWCAP 16
-  #define HWCAP_ASIMD (1 << 1)
+  #include <asm/hwcap.h>
 #endif
 
 std::string GetCpuInfo()
@@ -22,9 +20,16 @@ std::string GetCpuInfo()
 
 void GetSupportedSIMDs()
 {
-	#if defined(__aarch64__) || defined(_M_ARM64)
-	  uint64_t hwcap = getauxval(AT_HWCAP);
-      CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
+	#if defined(__linux__)
+	  #if (defined(__aarch64__) || defined(_M_ARM64))
+	    uint64_t hwcap = getauxval(AT_HWCAP);
+        CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
+	  #elif (defined(__arm__) || defined(_M_ARM))
+	    uint64_t hwcap = getauxval(AT_HWCAP);
+        CPUopt.hasASIMD = hwcap & HWCAP_NEON;
+	  #endif
+	#elif defined(__APPLE__)
+	  CPUopt.hasASIMD = true; // M1
 	#else
 	  CPUopt.hasASIMD = false;
 	#endif
@@ -39,11 +44,6 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 				   ? SIMDEnum::OptASIMD
 				   : SIMDEnum::OptNONE;
 	}
-
-	// else
-	//{
-	//	simd = SIMDEnum::OptNONE;
-	// }
 
 	if (tempSimd != simd)
 	{
