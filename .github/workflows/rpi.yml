@@ -46,7 +46,7 @@ jobs:
           git clone --depth 1 https://github.com/BOINC/boinc.git
           cd ./boinc
           ./_autosetup
-          ./configure --disable-server --disable-manager --disable-client CXXFLAGS="-O3 "
+          ./configure --host=aarch64-linux --with-boinc-platform="aarch64-unknown-linux-gnu" --disable-server --disable-manager --disable-client CXXFLAGS="-O3 "
           make -j
 
       - name: Run make
