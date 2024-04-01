@@ -1,0 +1,74 @@
+# download wget https://dl.google.com/android/repository/android-ndk-r26c-linux.zip
+
+BOINC_DIR = ../../../boinc_src
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+ANDROID_NDK_DIR = ../../../android/android-ndk-r26c
+ANDROID_NDK_BIN = $(ANDROID_NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin
+
+CXXFLAGS = -march=armv8-a -O3 -std=c++17 -w -s -frecord-gcc-switches -static-libstdc++ -static -ldl\
+        -DAPP_GRAPHICS \
+        -I$(BOINC_DIR) \
+        -I$(BOINC_LIB_DIR) \
+        -I$(BOINC_API_DIR) \
+        -L /usr/X11R6/lib \
+        -L.
+
+CC=$(ANDROID_NDK_BIN)/aarch64-linux-android34-clang++
+CXX=$(ANDROID_NDK_BIN)/aarch64-linux-android34-clang++
+LD=$(ANDROID_NDK_BIN)/ld
+OPTFLAGS=-march=armv8-a -O3 -frecord-gcc-switches
+CFLAGS=$(OPTFLAGS) -w -s -static-libstdc++ -static -ldl
+LDFLAGS=-lm
+MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o \
+    conv.o \
+    covsrt.o CpuInfoArm.o curv.o \
+    bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
+    dot_product.o ellfit.o EnumHelpers.o gauss_errc.o \
+    lubksb.o ludcmp.o matrix.o \
+    memory.o mrqcof.o \
+    mrqmin.o phasec.o sphfunc.o systeminfo.o \
+    trifac.o VersionInfo.o
+
+# the following should be freeglut; use nm to check
+# you may have to change the paths for your system
+
+ifeq ($(wildcard /usr/local/lib/libglut.a),)
+        LIBGLUT = /usr/lib/libglut.a
+        LIBGLU = /usr/lib/libGLU.a
+        LIBJPEG = /usr/lib/libjpeg.a
+else
+        LIBGLUT = /usr/local/lib/libglut.a
+        LIBGLU = /usr/local/lib/libGLU.a
+        LIBJPEG = /usr/local/lib/libjpeg.a
+endif
+
+PROGS = period_search_BOINC_android_10220_arm_universal_androidv8_Release
+# uc2_graphics
+# make this optional so compile doesn't break on systems without OpenGL
+
+all: $(PROGS)
+
+clean:
+	/bin/rm -f $(PROGS) *.o
+
+distclean:
+	/bin/rm -f $(PROGS) *.o
+
+install: period_search_BOINC_android_10220_arm_universal_androidv8_Release
+
+# specify library paths explicitly (rather than -l)
+# because otherwise you might get a version in /usr/lib etc.
+
+#uc2: uc2.o libstdc++.a $(BOINC_API_DIR)/libboinc_api.a #$(BOINC_LIB_DIR)/libboinc.a
+#	$(CXX) $(CXXFLAGS) -o uc2 uc2.o libstdc++.a -pthread \
+#	$(BOINC_API_DIR)/libboinc_api.a \
+#	$(BOINC_LIB_DIR)/libboinc.a
+
+period_search_BOINC_android_10220_arm_universal_androidv8_Release: period_search_BOINC.o $(MY_LIBS) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
+	$(BOINC_API_DIR)/libboinc_api.a \
+	$(BOINC_LIB_DIR)/libboinc.a -lm
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
