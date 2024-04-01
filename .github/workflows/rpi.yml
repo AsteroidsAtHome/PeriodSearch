@@ -1,0 +1,71 @@
+
+name: C/C++ CI
+
+on: [push, pull_request]
+
+env:
+  BOINC_DIR: ./boinc
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    name: >-
+      ${{ matrix.variant }} / ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { variant: 'cpu rpi v8', os: 'ubuntu-latest', working-directory: './period_search_optimization_simd/period_search', makefile: 'Makefile_arm' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare rpi toolchain
+        run: |
+          wget https://sourceforge.net/projects/raspberry-pi-cross-compilers/files/Bonus%20Raspberry%20Pi%20GCC%2064-Bit%20Toolchains/Raspberry%20Pi%20GCC%2064-Bit%20Cross-Compiler%20Toolchains/Buster/GCC%2010.3.0/cross-gcc-10.3.0-pi_64.tar.gz/download
+          tar -zxvf download
+
+      - name: Print gcc version
+        run: |
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/bin:$PATH"
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/libexec/gcc/aarch64-linux-gnu/10.3.0:$PATH"
+          aarch64-linux-gnu-g++ -v
+
+      - name: Prepare boinc libraries
+        run: |
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/bin:$PATH"
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/libexec/gcc/aarch64-linux-gnu/10.3.0:$PATH"
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          git clone --depth 1 https://github.com/BOINC/boinc.git
+          cd ./boinc
+          ./_autosetup
+          ./configure --disable-server --disable-manager --disable-client CXXFLAGS="-O3 "
+          make -j
+
+      - name: Run make
+        working-directory: ${{ matrix.working-directory }}
+        run: |
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/bin:$PATH"
+          export PATH="/home/runner/work/PeriodSearch/PeriodSearch/cross-pi-gcc-10.3.0-64/libexec/gcc/aarch64-linux-gnu/10.3.0:$PATH"
+          sed -i 's/BOINC_DIR\s*=.*$/BOINC_DIR = ..\/..\/boinc/' ${{ matrix.makefile }}
+          sed -i 's/CC\s*=.*$/CC = aarch64-linux-gnu-g++/' ${{ matrix.makefile }}
+          sed -i 's/CXX\s*=.*$/CXX = aarch64-linux-gnu-g++/' ${{ matrix.makefile }}
+          sed -i 's/g++ -print-file-name=libstdc++.a/aarch64-linux-gnu-g++ -print-file-name=libstdc++.a/' ${{ matrix.makefile }}
+          make -f ${{ matrix.makefile }} -j
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.variant }}_${{ matrix.os }}
+          retention-days: 1
+          path: |
+            ${{ matrix.working-directory }}/**/period_search_BOINC*
+            !${{ matrix.working-directory }}/period_search_BOINC.cpp
+            !${{ matrix.working-directory }}/period_search_BOINC.o
