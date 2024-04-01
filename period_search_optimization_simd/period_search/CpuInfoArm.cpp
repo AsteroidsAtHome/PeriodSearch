@@ -9,7 +9,9 @@
 #include "CalcStrategyAsimd.hpp"
 
 #if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
+#if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
   #include <sys/auxv.h>
+  #include <asm/hwcap.h>
   #include <asm/hwcap.h>
 #endif
 
@@ -18,12 +20,63 @@ std::string GetCpuInfo()
 	return "";
 }
 
+void DetectArmv8CpuFeatures(long hwcaps)
+{
+    if(hwcaps & HWCAP_AES)
+	{
+        std::cerr << "HWCAP_AES: AES instructions are available." << std::endl;
+    }
+	else
+	{
+		std::cerr << "HWCAP_AES: AES instructions are NOT available." << std::endl;
+	}
+
+    if(hwcaps & HWCAP_CRC32)
+	{
+		std::cerr << "HWCAP_CRC32: CRC32 instructions are available." << std::endl;
+    }
+	else
+	{
+		std::cerr << "HWCAP_CRC32: CRC32 instructions are NOT available." << std::endl;
+	}
+
+    if(hwcaps & HWCAP_PMULL)
+	{
+		std::cerr << "HWCAP_PMULL: PMULL/PMULL2 instructions that operate on 64-bit data are available." << std::endl;
+    }
+	else
+	{
+		std::cerr << "HWCAP_PMULL: PMULL/PMULL2 instructions that operate on 64-bit data are NOT available." << std::endl;
+	}
+
+    if(hwcaps & HWCAP_SHA1)
+	{
+		std::cerr << "HWCAP_SHA1: SHA1 instructions are available." << std::endl;
+    }
+	else
+	{
+		std::cerr << "HWCAP_SHA1: SHA1 instructions are NOT available." << std::endl;
+	}
+
+    if(hwcaps & HWCAP_SHA2)
+	{
+        std::cerr << "HWCAP_SHA2: SHA2 instructions are available." << std::endl;
+    }
+	else
+	{
+		std::cerr << "HWCAP_SHA2: SHA2 instructions are NOT available." << std::endl;
+	}
+}
+
 void GetSupportedSIMDs()
 {
 	#if defined(__linux__)
 	  #if (defined(__aarch64__) || defined(_M_ARM64))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
-        CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
+		// NOTE: For debug purposes:
+		// DetectArmv8CpuFeatures(hwcap);
+
+        CPUopt.hasASIMD = hwcap & HWCAP_PMULL & HWCAP_ASIMD;
 	  #elif (defined(__arm__) || defined(_M_ARM))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
         CPUopt.hasASIMD = hwcap & HWCAP_NEON;
@@ -71,9 +124,11 @@ void SetOptimizationStrategy(SIMDEnum useOptimization)
 {
 	switch (useOptimization)
 	{
+#if !(defined(__linux__) && (defined(__aarch64__) || defined(_M_ARM64)))
 	case SIMDEnum::OptASIMD:
 		calcCtx.set_strategy(std::make_unique<CalcStrategyAsimd>());
 		break;
+#endif
 	case SIMDEnum::OptNONE:
 	default:
 		calcCtx.set_strategy(std::make_unique<CalcStrategyNone>());
