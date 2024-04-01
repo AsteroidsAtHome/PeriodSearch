@@ -37,7 +37,7 @@ jobs:
           git clone --depth 1 https://github.com/BOINC/boinc.git
           cd ./boinc
           sh ./_autosetup
-          sh ./configure --disable-server --disable-client --disable-manager
+          sh ./configure --disable-server --disable-client --disable-manager CXXFLAGS="-O3 "
           make -j
 
       - name: Install opencl

@@ -44,7 +44,7 @@ jobs:
           git clone --depth 1 https://github.com/BOINC/boinc.git
           cd ./boinc
           ./_autosetup
-          ./configure --host=aarch64-linux --with-boinc-platform="aarch64-android-linux-gnu" --with-boinc-alt-platform="arm-android-linux-gnu" --disable-server --disable-manager --disable-client --enable-static
+          ./configure --host=aarch64-linux --with-boinc-platform="aarch64-android-linux-gnu" --with-boinc-alt-platform="arm-android-linux-gnu" --disable-server --disable-manager --disable-client --enable-static CXXFLAGS="-O3 "
           make -j
 
       - name: Run make
