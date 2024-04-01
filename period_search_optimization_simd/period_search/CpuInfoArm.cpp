@@ -73,7 +73,8 @@ void GetSupportedSIMDs()
 	#if defined(__linux__)
 	  #if (defined(__aarch64__) || defined(_M_ARM64))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
-		DetectArmv8CpuFeatures(hwcap);
+		// NOTE: For debug purposes:
+		// DetectArmv8CpuFeatures(hwcap);
 
         CPUopt.hasASIMD = hwcap & HWCAP_PMULL & HWCAP_ASIMD;
 	  #elif (defined(__arm__) || defined(_M_ARM))
