@@ -2,34 +2,44 @@
 #
 #	Prepare BOINC API as follows:	
 #		./_autosetup # Only first time
-#		./configure --disable-server --disable-client --disable-manager CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3"
+#		./configure --disable-server --disable-client --disable-manager \
+			CC="arm-linux-gnueabihf-g++" \
+			CXX="arm-linux-gnueabihf-g++" \
+			CPP="arm-linux-gnueabihf-g++ -E" \
+			CXXFLAGS="-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3"
 #		make
 #
+#	To check for the supported macroses use:
+#		echo | g++ -dM -E -
+#		echo | arm-linux-gnueabihf-g++ -dM -E -
+#		echo | clang++ -dM -E -
+#
 
-BOINC_DIR = ../boinc_src
+BOINC_DIR = ../../../boinc_src_armv7
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
 # Use `readelf -p .GCC.command.line period_search_rpi_armv7_arm32` to see all used compiler commands
-CXXFLAGS = -march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches \
+CXXFLAGS = -march=armv7-a+vfpv4 -std=c++17 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches \
     -DARM32 \
-	-DAPP_GRAPHICS \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
     -I$(BOINC_API_DIR) \
-	-I/usr/arm-linux-gnueabihf/include \
-    -L/usr/arm-linux-gnueabihf/lib \
-    -L /usr/X11R6/lib \
+	-I /usr/arm-linux-gnueabihf/include \
+    -L /usr/arm-linux-gnueabihf/lib \
+    -L /usr/lib \
     -L.
+
+#     -L /usr/arm-linux-gnueabihf/include/c++/10 \
 
 CC=arm-linux-gnueabihf-g++ 
 CXX=arm-linux-gnueabihf-g++
-OPTFLAGS=-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches
+OPTFLAGS=-march=armv7-a+vfpv4 -std=c++17 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -Wall
 LDFLAGS=-lm
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
         curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
-	    dot_product.o gauss_errc.o systeminfo.o
+	    dot_product.o gauss_errc.o systeminfo.o CpuInfoArm32.o EnumHelpers.o VersionInfo.o
 
 # the following should be freeglut; use nm to check
 # you may have to change the paths for your system

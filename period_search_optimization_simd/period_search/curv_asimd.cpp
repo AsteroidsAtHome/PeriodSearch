@@ -9,9 +9,13 @@
 #include "CalcStrategyAsimd.hpp"
 #include "arrayHelpers.hpp"
 
-#if defined(__GNUC__)
+#if defined __GNUG__ && !defined __clang__
 __attribute__((__target__("arch=armv8-a+simd")))
+#elif defined __GNUG__ && __clang__
+// NOTE: The following generates warning: unsupported architecture 'armv8-a+simd' in the 'target' attribute string; 'target' attribute ignored [-Wignored-attributes]
+// __attribute__((target("arch=armv8-a+simd")))
 #endif
+
 void CalcStrategyAsimd::curv(double cg[])
 {
    int i, m, l, k;

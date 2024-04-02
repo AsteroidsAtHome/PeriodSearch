@@ -14,16 +14,22 @@ BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
+# CXXFLAGS = -march=armv8-a -O3 -std=c++17 -frecord-gcc-switches\
+#     -DARM64 \
+#     -I$(BOINC_DIR) \
+#     -I$(BOINC_LIB_DIR) \
+#     -I$(BOINC_API_DIR) \
+#     -L /usr/lib \
+#     -L.
+
 CXXFLAGS = -march=armv8-a -O3 -std=c++17 -frecord-gcc-switches\
     -DARM64 \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
-    -I$(BOINC_API_DIR) \
-    -L /usr/lib \
-    -L.
+    -I$(BOINC_API_DIR)
 
-CC=g++
-CXX=g++
+CC=clang++
+CXX=clang++
 OPTFLAGS=-march=armv8-a -O3 -std=c++17 -frecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -Wall
 LDFLAGS=-lm
