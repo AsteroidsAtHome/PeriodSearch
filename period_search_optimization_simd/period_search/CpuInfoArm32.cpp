@@ -10,7 +10,6 @@
 #if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
   #include <sys/auxv.h>
   #include <asm/hwcap.h>
-  #include <asm/hwcap.h>
 #endif
 
 #if defined(__GNUG__)
