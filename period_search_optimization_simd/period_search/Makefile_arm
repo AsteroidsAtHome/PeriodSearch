@@ -19,7 +19,7 @@ CFLAGS=$(OPTFLAGS) -w -s
 LDFLAGS=-lm
 MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o \
     conv.o \
-    covsrt.o CpuInfoArm.o curv.o \
+    covsrt.o CpuInfoArm64.o curv.o \
     bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
     dot_product.o ellfit.o EnumHelpers.o gauss_errc.o \
     lubksb.o ludcmp.o matrix.o \

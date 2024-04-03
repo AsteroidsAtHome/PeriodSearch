@@ -12,6 +12,7 @@
 #include "declarations.h"
 #include "constants.h"
 #include "CalcStrategyAsimd.hpp"
+#include <arm_neon.h>
 
 #define INNER_CALC \
 	res_br = vaddq_f64(res_br, avx_pbr); \
@@ -71,9 +72,13 @@
 // end of inner_calc_dsmu
 
 
-#if defined(__GNUC__)
+#if defined __GNUG__ && !defined __clang__
 __attribute__((__target__("arch=armv8-a+simd")))
+#elif defined __GNUG__ && __clang__
+// NOTE: The following generates warning: unsupported architecture 'armv8-a+simd' in the 'target' attribute string; 'target' attribute ignored [-Wignored-attributes]
+// __attribute__((target("arch=armv8-a+simd")))
 #endif
+
 void CalcStrategyAsimd::bright(double ee[], double ee0[], double t, double cg[], double dyda[], int ncoef, double &br)
 {
    int i, j, k;

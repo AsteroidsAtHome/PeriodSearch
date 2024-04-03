@@ -12,6 +12,7 @@ class CalcStrategyAsimd : public CalcStrategy
 public:
 
 	CalcStrategyAsimd() {};
+	~CalcStrategyAsimd() {};
 
 	virtual void mrqcof(double** x1, double** x2, double x3[], double y[],
 		double sig[], double a[], int ia[], int ma,
