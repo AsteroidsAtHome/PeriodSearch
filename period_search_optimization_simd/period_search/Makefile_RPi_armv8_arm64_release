@@ -9,6 +9,7 @@
 #		echo | g++ -dM -E -
 #		echo | clang++ -dM -E -
 #
+#    N.B.: Unfortunatelly this doesn't work for the momment. g++ has issues with ASIMDs.
 
 BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api

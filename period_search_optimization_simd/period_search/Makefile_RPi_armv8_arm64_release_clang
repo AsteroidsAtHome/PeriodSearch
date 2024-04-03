@@ -1,5 +1,11 @@
 # This should work on Linux.  Modify as needed for other platforms.
 #
+#	The following Makefile produces armv7 32bit period-search application. Tested on RPi CM4 2GB running 64bit Buster distro.
+#	Try to use environment based on GLIBC v2.28
+#   Before you start you might need to install the following packages:
+#		binutils-arm-linux-gnueabihf | 2.31.1-16
+#		g++-arm-linux-gnueabihf | 4:8.3.0-1
+#
 #	Prepare BOINC API as follows:	
 #		./_autosetup # Only first time
 #		./configure --disable-server --disable-client --disable-manager --build=aarch64-unknown-linux-gnu
@@ -22,7 +28,7 @@ BOINC_LIB_DIR = $(BOINC_DIR)/lib
 #     -L /usr/lib \
 #     -L.
 
-CXXFLAGS = -march=armv8-a -O3 -std=c++17 -frecord-gcc-switches\
+CXXFLAGS = -march=armv8-a -O3 -std=c++17 -grecord-gcc-switches\
     -DARM64 \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
@@ -30,7 +36,7 @@ CXXFLAGS = -march=armv8-a -O3 -std=c++17 -frecord-gcc-switches\
 
 CC=clang++
 CXX=clang++
-OPTFLAGS=-march=armv8-a -O3 -std=c++17 -frecord-gcc-switches
+OPTFLAGS=-march=armv8-a -O3 -std=c++17 -grecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -Wall
 LDFLAGS=-lm
 

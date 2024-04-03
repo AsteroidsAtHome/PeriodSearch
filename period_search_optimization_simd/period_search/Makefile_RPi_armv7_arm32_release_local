@@ -1,11 +1,5 @@
 # This should work on Linux.  Modify as needed for other platforms.
 #
-#	The following Makefile produces armv7 32bit period-search application. Tested on RPi CM 42GB, running 64bit Buster distro.
-#	Try to use environment based on GLIBC v2.28
-#   Before you start you might need to install the following packages:
-#		binutils-arm-linux-gnueabihf | 2.31.1-16
-#		g++-arm-linux-gnueabihf | 4:8.3.0-1
-#
 #	Prepare BOINC API as follows:	
 #		./_autosetup # Only first time
 #		./configure --disable-server --disable-client --disable-manager CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-march=armv7-a+vfpv4 -mfloat-abi=hard -mfpu=vfpv4 -O3"
@@ -22,19 +16,24 @@ BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
 # Use `readelf -p .GCC.command.line period_search_rpi_armv7_arm32` to see all used compiler commands
-CXXFLAGS = -march=armv7-a+vfpv4 -std=c++17 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches \
+# CXXFLAGS = -march=armv7-a+vfpv4 -std=c++17 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches \
+
+CXXFLAGS = -std=c++17 -O3 -frecord-gcc-switches \
     -DARM32 \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
     -I$(BOINC_API_DIR) \
-	-I /usr/arm-linux-gnueabihf/include \
-    -L /usr/arm-linux-gnueabihf/lib \
+	-I /usr/lib/arm-linux-gnueabihf \
+	-L /usr/include/c++/8/filesystem \
     -L /usr/lib \
     -L.
 
-CC=arm-linux-gnueabihf-g++ 
-CXX=arm-linux-gnueabihf-g++
-OPTFLAGS=-march=armv7-a+vfpv4 -std=c++17 -mfloat-abi=hard -mfpu=vfpv4 -O3 -frecord-gcc-switches
+#     -L /usr/arm-linux-gnueabihf/include/c++/10 \
+
+CC=g++ 
+CXX=g++
+# OPTFLAGS=-march=armv7-a+vfpv4 -std=c++17 -O3 -frecord-gcc-switches
+OPTFLAGS=-march=armv7 -std=c++17 -O3 -frecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -Wall
 LDFLAGS=-lm
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
@@ -61,7 +60,7 @@ PROGS = period_search_rpi_armv7_arm32
 all: $(PROGS)
 
 libstdc++.a:
-	ln -s `arm-linux-gnueabihf-g++ -print-file-name=libstdc++.a`
+	ln -s `g++ -print-file-name=libstdc++.a`
 
 clean:
 	/bin/rm -f $(PROGS) *.o libstdc++.a
