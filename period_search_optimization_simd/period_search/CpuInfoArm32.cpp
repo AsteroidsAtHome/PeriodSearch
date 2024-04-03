@@ -6,23 +6,22 @@
 #include "declarations.h"
 #include "globals.h"
 #include "CalcStrategyNone.hpp"
-#include "CalcStrategyAsimd.hpp"
 
 #if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
   #include <sys/auxv.h>
   #include <asm/hwcap.h>
 #endif
 
-std::string GetCpuInfo()
-{
-	return "";
-}
+#if defined(__GNUG__)
 
 void GetSupportedSIMDs()
 {
 	#if defined(__linux__)
 	  #if (defined(__aarch64__) || defined(_M_ARM64))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
+		// NOTE: For debug purposes:
+		// DetectArmv8CpuFeatures(hwcap);
+
         CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
 	  #elif (defined(__arm__) || defined(_M_ARM))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
@@ -33,6 +32,17 @@ void GetSupportedSIMDs()
 	#else
 	  CPUopt.hasASIMD = false;
 	#endif
+}
+
+void SetOptimizationStrategy(SIMDEnum useOptimization)
+{
+	switch (useOptimization)
+	{
+		case SIMDEnum::OptNONE:
+		default:
+			calcCtx.set_strategy(std::make_unique<CalcStrategyNone>());
+			break;
+	}
 }
 
 SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
@@ -55,28 +65,10 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 
 SIMDEnum GetBestSupportedSIMD()
 {
-	if (CPUopt.hasASIMD)
-	{
-		std::cerr << "Using ASIMD (NEON) SIMD optimizations." << std::endl;
-		return SIMDEnum::OptASIMD;
-	}
-	else
-	{
+
 		std::cerr << "Not using SIMD optimizations." << std::endl;
 		return SIMDEnum::OptNONE;
-	}
+
 }
 
-void SetOptimizationStrategy(SIMDEnum useOptimization)
-{
-	switch (useOptimization)
-	{
-	case SIMDEnum::OptASIMD:
-		calcCtx.set_strategy(std::make_unique<CalcStrategyAsimd>());
-		break;
-	case SIMDEnum::OptNONE:
-	default:
-		calcCtx.set_strategy(std::make_unique<CalcStrategyNone>());
-		break;
-	}
-}
+#endif

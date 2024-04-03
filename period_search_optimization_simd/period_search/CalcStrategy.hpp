@@ -65,7 +65,6 @@ public:
 							double sig[], double a[], int ia[], int ma,
 							double** alpha, double beta[], int mfit, int lastone, int lastma, double &mrq) const
 	{
-		double result = 0.0;
 		if (strategy_)
 		{
 			strategy_->mrqcof(x1, x2, x3, y, sig, a, ia, ma, alpha, beta, mfit, lastone, lastma, mrq);

@@ -617,7 +617,7 @@ int main(int argc, char** argv)
 		std::cerr << "Application: " << filename << std::endl;
 #elif defined __GNUC__
 		GetVersionInfo(major, minor, build, revision);
-#if !defined __APPLE__
+#if !defined __APPLE__ && !defined __arm__ && !defined __aarch64__
 		auto path = std::filesystem::current_path();
 #endif
 		std::cerr << "Application: " << argv[0] << std::endl;
