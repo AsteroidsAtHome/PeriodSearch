@@ -1,0 +1,368 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug' or '$(Configuration)'=='Release'" Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{BE886389-FA1E-4C07-9D17-0C77E93D9764}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>pssse3</RootNamespace>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>pssse3_vs2017_sse2_WinXP</ProjectName>
+  </PropertyGroup>
+  <!-- <PropertyGroup Label="Globals">
+    <ProjectGuid>{20569776-4852-41C7-907F-FA8F859BDBBF}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>pssse3</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+  </PropertyGroup> -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>v140_xp</PlatformToolset>
+    <PreferredToolArchitecture>x86</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>v141_xp</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140_xp</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141_xp</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\Win32\Debug;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)\$(Platform)_Win7_SSE2\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\$(Platform)_Win7_SSE2\$(Configuration)\</IntDir>
+    <GenerateManifest>true</GenerateManifest>
+    <TargetName>Period_search_Win7_$(PlatformTarget)_sse2_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Debug;$(LibraryPath)</LibraryPath>
+    <TargetName>Period_search_WinXP_$(PlatformTarget)_simd_$(Configuration)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_WinXP\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)_WinXP\$(Configuration)\</IntDir>
+    <ExternalIncludePath>C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)\$(Platform)_WinXP\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\$(Platform)_WinXP\$(Configuration)\</IntDir>
+    <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\Win32\Release;$(LibraryPath)</LibraryPath>
+    <TargetName>Period_search_WinXP_$(PlatformTarget)_sse2_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>C:\boincsdk\boinc_repo\win_build\Build\x64\Release;$(LibraryPath)</LibraryPath>
+    <TargetName>Period_search_WinXP_$(PlatformTarget)_simd_$(Configuration)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)_WinXP\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)_WinXP\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgUseStatic>true</VcpkgUseStatic>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <VcpkgInstalledDir>D:\boincsdk\boinc\3rdParty\Windows\vcpkg\installed\x86-windows-static</VcpkgInstalledDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <VcpkgInstalledDir>D:\boincsdk\boinc\3rdParty\Windows\vcpkg\installed\x86-windows-static</VcpkgInstalledDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\Win32\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WINXP;NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>libboinc.lib;libboincapi_staticcrt.lib;psapi.lib;ShLwApi.lib;Version.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <StackReserveSize>20000000</StackReserveSize>
+      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <AdditionalLibraryDirectories>C:\boincsdk\lib;C:\boincsdk\api;C:\boincsdk\boinc\win_build\Build\Win32\Debug;$(WindowsSdk_71A_LibraryPath_x86);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PreprocessorDefinitions>WINXP;NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <OmitFramePointers>false</OmitFramePointers>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <!-- <AdditionalDependencies>libcmtd.lib;libcpmtd.lib;libboincapi_staticcrt.lib;libboinc_staticcrt.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies> -->
+      <!-- <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries> -->
+      <StackReserveSize>20000000</StackReserveSize>
+      <AdditionalDependencies>libboinc_static_xp.lib;libboincapi_static_xp.lib;ShLwApi.lib;Version.Lib;libucrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\boincsdk\boinc\win_build\Build\x64\Debug;$(WindowsSDK_LibraryPath_x64);C:\Program Files (x86)\Windows Kits\10\Lib\10.0.10240.0\ucrt\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WINXP;NO_SSE3;_WIN32;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\Win32\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>false</OmitFramePointers>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+      <AssemblerOutput>NoListing</AssemblerOutput>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;psapi.lib;Version.Lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <StackReserveSize>20000000</StackReserveSize>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
+      <AdditionalLibraryDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\Win32\Release;$(WindowsSdk_71A_LibraryPath_x86);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableUAC>true</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>WINXP;NO_SSE3;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <OmitFramePointers>false</OmitFramePointers>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>
+      </LanguageStandard>
+      <MultiProcessorCompilation>
+      </MultiProcessorCompilation>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <SDLCheck>true</SDLCheck>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <UseUnicodeForAssemblerListing>false</UseUnicodeForAssemblerListing>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>libboinc_staticcrt.lib;libboincapi_staticcrt.lib;psapi.lib;Version.lib;ShLwApi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- <AdditionalDependencies>libcmt.lib;libcpmt.lib;libboinc_staticcrt.lib;libboincapi_staticcrt.lib;%(AdditionalDependencies)</AdditionalDependencies> -->
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <StackReserveSize>20000000</StackReserveSize>
+      <AdditionalLibraryDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;$(WindowsSDK_LibraryPath_x64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
+      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <TargetMachine>MachineX64</TargetMachine>
+      <AdditionalOptions>
+      </AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\arrayHelpers.cpp" />
+    <ClCompile Include="period_search\blmatrix.c" />
+    <ClCompile Include="period_search\bright.c" />
+    <ClCompile Include="period_search\bright.cpp" />
+    <ClCompile Include="period_search\bright_asimd.cpp" />
+    <ClCompile Include="period_search\bright_avx.cpp" />
+    <ClCompile Include="period_search\bright_avx512.cpp" />
+    <ClCompile Include="period_search\bright_fma.cpp" />
+    <ClCompile Include="period_search\bright_fma_bad.cpp" />
+    <ClCompile Include="period_search\bright_sse2.cpp" />
+    <ClCompile Include="period_search\bright_sse3.cpp" />
+    <ClCompile Include="period_search\conv.c" />
+    <ClCompile Include="period_search\conv.cpp" />
+    <ClCompile Include="period_search\conv_asimd.cpp" />
+    <ClCompile Include="period_search\conv_avx.cpp" />
+    <ClCompile Include="period_search\conv_avx512.cpp" />
+    <ClCompile Include="period_search\conv_fma.cpp" />
+    <ClCompile Include="period_search\conv_sse2.cpp" />
+    <ClCompile Include="period_search\conv_sse3.cpp" />
+    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\CpuInfo.cpp" />
+    <ClCompile Include="period_search\CpuInfoArm.cpp" />
+    <ClCompile Include="period_search\curv.c" />
+    <ClCompile Include="period_search\curv.cpp" />
+    <ClCompile Include="period_search\curv_asimd.cpp" />
+    <ClCompile Include="period_search\curv_avx.cpp" />
+    <ClCompile Include="period_search\curv_avx512.cpp" />
+    <ClCompile Include="period_search\curv_fma.cpp" />
+    <ClCompile Include="period_search\curv_sse2.cpp" />
+    <ClCompile Include="period_search\curv_sse3.cpp" />
+    <ClCompile Include="period_search\dot_product.c" />
+    <ClCompile Include="period_search\dot_product.cpp" />
+    <ClCompile Include="period_search\ellfit.c" />
+    <ClCompile Include="period_search\EnumHelpers.cpp" />
+    <ClCompile Include="period_search\gauss_errc.c" />
+    <ClCompile Include="period_search\gauss_errc.cpp" />
+    <ClCompile Include="period_search\gauss_errc_asimd.cpp" />
+    <ClCompile Include="period_search\gauss_errc_avx512.cpp" />
+    <ClCompile Include="period_search\gauss_errc_avx_fma.cpp" />
+    <ClCompile Include="period_search\gauss_errc_sse2.cpp" />
+    <ClCompile Include="period_search\gauss_errc_sse3.cpp" />
+    <ClCompile Include="period_search\lubksb.c" />
+    <ClCompile Include="period_search\ludcmp.c" />
+    <ClCompile Include="period_search\matrix.c" />
+    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\mrqcof.c" />
+    <ClCompile Include="period_search\mrqcof.cpp" />
+    <ClCompile Include="period_search\mrqcof_asimd.cpp" />
+    <ClCompile Include="period_search\mrqcof_avx.cpp" />
+    <ClCompile Include="period_search\mrqcof_avx512.cpp" />
+    <ClCompile Include="period_search\mrqcof_fma.cpp" />
+    <ClCompile Include="period_search\mrqcof_sse2.cpp" />
+    <ClCompile Include="period_search\mrqcof_sse3.cpp" />
+    <ClCompile Include="period_search\mrqmin.c" />
+    <ClCompile Include="period_search\period_search_BOINC.cpp" />
+    <ClCompile Include="period_search\phasec.c" />
+    <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\systeminfo.cpp" />
+    <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\VersionInfo.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="period_search\arrayHelpers.hpp" />
+    <ClInclude Include="period_search\CalcStrategy.hpp" />
+    <ClInclude Include="period_search\CalcStrategyAsimd.hpp" />
+    <ClInclude Include="period_search\CalcStrategyAvx.hpp" />
+    <ClInclude Include="period_search\CalcStrategyAvx512.hpp" />
+    <ClInclude Include="period_search\CalcStrategyFma.hpp" />
+    <ClInclude Include="period_search\CalcStrategyNone.hpp" />
+    <ClInclude Include="period_search\CalcStrategySse2.hpp" />
+    <ClInclude Include="period_search\CalcStrategySse3.hpp" />
+    <ClInclude Include="period_search\constants.h" />
+    <ClInclude Include="period_search\declarations.h" />
+    <ClInclude Include="period_search\Enums.h" />
+    <ClInclude Include="period_search\globals.h" />
+    <ClInclude Include="period_search\resource.h" />
+    <ClInclude Include="period_search\systeminfo.h" />
+    <ClInclude Include="period_search\VersionInfo.h" />
+    <ClInclude Include="resource1.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="period_search\logo_Nta_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="pssse_XP_x64.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
