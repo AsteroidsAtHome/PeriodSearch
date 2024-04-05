@@ -1,0 +1,112 @@
+# This should work on Linux.  Modify as needed for other platforms.
+#
+#	For now (as of 5th April 2024) we'll keep this Make file as a refferense only.
+#	The following Makefile SHOULD produces armv7 32bit period-search application. Tested on RPi CM4 2GB, running 64-bit Buster distro.
+#
+#   If you run this Makefile on different platform than RPi 1 Zero, even using arm-linux-gnueabihf-g++ (Debian 8.3.0-2) 8.3.0compiler,
+#	compilation will produce error:
+# 		/usr/arm-linux-gnueabihf/include/bits/stdio.h: In function ‘int vprintf(const char*, __gnuc_va_list)’:
+# 		/usr/arm-linux-gnueabihf/include/bits/stdio.h:39:60: sorry, unimplemented: Thumb-1 hard-float VFP ABI
+# 		 vprintf (const char *__restrict __fmt, __gnuc_va_list __arg)
+#
+#  	More on that issue here:
+#	https://forums.raspberrypi.com/viewtopic.php?t=290804#p1758436
+#	"I suspect the cause of your failure is using a build environment based on Debian buster rather than raspbian buster. 
+#	Debian armhf's gcc has "-mthumb" as part of it's hardcoded default flags, which causes it to be unable to build armv6 code
+#	(as requested by the compiler flags, which are presumablly set by the raspberry pi foundation ffmpeg packaging."
+#	It is due to the compiler being not cappable to handle correctly armv6 architecture (debian compilator). 
+#
+#	You can try using the -marm options instead of -march=armv6, the error will be gone but when you run the binary on an armv6 platform
+#	it will produce the following error:
+#		Segmentation fault
+#
+#	Prepare BOINC API as follows:	
+#		./_autosetup # Only first time
+#		./configure --disable-server --disable-client --disable-manager --build=arm-linux-gnueabihf --target=arm-linux-gnueabihf CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-marm -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3"
+#		make
+#
+#	To check for the supported macroses use:
+#		echo | g++ -dM -E -
+#		echo | arm-linux-gnueabihf-g++ -dM -E -
+#		echo | clang++ -dM -E -
+#
+
+BOINC_DIR = ../../../boinc_src_armv6
+BOINC_API_DIR = $(BOINC_DIR)/api
+BOINC_LIB_DIR = $(BOINC_DIR)/lib
+
+# Use `readelf -p .GCC.command.line period_search_rpi_armv7_arm32` to see all used compiler commands
+CXXFLAGS = -march=armv6 -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches \
+    -DARM32 \
+    -I$(BOINC_DIR) \
+    -I$(BOINC_LIB_DIR) \
+    -I$(BOINC_API_DIR) \
+	-I /usr/lib/arm-linux-gnueabihf \
+    -L /usr/lib \
+    -L.
+
+CC = arm-linux-gnueabihf-g++ 
+CXX = arm-linux-gnueabihf-g++ 
+# CC = g++ 
+# CXX = g++ 
+OPTFLAGS = -march=armv6 -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches
+CFLAGS = $(OPTFLAGS) -Wall
+LDFLAGS = -lm
+MY_LIBS = trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
+        curv.o blmatrix.o conv.o covsrt.o phasec.o matrix.o bright.o memory.o\
+	    dot_product.o gauss_errc.o systeminfo.o CpuInfoArm32.o EnumHelpers.o VersionInfo.o
+
+# the following should be freeglut; use nm to check
+# you may have to change the paths for your system
+
+ifeq ($(wildcard /usr/local/lib/libglut.a),)
+	LIBGLUT = /usr/lib/libglut.a
+	LIBGLU = /usr/lib/libGLU.a
+	LIBJPEG = /usr/lib/libjpeg.a
+else
+	LIBGLUT = /usr/local/lib/libglut.a
+	LIBGLU = /usr/local/lib/libGLU.a
+	LIBJPEG = /usr/local/lib/libjpeg.a
+endif
+
+PROGS = period_search_rpi_armv6_arm32 
+# uc2_graphics
+# make this optional so compile doesn't break on systems without OpenGL
+
+all: $(PROGS)
+
+# libstdc++.a:
+# 	ln -s `arm-linux-gnueabihf-g++ -print-file-name=libstdc++.a`
+
+# clean:
+# 	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+clean:
+	/bin/rm -f $(PROGS) *.o
+
+# distclean:
+# 	/bin/rm -f $(PROGS) *.o libstdc++.a
+
+distclean:
+	/bin/rm -f $(PROGS) *.o
+
+install: period_search_rpi_armv6_arm32
+
+# specify library paths explicitly (rather than -l)
+# because otherwise you might get a version in /usr/lib etc.
+
+#uc2: uc2.o libstdc++.a $(BOINC_API_DIR)/libboinc_api.a #$(BOINC_LIB_DIR)/libboinc.a
+#	$(CXX) $(CXXFLAGS) -o uc2 uc2.o libstdc++.a -pthread \
+#	$(BOINC_API_DIR)/libboinc_api.a \
+#	$(BOINC_LIB_DIR)/libboinc.a
+
+# $(OBJS) = $(patsubst %.o,another_folder/%.o,file1.o file2.o file3.o)
+# $(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< $(ANOTHER_DIR)/file1.o libstdc++.a -pthread \
+
+period_search_rpi_armv6_arm32: period_search_BOINC.o $(MY_LIBS) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
+	$(BOINC_API_DIR)/libboinc_api.a \
+	$(BOINC_LIB_DIR)/libboinc.a -lm 
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
