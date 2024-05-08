@@ -103,7 +103,7 @@ void CalcStrategyAvx512::gauss_errc(double** a, int n, double b[], int& error)
 				{
 					__m512d avx_a = _mm512_load_pd(&a[ll][l]);
 					__m512d avx_aa = _mm512_load_pd(&a[icol][l]);
-					avx_a = _mm512_sub_pd(avx_a, _mm512_mul_pd(avx_aa, avx_dum));
+					avx_a = _mm512_fnmadd_pd(avx_aa, avx_dum, avx_a);
 					_mm512_store_pd(&a[ll][l], avx_a);
 				}
 
