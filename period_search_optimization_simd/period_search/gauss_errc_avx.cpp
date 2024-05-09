@@ -9,15 +9,9 @@
 #include <immintrin.h>
 #include <string.h>
 #include "CalcStrategyAvx.hpp"
-#include "CalcStrategyFma.hpp"
-
-void CalcStrategyFma::gauss_errc(double** a, int n, double b[], int& error)
-{
-	CalcStrategyAvx::gauss_errc(a, n, b, error);
-}
 
 #if defined(__GNUC__)
-__attribute__((target("avx,fma")))
+__attribute__((target("avx")))
 #endif
 void CalcStrategyAvx::gauss_errc(double** a, int n, double b[], int& error)
 {

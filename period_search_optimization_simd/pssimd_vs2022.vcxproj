@@ -588,7 +588,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="period_search\gauss_errc_avx_fma.cpp" />
+    <ClCompile Include="period_search\gauss_errc_avx.cpp" />
+    <ClCompile Include="period_search\gauss_errc_fma.cpp" />
     <ClCompile Include="period_search\gauss_errc_avx512.cpp" />
     <ClCompile Include="period_search\gauss_errc_sse2.cpp" />
     <ClCompile Include="period_search\gauss_errc_sse3.cpp" />

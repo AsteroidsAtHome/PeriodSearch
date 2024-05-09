@@ -148,7 +148,10 @@
     <ClCompile Include="period_search\gauss_errc_asimd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\gauss_errc_avx_fma.cpp">
+    <ClCompile Include="period_search\gauss_errc_avx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="period_search\gauss_errc_fma.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="period_search\gauss_errc_avx512.cpp">
