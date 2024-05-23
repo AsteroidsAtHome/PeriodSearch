@@ -3,9 +3,9 @@
 # Prepare BOINC API as follows:	
 # ./_autosetup # Only first time
 # export PATH="[NDK]/android-ndk-r26c/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
-# export CC=aarch64-linux-android34-clang
-# export CXX=aarch64-linux-android34-clang++
-# ./configure --host=aarch64-linux --with-boinc-platform="aarch64-android-linux-gnu" --with-boinc-alt-platform="arm-android-linux-gnu" --disable-server --disable-manager --disable-client --enable-static CXXFLAGS="-O3 "
+# export CC=armv7a-linux-androideabi34-clang
+# export CXX=armv7a-linux-androideabi34-clang++
+# ./configure --host=arm-linux --with-boinc-platform="arm-android-linux-gnu" --disable-server --disable-manager --disable-client --enable-static CXXFLAGS="-O3 "
 # make -j
 
 BOINC_DIR = ../../../boinc_src
@@ -14,7 +14,7 @@ BOINC_LIB_DIR = $(BOINC_DIR)/lib
 ANDROID_NDK_DIR = ../../../android/android-ndk-r26c
 ANDROID_NDK_BIN = $(ANDROID_NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin
 
-CXXFLAGS = -march=armv8-a -O3 -std=c++17 -w -s -frecord-gcc-switches -static-libstdc++ -static -ldl\
+CXXFLAGS = -march=armv7-a -O3 -std=c++17 -w -s -frecord-gcc-switches -static-libstdc++ -static -ldl\
         -DAPP_GRAPHICS \
         -I$(BOINC_DIR) \
         -I$(BOINC_LIB_DIR) \
@@ -22,16 +22,15 @@ CXXFLAGS = -march=armv8-a -O3 -std=c++17 -w -s -frecord-gcc-switches -static-lib
         -L /usr/X11R6/lib \
         -L.
 
-CC=$(ANDROID_NDK_BIN)/aarch64-linux-android34-clang++
-CXX=$(ANDROID_NDK_BIN)/aarch64-linux-android34-clang++
+CC=$(ANDROID_NDK_BIN)/armv7a-linux-androideabi34-clang++
+CXX=$(ANDROID_NDK_BIN)/armv7a-linux-androideabi34-clang++
 LD=$(ANDROID_NDK_BIN)/ld
 OPTFLAGS=-march=armv8-a -O3 -frecord-gcc-switches
 CFLAGS=$(OPTFLAGS) -w -s -static-libstdc++ -static -ldl
 LDFLAGS=-lm
 MY_LIBS=areanorm.o arrayHelpers.o blmatrix.o bright.o \
     conv.o \
-    covsrt.o CpuInfoArm64.o curv.o \
-    bright_asimd.o conv_asimd.o curv_asimd.o gauss_errc_asimd.o mrqcof_asimd.o \
+    covsrt.o CpuInfoArm32.o curv.o \
     dot_product.o ellfit.o EnumHelpers.o gauss_errc.o \
     lubksb.o ludcmp.o matrix.o \
     memory.o mrqcof.o \
@@ -51,19 +50,19 @@ else
         LIBJPEG = /usr/local/lib/libjpeg.a
 endif
 
-PROGS = period_search_BOINC_android_10220_arm_universal_androidv8_Release
+PROGS = period_search_BOINC_android_10220_arm_universal_androidv7_Release
 # uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
 
 all: $(PROGS)
 
 clean:
-	/bin/rm -f $(PROGS) *.o
+        /bin/rm -f $(PROGS) *.o
 
 distclean:
-	/bin/rm -f $(PROGS) *.o
+        /bin/rm -f $(PROGS) *.o
 
-install: period_search_BOINC_android_10220_arm_universal_androidv8_Release
+install: period_search_BOINC_android_10220_arm_universal_androidv7_Release
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
@@ -73,7 +72,7 @@ install: period_search_BOINC_android_10220_arm_universal_androidv8_Release
 #	$(BOINC_API_DIR)/libboinc_api.a \
 #	$(BOINC_LIB_DIR)/libboinc.a
 
-period_search_BOINC_android_10220_arm_universal_androidv8_Release: period_search_BOINC.o $(MY_LIBS) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
+period_search_BOINC_android_10220_arm_universal_androidv7_Release: period_search_BOINC.o $(MY_LIBS) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< -pthread \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a -lm
