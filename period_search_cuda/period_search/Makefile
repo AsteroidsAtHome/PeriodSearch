@@ -17,7 +17,7 @@ BOINC_LIB_DIR = $(BOINC_DIR)/lib
 CUDA_PATH = ../../../cuda-12.0
 # END DO-NOT-CHANGE
 
-CXXFLAGS = -g -O3 \
+CXXFLAGS = -s -w -O3 \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
@@ -34,13 +34,14 @@ CXXFLAGS = -g -O3 \
 # CUDA 11.1 - CC: NVCCFLAGS = compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86
 # CUDA 11.8 - CC: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=80 -rdc=tru
 # CUDA 12.0 - CC:
-NVCCFLAGS = --forward-unknown-opts -mcmodel=medium --split-compile-extended 25 -O3 -lineinfo --use_fast_math --extra-device-vectorization --ptxas-options="-v -O3 --register-usage-level 0 " -t0 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_89,code=sm_89 --maxrregcount=32 -rdc=true
+# NVCCFLAGS = --forward-unknown-opts -mcmodel=large --split-compile-extended 25 -O3 -lineinfo --use_fast_math --extra-device-vectorization --ptxas-options="-v -O3 --register-usage-level 0 " -t0 --generate-code arch=compute_50,code=sm_50 --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_89,code=sm_89 --maxrregcount=32 -rdc=true --default-stream per-thread
+NVCCFLAGS = --forward-unknown-opts -mcmodel=large --split-compile-extended 25 -O3 -lineinfo --use_fast_math --extra-device-vectorization --ptxas-options="-v -O3 --register-usage-level 0 " -t0 --generate-code arch=compute_60,code=[lto_60,sm_60] --generate-code arch=compute_61,code=[lto_61,sm_61] --generate-code arch=compute_62,code=[lto_62,sm_62] --generate-code arch=compute_70,code=[lto_70,sm_70] --generate-code arch=compute_72,code=[lto_72,sm_72] --generate-code arch=compute_75,code=[lto_75,sm_75] --generate-code arch=compute_80,code=[lto_80,sm_80] --generate-code arch=compute_86,code=[lto_86,sm_86] --generate-code arch=compute_87,code=[lto_87,sm_87] --generate-code arch=compute_89,code=[lto_89,sm_89] --maxrregcount=255 -rdc=true --default-stream per-thread
 
 CC=g++
 CXX=g++
 OPTFLAGS=-O3
-CFLAGS=$(OPTFLAGS) -Wall -mcmodel=medium
-LDFLAGS=-lm -lrt -lstdc++ -lcudart -lcuda -Xlinker -rpath -mcmodel=medium .
+CFLAGS=$(OPTFLAGS) -s -w -mcmodel=large
+LDFLAGS=-dlto -lm -lrt -Xlinker -rpath -mcmodel=large .
 
 
 MY_LIBS=trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o \

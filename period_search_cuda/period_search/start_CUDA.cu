@@ -92,10 +92,9 @@ int CUDA_grid_dim;
 extern int Nfactor; // default 1, usage: --N number  where number is 2 - 16
 cudaStream_t stream1;
 cudaStream_t stream2;
-cudaStream_t stream3;
 cudaEvent_t event1, event2;
 
-double *pWeight;
+//double *pWeight;
 bool nvml_enabled = false;
 
 //bool if_freq_measured = false;
@@ -265,17 +264,16 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
   res = cudaMemcpyToSymbol(CUDA_ee, ee, 3 * (MAX_N_OBS + 1) * sizeof(double)); //, cudaMemcpyHostToDevice);
   res = cudaMemcpyToSymbol(CUDA_ee0, ee0, 3 * (MAX_N_OBS + 1) * sizeof(double)); //, cudaMemcpyHostToDevice);
 
-  int hp, lp;
-  cudaDeviceGetStreamPriorityRange(&lp, &hp);
+  //int hp, lp;
+  //cudaDeviceGetStreamPriorityRange(&lp, &hp);
   //std::cout << "lowest priority: " << lp << " highest priority: " << hp << std::endl;
-  //cudaStreamCreateWithFlags(&stream1, cudaStreamNonBlocking);
-  //cudaStreamCreateWithFlags(&stream2, cudaStreamNonBlocking);
-  cudaStreamCreateWithPriority(&stream1, cudaStreamNonBlocking, lp);
-  cudaStreamCreateWithPriority(&stream2, cudaStreamNonBlocking, lp);
-  cudaStreamCreateWithPriority(&stream3, cudaStreamNonBlocking, hp);
+  cudaStreamCreateWithFlags(&stream1, cudaStreamNonBlocking);
+  cudaStreamCreateWithFlags(&stream2, cudaStreamNonBlocking);
+  //cudaStreamCreateWithPriority(&stream1, cudaStreamNonBlocking, hp);
+  //cudaStreamCreateWithPriority(&stream2, cudaStreamNonBlocking, lp); // copy
 
-  cudaEventCreateWithFlags(&event1, cudaEventBlockingSync|cudaEventDisableTiming);
-  cudaEventCreateWithFlags(&event2, cudaEventBlockingSync|cudaEventDisableTiming);
+  //cudaEventCreateWithFlags(&event1, cudaEventBlockingSync|cudaEventDisableTiming);
+  //cudaEventCreateWithFlags(&event2, cudaEventBlockingSync|cudaEventDisableTiming);
 
   cudaMallocHost(&theEnd, sizeof(int));
 
@@ -288,7 +286,7 @@ void CUDAUnprepare(void)
   //cudaUnbindTexture(texWeight);
   //cudaFree(pee);
   //cudaFree(pee0);
-  cudaFree(pWeight);
+  //cudaFree(pWeight);
 
   //printf("3 theEnd %p\n", theEnd);
   cudaFreeHost(theEnd);
@@ -297,22 +295,18 @@ void CUDAUnprepare(void)
 
   cudaStreamDestroy(stream1);
   cudaStreamDestroy(stream2);
-  cudaStreamDestroy(stream3);
-  cudaEventDestroy(event1);
-  cudaEventDestroy(event2);
+  //cudaEventDestroy(event1);
+  //cudaEventDestroy(event2);
 }
 
 
 volatile bool copyReady = false;
-
-void CUDART_CB cbCopyReady(cudaStream_t stream, cudaError_t status, void *data)
+/*
+void CUDART_CB cbCopyReady(cudaStream_t stream, cudaError_t status, void *pCopyReady)
 {
-    // Check status of GPU after stream operations are done
-    //checkCudaErrors(status);
-
-    // Spawn new CPU worker thread and continue processing on the CPU
-  *(bool *)data = true;
+  *(bool *)pCopyReady = true;
 }
+*/
 
 static double precalcpct = 0;
 int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_step, double stop_condition, int n_iter_min, double *conw_r,
@@ -382,30 +376,30 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
     double piv_inv, sh_big_local[CUDA_BLOCK_DIM];*/
 
   //here move data to device
-  cudaMemcpyToSymbolAsync(CUDA_Ncoef, &n_coef, sizeof(n_coef), 0, cudaMemcpyHostToDevice, stream3);
-  // cudaMemcpyToSymbolAsync(CUDA_Nphpar, &n_ph_par, sizeof(n_ph_par), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Numfac, &Numfac, sizeof(Numfac), 0, cudaMemcpyHostToDevice, stream3);
+  // cudaMemcpyToSymbolAsync(CUDA_Ncoef, &n_coef, sizeof(n_coef), 0, cudaMemcpyHostToDevice, stream1);
+  // cudaMemcpyToSymbolAsync(CUDA_Nphpar, &n_ph_par, sizeof(n_ph_par), 0, cudaMemcpyHostToDevice, stream1);
+  // cudaMemcpyToSymbolAsync(CUDA_Numfac, &Numfac, sizeof(Numfac), 0, cudaMemcpyHostToDevice, stream1);
   m = Numfac + 1;
-  cudaMemcpyToSymbolAsync(CUDA_Numfac1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_ia, ia, sizeof(int) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_cg_first, cg_first, sizeof(double) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_n_iter_max, &n_iter_max, sizeof(n_iter_max), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_n_iter_min, &n_iter_min, sizeof(n_iter_min), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_ndata, &ndata, sizeof(ndata), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_iter_diff_max, &iter_diff_max, sizeof(iter_diff_max), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_conw_r, &conw_r, sizeof(conw_r), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Nor, normal, sizeof(double) * (MAX_N_FAC + 1) * 3, 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Fc, f_c, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Fs, f_s, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Pleg, pleg, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Darea, d_area, sizeof(double) * (MAX_N_FAC + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Dsph, d_sphere, sizeof(double) * (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_Is_Precalc, &isPrecalc, sizeof isPrecalc, 0, cudaMemcpyHostToDevice, stream3);
+  // cudaMemcpyToSymbolAsync(CUDA_Numfac1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_ia, ia, sizeof(int) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_cg_first, cg_first, sizeof(double) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_n_iter_max, &n_iter_max, sizeof(n_iter_max), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_n_iter_min, &n_iter_min, sizeof(n_iter_min), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_ndata, &ndata, sizeof(ndata), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_iter_diff_max, &iter_diff_max, sizeof(iter_diff_max), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_conw_r, &conw_r, sizeof(conw_r), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Nor, normal, sizeof(double) * (MAX_N_FAC + 1) * 3, 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Fc, f_c, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Fs, f_s, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Pleg, pleg, sizeof(double) * (MAX_N_FAC + 1) * (MAX_LM + 1) * (MAX_LM + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Darea, d_area, sizeof(double) * (MAX_N_FAC + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Dsph, d_sphere, sizeof(double) * (MAX_N_FAC + 1) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_Is_Precalc, &isPrecalc, sizeof isPrecalc, 0, cudaMemcpyHostToDevice, stream1);
 
   //err = cudaMalloc(&pbrightness, (ndata + 1) * sizeof(double));
-  err = cudaMemcpyToSymbolAsync(CUDA_brightness, brightness, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream3);
-  err = cudaMemcpyToSymbolAsync(CUDA_sig, sig, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream3);
-  err = cudaMemcpyToSymbolAsync(CUDA_sigr2, sigr2, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream3);
+  err = cudaMemcpyToSymbolAsync(CUDA_brightness, brightness, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream1);
+  err = cudaMemcpyToSymbolAsync(CUDA_sig, sig, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream1);
+  err = cudaMemcpyToSymbolAsync(CUDA_sigr2, sigr2, (ndata + 1) * sizeof(double), 0, cudaMemcpyHostToDevice, stream1);
 
   if (err) printf("Error: %s\n", cudaGetErrorString(err));
 
@@ -427,14 +421,14 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
       llastone = m;
     }
 
-  cudaMemcpyToSymbolAsync(CUDA_ma, &ma, sizeof(ma), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_mfit, &lmfit, sizeof(lmfit), 0, cudaMemcpyHostToDevice, stream3);
+  // cudaMemcpyToSymbolAsync(CUDA_ma, &ma, sizeof(ma), 0, cudaMemcpyHostToDevice, stream1);
+  // cudaMemcpyToSymbolAsync(CUDA_mfit, &lmfit, sizeof(lmfit), 0, cudaMemcpyHostToDevice, stream1);
   m = lmfit + 1;
-  // cudaMemcpyToSymbolAsync(CUDA_mfit1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_lastma, &llastma, sizeof(llastma), 0, cudaMemcpyHostToDevice, stream3);
-  cudaMemcpyToSymbolAsync(CUDA_lastone, &llastone, sizeof(llastone), 0, cudaMemcpyHostToDevice, stream3);
-  int n0 = ma - 2 - n_ph_par;
-  cudaMemcpyToSymbolAsync(CUDA_ncoef0, &n0, sizeof(n0), 0, cudaMemcpyHostToDevice, stream3);
+  // cudaMemcpyToSymbolAsync(CUDA_mfit1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_lastma, &llastma, sizeof(llastma), 0, cudaMemcpyHostToDevice, stream1);
+  cudaMemcpyToSymbolAsync(CUDA_lastone, &llastone, sizeof(llastone), 0, cudaMemcpyHostToDevice, stream1);
+  //int n0 = ma - 2 - n_ph_par;
+  // cudaMemcpyToSymbolAsync(CUDA_ncoef0, &n0, sizeof(n0), 0, cudaMemcpyHostToDevice, stream1);
   // printf("ma = %d, CUDA_Ncoef = %d, CUDA_ncoef0 = %d, mfit = %d, m = %d, lastma = %d, lastone = %d\n", ma, n_coef, n0, lmfit, m, llastma, llastone);
 
   int CUDA_Grid_dim_precalc = CUDA_grid_dim;
@@ -447,21 +441,22 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
     }
 
   err = cudaMalloc(&pcc, (CUDA_Grid_dim_precalc + 32) * sizeof(freq_context));
-  cudaMemcpyToSymbolAsync(CUDA_CC, &pcc, sizeof(pcc), 0, cudaMemcpyHostToDevice, stream3);
+  cudaMemcpyToSymbolAsync(CUDA_CC, &pcc, sizeof(pcc), 0, cudaMemcpyHostToDevice, stream1);
 
   m = (Numfac + 1) * (n_coef + 1);
-  cudaMemcpyToSymbolAsync(CUDA_Dg_block, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream3);
+  cudaMemcpyToSymbolAsync(CUDA_Dg_block, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
 
   //  double *pa,
   double *pg, /* *pal, */ *pco, *pdytemp, *pytemp;
 
   err = cudaMalloc(&pg, CUDA_Grid_dim_precalc * (Numfac + 1) * (n_coef + 1) * sizeof(double));
-  err = cudaMemcpyToSymbolAsync(CUDA_Dg, &pg, sizeof(pg), 0, cudaMemcpyHostToDevice, stream3);
+  err = cudaMemcpyToSymbolAsync(CUDA_Dg, &pg, sizeof(pg), 0, cudaMemcpyHostToDevice, stream1);
   err = cudaMalloc(&pco, (CUDA_Grid_dim_precalc) * (lmfit + 1) * (lmfit + 2) * sizeof(double));
   err = cudaMalloc(&pdytemp, (CUDA_Grid_dim_precalc + 1) * (ndata + 1) * (ma + 1) * sizeof(double));
   err = cudaMalloc(&pytemp, CUDA_Grid_dim_precalc * (ndata + 1) * sizeof(double));
 
   dim3 dim_3(32, CUDA_Grid_dim_precalc, 1);
+  dim3 dim_3_64(64, CUDA_Grid_dim_precalc, 1);
 
   for(m = 0; m < CUDA_Grid_dim_precalc; m++)
     {
@@ -471,28 +466,27 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
       ps.dytemp = &pdytemp[m * (ndata + 1) * (ma + 1)];
       ps.ytemp = &pytemp[m * (ndata + 1)];
       freq_context *pt = &((freq_context*)pcc)[m];
-      err = cudaMemcpyAsync(pt, &ps, sizeof(void*) * 4, cudaMemcpyHostToDevice, stream3);
+      err = cudaMemcpyAsync(pt, &ps, sizeof(void*) * 4, cudaMemcpyHostToDevice, stream1);
     }
 
-  // cudaStreamSynchronize(stream3);
+  // cudaStreamSynchronize(stream1);
 
   // printf("MaxTestPeriods %d %d\n", max_test_periods, CUDA_Grid_dim_precalc);
 
+  // for(int t = 1; t <= l_curves; t++)
+  //   printf("InRel[%d] == %d\n", t, in_rel[t]);
+  // printf("ia[1] = %d\n", ia[1]);
+
   for(n = 1; n <= max_test_periods; n += CUDA_Grid_dim_precalc)
     {
-      CudaCalculatePrepare<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(n, max_test_periods);
+      CudaCalculatePrepare<<<1, CUDA_Grid_dim_precalc, 0, stream1>>>(n, max_test_periods);
 
       for(m = 1; m <= N_POLES; m++)
 	{
 	  //zero global End signal
 	  *theEnd = 0;
-	  cudaMemcpyToSymbolAsync(CUDA_End, theEnd, sizeof(int), 0, cudaMemcpyHostToDevice, stream3);
-	  //CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(m, freq_start, freq_step, n); 
-	  CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]);
-    #ifndef __GNUC__
-      cudaDeviceSynchronize();
-    #endif
-
+	  cudaMemcpyToSymbolAsync(CUDA_End, theEnd, sizeof(int), 0, cudaMemcpyHostToDevice, stream1);
+	  CudaCalculatePreparePole<<<1, CUDA_Grid_dim_precalc, 0, stream1>>>(freq_start, freq_step, n, g_beta[m], g_lambda[m]);
 
 #ifdef _DEBUG
     // printf("ia[1] = %d\r\n", ia[1]);
@@ -500,172 +494,210 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 #endif
 
 	  int loop = 0;
+	  cudaStreamSynchronize(stream1);
 
 	  while(!*(volatile int *)theEnd)
 	    {
 	      loop++;
-	      CudaCalculateIter1Begin<<<1, CUDA_Grid_dim_precalc, 0, stream3>>>(CUDA_Grid_dim_precalc);
-	      cudaStreamQuery(stream3);
-	      
-	      cudaEventRecord(event1, stream3);
-	      cudaStreamQuery(stream3);
-
-	      cudaStreamWaitEvent(stream3, event1);
-	      cudaMemcpyFromSymbolAsync(theEnd, CUDA_End, sizeof(int), 0, cudaMemcpyDeviceToHost, stream3);
-	      //cudaStreamQuery(stream3);
-
-	      copyReady = false;
-	      cudaStreamAddCallback(stream3, cbCopyReady, (void *)&copyReady, 0);
-	      //cudaStreamQuery(stream3);
+	      CudaCalculateIter1Begin<<<1, CUDA_Grid_dim_precalc, 0, stream1>>>(CUDA_Grid_dim_precalc);
+	      //cudaEventRecord(event1, stream1);
+	      //cudaStreamQuery(stream1);
+	      //cudaStreamWaitEvent(stream2, event1);
+	      *theEnd = -1;
+	      cudaMemcpyFromSymbolAsync(theEnd, CUDA_End, sizeof(int), 0, cudaMemcpyDeviceToHost, stream1); ////stream2
+	      //copyReady = false;
+	      //cudaStreamAddCallback(stream1, cbCopyReady, (void *)&copyReady, 0); ////stream2
+	      cudaStreamQuery(stream1);
 
 	      //1, dim_3 works
-	      CudaCalculateIter1Mrqcof1Start<<<1, dim_3, 0, stream3>>>();
-
-	      cudaStreamQuery(stream3);
+	      CudaCalculateIter1Mrqcof1Start<<<1, dim_3, 0, stream1>>>();
+	      //CudaCalculateIter1Mrqcof1Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+	      //cudaStreamQuery(stream1);
+	      
+	      //cudaStreamSynchronize(stream1);
 
 	      for(iC = 1; iC < l_curves; iC++)
 		{
 		  if(in_rel[iC])
 		    if(ia[1])
 		      {
-			CudaCalculateIter1Mrqcof1CurveM12I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+			CudaCalculateIter1Mrqcof1CurveM12I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		      }
 		    else
 		      {
-			CudaCalculateIter1Mrqcof1CurveM12I1IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+			CudaCalculateIter1Mrqcof1CurveM12I1IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		      }
 		  else
 		    if(ia[1])
-		      CudaCalculateIter1Mrqcof1CurveM12I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+		      CudaCalculateIter1Mrqcof1CurveM12I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		    else
-		      CudaCalculateIter1Mrqcof1CurveM12I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
-		  cudaStreamQuery(stream3);
+		      CudaCalculateIter1Mrqcof1CurveM12I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		  // cudaStreamQuery(stream1);
 		}
 
 	      if(in_rel[l_curves])
 		{ //1, dim_3 x NO NO NO
-		  CudaCalculateIter1Mrqcof1Curve1LastI1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		  // NEWDYTEMP
+		  CudaCalculateIter1Mrqcof1Curve1LastI1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 
-		  cudaStreamQuery(stream3);
+		  //cudaStreamQuery(stream1);
 		  
-		  if(ia[1])
-		    CudaCalculateIter1Mrqcof1Curve2I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		  if(ia[1]) //NEWDYTEMP, calls curve23i1ia1
+		    CudaCalculateIter1Mrqcof1Curve2I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 		  else // 1, dim_3 ???? works
-		    CudaCalculateIter1Mrqcof1Curve2I1IA0<<<1, dim_3, 0, stream3>>>();		    
+		    CudaCalculateIter1Mrqcof1Curve2I1IA0<<<1, dim_3, 0, stream1>>>();		    
 		}
 	      else
 		{ // 1, dim_3 This can not be changed!!!!
-		  CudaCalculateIter1Mrqcof1Curve1LastI0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+      // NEWDYTEMP
+		  CudaCalculateIter1Mrqcof1Curve1LastI0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 
-		  cudaStreamQuery(stream3);
+		  //cudaStreamQuery(stream1);
 
 		  if(ia[1])
-		    CudaCalculateIter1Mrqcof1Curve2I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof1Curve2I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 		  else
-		    CudaCalculateIter1Mrqcof1Curve2I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof1Curve2I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 		}
 
-	      cudaStreamQuery(stream3);
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      
+	      //CudaCalculateIter1Mrqcof1End<<<1, dim_3_64, 0, stream1>>>();
+	      CudaCalculateIter1Mrqcof1End<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM*2, 0, stream1>>>();
+  
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      
+	      CudaCalculateIter1Mrqmin1End1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
 
-	      CudaCalculateIter1Mrqcof1End<<<1, dim_3, 0, stream3>>>();
+	      CudaCalculateIter1Mrqmin1EndGauss<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
 
-	      cudaStreamQuery(stream3);
+	      CudaCalculateIter1Mrqmin1End2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 
-	      CudaCalculateIter1Mrqmin1End<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
-
-	      cudaStreamQuery(stream3);
-
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      
 	      // 1, dim_3 OK
-	      CudaCalculateIter1Mrqcof2Start<<<1, dim_3, 0, stream3>>>();
-
-	      cudaStreamQuery(stream3);
+	      //CudaCalculateIter1Mrqcof2Start<<<1, dim_3, 0, stream1>>>();
+	      CudaCalculateIter1Mrqcof2Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+	      
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
 
 	      for(iC = 1; iC < l_curves; iC++)
 		{
 		  if(in_rel[iC])
 		    if(ia[1])
 		      {
-			CudaCalculateIter1Mrqcof2CurveM12I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+			CudaCalculateIter1Mrqcof2CurveM12I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		      }
 		    else
-		      {
-			CudaCalculateIter1Mrqcof2CurveM12I1IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+		      { // SLOW!!!
+			CudaCalculateIter1Mrqcof2CurveM12I1IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		      }
 		  else
 		    if(ia[1])
-		      CudaCalculateIter1Mrqcof2CurveM12I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+		      CudaCalculateIter1Mrqcof2CurveM12I0IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		    else
-		      CudaCalculateIter1Mrqcof2CurveM12I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>(l_points[iC]);
+		      CudaCalculateIter1Mrqcof2CurveM12I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 
-		  cudaStreamQuery(stream3);
+		  //cudaStreamQuery(stream1);
 		}
 
 	      if(in_rel[l_curves])
 		{ // 1, dim_3 OK
-		  CudaCalculateIter1Mrqcof2Curve1LastI1<<<1, dim_3, 0, stream3>>>();
-		  cudaStreamQuery(stream3);
-
+		  // NEWDYTEMP
+		  CudaCalculateIter1Mrqcof2Curve1LastI1<<<1, dim_3, 0, stream1>>>();
+		  //cudaStreamQuery(stream1);
+		  //printf(":");fflush(stdout);
 		  if(ia[1])
-		    CudaCalculateIter1Mrqcof2Curve2I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof2Curve2I1IA1<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 		  else //1, dim_3, ok
-		    CudaCalculateIter1Mrqcof2Curve2I1IA0<<<1, dim_3, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof2Curve2I1IA0<<<1, dim_3, 0, stream1>>>();
 		}
 	      else
 		{ //1, dim_3 no no no
-		  CudaCalculateIter1Mrqcof2Curve1LastI0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
-		  cudaStreamQuery(stream3);
-
+		  // NEWDYTEMP
+		  CudaCalculateIter1Mrqcof2Curve1LastI0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+		  //cudaStreamQuery(stream1);
+	      
 		  if(ia[1]) //ok
-		    CudaCalculateIter1Mrqcof2Curve2I0IA1<<<1, dim_3, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof2Curve2I0IA1<<<1, dim_3, 0, stream1>>>();
 		  else //1, dim_3 no no no
-		    CudaCalculateIter1Mrqcof2Curve2I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
+		    CudaCalculateIter1Mrqcof2Curve2I0IA0<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
 		}
 
-	      cudaStreamQuery(stream3);
+	      //cudaStreamQuery(stream1);
 
-	      CudaCalculateIter1Mrqcof2End<<<1, dim_3, 0, stream3>>>();
-
-	      cudaStreamQuery(stream3);
-
-	      CudaCalculateIter1Mrqmin2End<<<1, dim_3, 0, stream3>>>();
-
-	      cudaStreamQuery(stream3);
-
-	      if(copyReady == false)
+	      /*
+	      while(copyReady == false)
 		{
-		  cudaStreamSynchronize(stream3);
+		  sched_yield();
+		  //if(copyReady == true)
+		  //  break;
+		  usleep(1);
+		  //if(copyReady == true)
+		  //  break;
+		  //cudaStreamSynchronize(stream1); //stream2
+		  //cudaStreamSynchronize(stream2); //stream2
+		  //if(copyReady == true)
+		  //  break;
 		}
+	      */
+	      CudaCalculateIter1Mrqcof2End<<<1, dim_3_64, 0, stream1>>>();
 
-	      CudaCalculateIter2<<<1, dim_3, 0, stream3>>>();
-	      cudaStreamQuery(stream3);
-
+	      cudaStreamQuery(stream1);
+	      
+	      CudaCalculateIter1Mrqmin2End<<<1, dim_3, 0, stream1>>>();
+	      
+	      cudaStreamQuery(stream1);
+	      
+	      CudaCalculateIter2<<<1, dim_3, 0, stream1>>>();
+	      cudaStreamQuery(stream1);
+	      //sched_yield();
+	      //cudaStreamSynchronize(stream1);
+	      while(*(volatile int *)theEnd == -1)
+		msleep(1);
 	      *theEnd = (*(volatile int *)theEnd >= CUDA_Grid_dim_precalc);
+	      
 	      precalcpct += 0.00001;
-	      if((loop & 3) == 3)
-		boinc_fraction_done(precalcpct > 0.02 ? 0.02 : precalcpct);
-	    }
+	      //if((loop & 1) == 1)
+	      //cudaStreamSynchronize(stream1);
+
+	      if((loop & 15) == 15)
+		{
+		  //msleep(0);
+		  boinc_fraction_done(precalcpct > 0.02 ? 0.02 : precalcpct);
+		}
+    }
 	  boinc_fraction_done(precalcpct > 0.02 ? 0.02 : precalcpct);
 	  //printf("."); fflush(stdout);
 
-	  CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream3>>>();
-	  cudaStreamQuery(stream3);
+	  CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, 0, stream1>>>();
+	  cudaStreamQuery(stream1);
+	  cudaStreamSynchronize(stream1);
 
 	}
 
-      cudaStreamSynchronize(stream3);
+      cudaStreamSynchronize(stream1);
 
-      for(m = 1; m <= CUDA_Grid_dim_precalc; m++)
+      for(m = 0; m < CUDA_Grid_dim_precalc; m++)
 	{
-	  if(isReported[m-1] == 1)
-	    sum_dark_facet = sum_dark_facet + dark_best[m-1];
+	  if(isReported[m] == 1)
+	    sum_dark_facet = sum_dark_facet + dark_best[m];
 	}
     } /* period loop */
 
   printf("\n");
   isPrecalc = 0;
 
-  cudaMemcpyToSymbolAsync(CUDA_Is_Precalc, &isPrecalc, sizeof(isPrecalc), 0, cudaMemcpyHostToDevice, stream3);
-  cudaStreamSynchronize(stream3);
+  cudaMemcpyToSymbolAsync(CUDA_Is_Precalc, &isPrecalc, sizeof(isPrecalc), 0, cudaMemcpyHostToDevice, stream1);
+  cudaStreamSynchronize(stream1);
   cudaFree(pg);
   cudaFree(pco);
   cudaFree(pdytemp);
@@ -726,10 +758,10 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
   cudaError_t err;
 
   //here move data to device
-  cudaMemcpyToSymbolAsync(CUDA_Ncoef, &n_coef, sizeof(n_coef), 0, cudaMemcpyHostToDevice, stream1); 
-  cudaMemcpyToSymbolAsync(CUDA_Numfac, &Numfac, sizeof(Numfac), 0, cudaMemcpyHostToDevice, stream1);
+  //cudaMemcpyToSymbolAsync(CUDA_Ncoef, &n_coef, sizeof(n_coef), 0, cudaMemcpyHostToDevice, stream1); 
+  //cudaMemcpyToSymbolAsync(CUDA_Numfac, &Numfac, sizeof(Numfac), 0, cudaMemcpyHostToDevice, stream1);
   m = Numfac + 1;
-  cudaMemcpyToSymbolAsync(CUDA_Numfac1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
+  //cudaMemcpyToSymbolAsync(CUDA_Numfac1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
   cudaMemcpyToSymbolAsync(CUDA_ia, ia, sizeof(int) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream1);
   cudaMemcpyToSymbolAsync(CUDA_cg_first, cg_first, sizeof(double) * (MAX_N_PAR + 1), 0, cudaMemcpyHostToDevice, stream1);
   cudaMemcpyToSymbolAsync(CUDA_n_iter_max, &n_iter_max, sizeof(n_iter_max), 0, cudaMemcpyHostToDevice, stream1);
@@ -766,14 +798,14 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
       if (!ia[m]) break;
       llastone = m;
     }
-  cudaMemcpyToSymbolAsync(CUDA_ma, &ma, sizeof(ma), 0, cudaMemcpyHostToDevice, stream1); 
-  cudaMemcpyToSymbolAsync(CUDA_mfit, &lmfit, sizeof(lmfit), 0, cudaMemcpyHostToDevice, stream1);
+  //cudaMemcpyToSymbolAsync(CUDA_ma, &ma, sizeof(ma), 0, cudaMemcpyHostToDevice, stream1); 
+  //cudaMemcpyToSymbolAsync(CUDA_mfit, &lmfit, sizeof(lmfit), 0, cudaMemcpyHostToDevice, stream1);
   m = lmfit + 1;
   //cudaMemcpyToSymbolAsync(CUDA_mfit1, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
   cudaMemcpyToSymbolAsync(CUDA_lastma, &llastma, sizeof(llastma), 0, cudaMemcpyHostToDevice, stream1);
   cudaMemcpyToSymbolAsync(CUDA_lastone, &llastone, sizeof(llastone), 0, cudaMemcpyHostToDevice, stream1);
   m = ma - 2 - n_ph_par;
-  cudaMemcpyToSymbolAsync(CUDA_ncoef0, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
+  //cudaMemcpyToSymbolAsync(CUDA_ncoef0, &m, sizeof(m), 0, cudaMemcpyHostToDevice, stream1);
 
   err = cudaMalloc(&pcc, (CUDA_grid_dim + 32) * sizeof(freq_context));
   cudaMemcpyToSymbolAsync(CUDA_CC, &pcc, sizeof(pcc), 0, cudaMemcpyHostToDevice, stream1);
@@ -835,7 +867,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
       for(m = 1; m <= N_POLES; m++)
 	{
 	  //cudaStreamQuery(stream1);
-	  usleep(1);
+	  //usleep(1);
 	  
 	  //sched_yield(); //usleep(1);
 	  double q = n_max - n; q = q > CUDA_grid_dim ? CUDA_grid_dim : q;
@@ -865,113 +897,134 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
     #endif
 
 	  //cudaStreamQuery(stream1);
-	  usleep(1);
-
 	  //usleep(1);
+
 	  int loop = 0;
+    cudaStreamSynchronize(stream1);
 
 	  while(!*(volatile int *)theEnd)
 	    {
-	      sched_yield();
+	      /*
+	      if(loop == 10)
+		cuProfilerStart();
+	      if(loop == 11)
+		cuProfilerStop();
+	      */
+	      //sched_yield();
 	      CudaCalculateIter1Begin<<<dim1, dim2, 0, stream1 >>>(CUDA_grid_dim); // RRRR
-	      cudaEventRecord(event1, stream1);
+	      //cudaEventRecord(event1, stream1);
+	      //cudaStreamQuery(stream1);
+	      
+	      //cudaStreamWaitEvent(stream2, event1);
+	      *theEnd = -1;
+	      cudaMemcpyFromSymbolAsync(theEnd, CUDA_End, sizeof(int), 0, cudaMemcpyDeviceToHost, stream1); //stream2
+	      //copyReady = false;
+	      //cudaStreamAddCallback(stream1, cbCopyReady, (void *)&copyReady, 0);
+	      //cudaStreamQuery(stream1);
+	      //cudaStreamQuery(stream2);
+	      //usleep(1);
+
+	      CudaCalculateIter1Mrqcof1Start<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+
+	      for(iC = 1; iC < l_curves; iC++)
+		{
+		  		  if(in_rel[iC])
+		    if(ia[1])
+		      { // M12 strided writess and reads
+			CudaCalculateIter1Mrqcof1CurveM12I1IA1<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		      }
+		    else
+		      {
+			CudaCalculateIter1Mrqcof1CurveM12I1IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		      }
+		  else
+		    if(ia[1])
+		      CudaCalculateIter1Mrqcof1CurveM12I0IA1<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		    else
+		      CudaCalculateIter1Mrqcof1CurveM12I0IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		  //cudaStreamQuery(stream1);
+		  //usleep(1);
+		  //sched_yield();
+		}
 
 	      //cudaStreamQuery(stream1);
 	      //usleep(1);
 
-	      cudaStreamWaitEvent(stream2, event1);
-	      cudaMemcpyFromSymbolAsync(theEnd, CUDA_End, sizeof(int), 0, cudaMemcpyDeviceToHost, stream2);
-	      copyReady = false;
-	      cudaStreamAddCallback(stream2, cbCopyReady, (void *)&copyReady, 0);
-
-	      //cudaStreamQuery(stream1);
-	      usleep(1);
-	      //cudaStreamQuery(stream2);
-
-	      CudaCalculateIter1Mrqcof1Start<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
-	      //cudaStreamQuery(stream1);
-	      usleep(1);
-
-	      for(iC = 1; iC < l_curves; iC++)
-		{
-		  sched_yield();
-		  if(in_rel[iC])
-		    if(ia[1])
-		      {
-			CudaCalculateIter1Mrqcof1CurveM12I1IA1<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-		      }
-		    else
-		      {
-			CudaCalculateIter1Mrqcof1CurveM12I1IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-		      }
-		  else
-		    if(ia[1])
-		      CudaCalculateIter1Mrqcof1CurveM12I0IA1<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-		    else
-		      CudaCalculateIter1Mrqcof1CurveM12I0IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-		}
-
-	      //cudaStreamQuery(stream1);
-	      usleep(1);
-
 	      if(in_rel[l_curves])
 		{
+		  // strided store (slow)
+		  // NEWDYTEMP
 		  CudaCalculateIter1Mrqcof1Curve1LastI1<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); //4 max, shared
-		  if(ia[1])
+		  if(ia[1]) // strided read from dytemp
 		    CudaCalculateIter1Mrqcof1Curve2I1IA1<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(); 
-		  else
+		  else // strided read from dytemp
 		    CudaCalculateIter1Mrqcof1Curve2I1IA0<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
 		}
 	      else
-		{
+		{ // strided store
+		  // NEWDYTEMP
 		  CudaCalculateIter1Mrqcof1Curve1LastI0<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
-		  if(ia[1])
+		  if(ia[1]) //strided read
 		    CudaCalculateIter1Mrqcof1Curve2I0IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>();
-		  else
-		    CudaCalculateIter1Mrqcof1Curve2I0IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>();
+		  else //strided read
+		    CudaCalculateIter1Mrqcof1Curve2I0IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(); // original
 		}
 
 	      //cudaStreamQuery(stream1);
-	      usleep(1);
+	      //usleep(1);
 
-	      //CudaCalculateIter1Mrqcof1End<<<dim1, dim_3, 0, stream1>>>(); //WORKS
-	      CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); //
-
-	      //cudaStreamQuery(stream1);
-	      usleep(1); // allow higher priority threads (stage 1) run
-
-	      CudaCalculateIter1Mrqmin1End<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(); // 1 max?, gauss, shared
+	      CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim, CUDA_BLOCK_DIM*2, 0, stream1>>>(); //
+	      //CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); //
 
 	      //cudaStreamQuery(stream1);
-	      usleep(1); 
+	      //usleep(1);
+
+	      CudaCalculateIter1Mrqmin1End1<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // 1 max?, gauss, shared
+	      //cudaStreamQuery(stream1);
+	      CudaCalculateIter1Mrqmin1EndGauss<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(); // 1 max?, gauss, shared
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
 	      
-	      CudaCalculateIter1Mrqcof2Start<<<CUDA_grid_dim/4, block4 /*CUDA_BLOCK_DIM*/, 0, stream1>>>();
-
+	      CudaCalculateIter1Mrqmin1End2<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // 1 max?, gauss, shared
+	      
 	      //cudaStreamQuery(stream1);
-	      usleep(1);
+	      //usleep(1);
 
-	      for(iC = 1; iC < l_curves; iC++)
-		{
-		  sched_yield();
+	      //cudaStreamSynchronize(stream1);
+
+        CudaCalculateIter1Mrqcof2Start<<<CUDA_grid_dim/4, block4 /*CUDA_BLOCK_DIM*/, 0, stream1>>>();
+	      
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+
+	      	      for(iC = 1; iC < l_curves; iC++)
+		{ // dytemp written and read in cof2curvem12
 		  if(in_rel[iC])
 		    if(ia[1])
-			CudaCalculateIter1Mrqcof2CurveM12I1IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-		    else
-		      CudaCalculateIter1Mrqcof2CurveM12I1IA0<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
+		      CudaCalculateIter1Mrqcof2CurveM12I1IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		    else // SLOW
+		      CudaCalculateIter1Mrqcof2CurveM12I1IA0<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		  else
 		    if(ia[1])
-		      CudaCalculateIter1Mrqcof2CurveM12I0IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
+		      CudaCalculateIter1Mrqcof2CurveM12I0IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
 		    else
-		      CudaCalculateIter1Mrqcof2CurveM12I0IA0<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC]);
-
+		      CudaCalculateIter1Mrqcof2CurveM12I0IA0<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>(l_points[iC], iC);
+		  //cudaStreamQuery(stream1);
+		  //usleep(1);
+		  //sched_yield();
 		}
 
+	      //cudaStreamSynchronize(stream1);
 	      //cudaStreamQuery(stream1);
-	      usleep(1);
 
 	      if(in_rel[l_curves])
-		{
+		{ // strided write
+		  //NEWDYTEMP
 		  CudaCalculateIter1Mrqcof2Curve1LastI1<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
+		  //cudaStreamQuery(stream1);
+		  //usleep(1);
 		  if(ia[1])
 		    CudaCalculateIter1Mrqcof2Curve2I1IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>();
 		  else
@@ -979,32 +1032,46 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 		}
 	      else // last
 		{
+		  //NEWDYTEMP
 		  CudaCalculateIter1Mrqcof2Curve1LastI0<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
+		  //cudaStreamQuery(stream1);
+		  //usleep(1);
 		  if(ia[1])
 		    CudaCalculateIter1Mrqcof2Curve2I0IA1<<<CUDA_grid_dim, CUDA_BLOCK_DIM, 0, stream1>>>();
 		  else
-		    CudaCalculateIter1Mrqcof2Curve2I0IA0<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
-		}
-
-        //cudaStreamQuery(stream1);
-	      cudaStreamQuery(stream2);
-	      usleep(1); // allow higher priority threads (stage 1) run
-
-	      while(!copyReady)
-		{
-          sched_yield();
-		  if(copyReady)
-		    break;
-		  msleep(10);
+		    CudaCalculateIter1Mrqcof2Curve2I0IA0<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>();
 		}
 	      
-	      //CudaCalculateIter1Mrqcof2End<<<dim1, dim_3, 0, stream1>>>(); // Works
-	      CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // test
 	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      /*
+	      while(!copyReady)
+		{
+		  sched_yield();
+		  if(copyReady)
+		    break;
+		  msleep(1);
+		  //if(copyReady)
+		  //  break;
+		  
+		  //		  cudaStreamSynchronize(stream2);
+		}
+	      */
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      //cudaStreamQuery(stream2);
+
+	      CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim, CUDA_BLOCK_DIM*2, 0, stream1>>>(); // test
+	      //CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // test
+	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+	      
 	      CudaCalculateIter1Mrqmin2End<<<CUDA_grid_dim/1, CUDA_BLOCK_DIM, 0, stream1>>>(); // RRRR
 	      //cudaStreamQuery(stream1);
+	      //usleep(1);
+
 	      CudaCalculateIter2<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>();
-	      //cudaStreamQuery(stream1);
+	      //cudaStreamQuery(stream2);
 	      //usleep(1);
 
 	      if((loop & 15) == 15)
@@ -1013,21 +1080,36 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 		  cp = cp > 0.99990 ? 0.99990 : cp;
 		  fractionDone = cp;
 		  boinc_fraction_done(fractionDone);
-
-		  // printf("%9.6f \r", fractionDone); fflush(stdout);
+		  //usleep(1);
+		  //cudaStreamSynchronize(stream1);
+		  //printf("%9.6f \r", fractionDone); fflush(stdout);
 		}
+    	  //printf("."); fflush(stdout);
 
+	      /*
+	      if(!copyReady)
+	        {
+		  //cudaStreamQuery(stream1);
+		  usleep(1);
+		  if(!copyReady)
+		    cudaStreamSynchronize(stream1);
+		}
+	      */
+	      //cudaStreamSynchronize(stream1);
+	      while(*(volatile int *)theEnd == -1)
+		usleep(100);
 	      *theEnd = (*(volatile int *)theEnd >= CUDA_grid_dim);
+	      //usleep(1);
 	      loop++;
 	    }
-
-      printf("\n"); fflush(stdout);
-      CudaCalculateFinishPole<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // RRRR
-
-      //cudaStreamQuery(stream1);
-      usleep(1);
-  }
-
+	    //cudaStreamSynchronize(stream1);
+	    //printf(" %d\n", loop); fflush(stdout);
+	  
+	  CudaCalculateFinishPole<<<CUDA_grid_dim/BLOCKX4, block4, 0, stream1>>>(); // RRRR
+	  //cudaStreamQuery(stream1);
+	  usleep(1);
+	}
+      
       //cudaStreamQuery(stream1);
 
       cudaStreamSynchronize(stream1);

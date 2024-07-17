@@ -50,11 +50,16 @@ __device__ __device_builtin__ double __hiloint2double(int hi, int lo);
 #include "constants.h"
 //NOTE: https://devtalk.nvidia.com/default/topic/517801/-34-texture-is-not-a-template-34-error-mvs-2010/
 
-#define N_BLOCKS 2048
+#define N_BLOCKS 3072
+//#define N_BLOCKS 1152
+//#define N_BLOCKS 640
+
 
 //global to all freq
-__constant__ extern int CUDA_Ncoef, CUDA_Numfac, CUDA_Numfac1, CUDA_Dg_block;
-__constant__ extern int CUDA_ma, CUDA_mfit, /*CUDA_mfit1,*/ CUDA_lastone, CUDA_lastma, CUDA_ncoef0;
+//__constant__ extern int CUDA_Numfac, CUDA_Numfac1;
+__constant__ extern int CUDA_Ncoef, CUDA_Dg_block;
+//__constant__ extern int CUDA_ma;
+__constant__ extern int CUDA_lastone, CUDA_lastma, CUDA_ncoef0;
 __constant__ extern double CUDA_cg_first[MAX_N_PAR + 1];
 __constant__ extern int CUDA_n_iter_max, CUDA_n_iter_min, CUDA_ndata;
 __constant__ extern double CUDA_iter_diff_max;
@@ -91,14 +96,11 @@ __device__ extern double CUDA_ee0[3][MAX_N_OBS+1];
 struct freq_context
 {
   double *Dg;
-  //double *alpha;
   double *covar;
   double *dytemp;
   double *ytemp;
-  
-  //double cg[MAX_N_PAR + 1];
-  //double beta[MAX_N_PAR + 1];
   double da[MAX_N_PAR + 1];
+  int check;
 };
 
 extern __device__ double *CUDA_Dg;

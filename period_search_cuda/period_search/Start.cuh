@@ -7,7 +7,11 @@ __global__ void CudaCalculatePreparePole(double freq_start, double freq_step, in
 
 __global__ void CudaCalculateIter1Begin(int n_max);
 
-__global__ void CudaCalculateIter1Mrqmin1End(void);
+__global__ void CudaCalculateIter1Mrqmin1End1(void);
+
+__global__ void CudaCalculateIter1Mrqmin1End2(void);
+
+__global__ void CudaCalculateIter1Mrqmin1EndGauss(void);
 
 __global__ void CudaCalculateIter1Mrqmin2End(void);
 
@@ -31,13 +35,13 @@ __global__ void CudaCalculateIter1Mrqcof1Curve2I1IA1(void);
 
 __global__ void CudaCalculateIter1Mrqcof1CurveM1(int inrel, int lpoints);
 
-__global__ void CudaCalculateIter1Mrqcof1CurveM12I0IA0(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof1CurveM12I0IA0(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof1CurveM12I0IA1(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof1CurveM12I0IA1(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof1CurveM12I1IA0(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof1CurveM12I1IA0(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof1CurveM12I1IA1(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof1CurveM12I1IA1(int lpoints, int lC);
 
 __global__ void CudaCalculateIter1Mrqcof1Curve1LastI0(void);
 
@@ -71,13 +75,13 @@ __global__ void CudaCalculateIter1Mrqcof2Curve2I1IA1(void);
 
 __global__ void CudaCalculateIter1Mrqcof2CurveM1(int inrel, int lpoints);
 
-__global__ void CudaCalculateIter1Mrqcof2CurveM12I0IA0(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof2CurveM12I0IA0(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof2CurveM12I0IA1(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof2CurveM12I0IA1(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof2CurveM12I1IA0(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof2CurveM12I1IA0(int lpoints, int lC);
 
-__global__ void CudaCalculateIter1Mrqcof2CurveM12I1IA1(int lpoints);
+__global__ void CudaCalculateIter1Mrqcof2CurveM12I1IA1(int lpoints, int lC);
 
 __global__ void CudaCalculateIter1Mrqcof2Curve1LastI1(void);
 

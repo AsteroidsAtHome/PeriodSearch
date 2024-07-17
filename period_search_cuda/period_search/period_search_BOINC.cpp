@@ -95,7 +95,7 @@ constexpr auto checkpoint_file = "period_search_state";
 constexpr auto input_filename = "period_search_in";
 constexpr auto output_filename = "period_search_out";
 
-int Nfactor = 2;
+int Nfactor = 0;
 
 int DoCheckpoint(MFILE& mf, const int nlines, const int newConw, const double conwr) {
 	string resolvedName;
@@ -416,16 +416,19 @@ int main(int argc, char** argv)
 	k2 = 0;                 /* index */
 	al0 = al0Abs = PI;      /* the smallest solar phase angle */
 	ial0 = ial0_abs = -1;   /* initialization, index of al0 */
-	jdMin = 1e20;           /* initial minimum and maximum JD */
-	jdMax = -1e40;
+	jdMin = 1e80;           /* initial minimum and maximum JD */
+	jdMax = -1e80;
 	onlyrel = 1;
 	jd0 = jd00;
 	a = a0; b = b0; cAxis = c0;
 
 	max_l_points = 0;
+	double jdmax0 = -1e80, jdmin0 = 1e80;
 	/* loop over lightcurves */
 	for (i = 1; i <= l_curves; i++)
 	{
+        jdMin = 1e80;           /* initial minimum and maximum JD */
+        jdMax = -1e80;
 		ave = 0; /* average */
 		fscanf(infile, "%d %d", &l_points[i], &iTemp); /* points in this lightcurve */
 		if (boinc_is_standalone())
@@ -512,7 +515,16 @@ int main(int argc, char** argv)
 			sigr2[k2] = double(1.0)/(ave*ave);
 		}
 
+      	if(jdMin < jdmin0)
+			jdmin0 = jdMin;
+      	if(jdMax > jdmax0)
+			jdmax0 = jdMax;
+      	//printf("jdMin %lf jdMax %lf length %lf\n", jdMin, jdMax, jdMax - jdMin);
 	} /* i, all lightcurves */
+
+    jdMin = jdmin0;
+    jdMax = jdmax0;
+    //printf("Final jdMin %lf jdMax %lf length %lf\n", jdMin, jdMax, jdMax - jdMin);
 
 	/* initiation of weights */
 	for (i = 1; i <= l_curves; i++)
@@ -681,6 +693,7 @@ int main(int argc, char** argv)
 				n_coef++;
 				if (m != 0) n_coef++;
 			}
+		//printf("n_coef %d comes from %d %d\n", n_coef, m_max, l_max);
 
 		/*  Fix the directions of the triangle vertices of the Gaussian image sphere
 			t = theta angle, f = phi angle */
@@ -867,11 +880,13 @@ int main(int argc, char** argv)
 
 	// printf("Num_fac %d\n", num_fac); fflush(stdout);
 
-	CUDAStart(cuda_device, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, sigr2, num_fac, brightness);
+    if(Nfactor == 0)
+      CUDAStart(cuda_device, nStartFrom, startFrequency, endFrequency, frequencyStep, stopCondition, nIterMin, conwR, ndata, ia, ia_par, cgFirst, out, escl, sig, sigr2, num_fac, brightness);
 
 	out.close();
 
 	boinc_fraction_done(0.99999);
+	//printf("Un_prepare\n"); fflush(stdout);
 	CUDAUnprepare();
 
 	//  deallocate_matrix_double(ee,MAX_N_OBS);
