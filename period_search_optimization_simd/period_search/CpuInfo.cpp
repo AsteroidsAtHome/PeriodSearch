@@ -119,24 +119,57 @@ static void GetCpuid(unsigned int info_type, unsigned int &a, unsigned int &b, u
 #ifndef _XCR_XFEATURE_ENABLED_MASK
 #define _XCR_XFEATURE_ENABLED_MASK 0
 #endif
-static bool IsAVXSupportedByOS()
+
+static bool IsAVXSupportedByOS(unsigned int avx_mask)
 {
-        unsigned int a, b, c, d;
-        GetCpuid(1, a, b, c, d);
+    unsigned int a, b, c, d;
+    GetCpuid(1, a, b, c, d);
 
-        bool osUsesXSAVE_XRSTORE = c & (1 << 27);
+    bool osUsesXSAVE_XRSTORE = c & (1 << 27);
 
-        return osUsesXSAVE_XRSTORE && (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0x6);
+    return osUsesXSAVE_XRSTORE && (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & avx_mask);
 }
 
-static bool IsAVX512SupportedByOS()
+static bool IsAVXSupportedByOS() {
+    return IsAVXSupportedByOS(0x6);
+}
+
+static bool IsAVX512SupportedByOS() {
+    return IsAVXSupportedByOS(0xe6);
+}
+
+/// <summary>
+/// The Bulldozer CPU family does technically support AVX/FMA, but its performance is worse compared to SSE3.
+/// </summary>
+static bool IsBulldozer()
 {
-        unsigned int a, b, c, d;
-        GetCpuid(1, a, b, c, d);
+    unsigned int a, b, c, d;
 
-        bool osUsesXSAVE_XRSTORE = c & (1 << 27);
+	GetCpuid(0, a, b, c, d);
+    char vendor[13];
+    memcpy(vendor + 0, &b, 4);
+    memcpy(vendor + 4, &d, 4);
+    memcpy(vendor + 8, &c, 4);
+    vendor[12] = '\0';
 
-        return osUsesXSAVE_XRSTORE && (xgetbv(_XCR_XFEATURE_ENABLED_MASK) & 0xe6);
+    if (strcmp(vendor, "AuthenticAMD") != 0) {
+        return 0;
+    }
+
+    GetCpuid(1, a, b, c, d);
+
+    uint32_t family = (a >> 8) & 0xf;
+    uint32_t extended_family = (a >> 20) & 0xff;
+
+    if (family == 0xf) {
+        family += extended_family;
+    }
+
+    if (family == 0x15) {
+        return 1;
+    } else {
+	    return 0;
+	}
 }
 
 void GetSupportedSIMDs()
@@ -171,6 +204,7 @@ void GetSupportedSIMDs()
 		CPUopt.hasAVX512 = struc_ebx & (1 << 16);
 		CPUopt.hasAVX512dq = struc_ebx & (1 << 17);
 	}
+	CPUopt.isBulldozer = IsBulldozer();
 }
 
 /// <summary>
@@ -237,12 +271,12 @@ SIMDEnum GetBestSupportedSIMD()
 		std::cerr << "Using AVX512 SIMD optimizations." << std::endl;
 		return SIMDEnum::OptAVX512;
 	}
-	else if (CPUopt.hasFMA)
+	else if (CPUopt.hasFMA && !CPUopt.isBulldozer)
 	{
 		std::cerr << "Using FMA SIMD optimizations." << std::endl;
 		return SIMDEnum::OptFMA;
 	}
-	else if (CPUopt.hasAVX)
+	else if (CPUopt.hasAVX && !CPUopt.isBulldozer)
 	{
 		std::cerr << "Using AVX SIMD optimizations." << std::endl;
 		return SIMDEnum::OptAVX;
