@@ -545,9 +545,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="period_search\areanorm.c" />
+    <ClCompile Include="period_search\areanorm.cpp" />
     <ClCompile Include="period_search\arrayHelpers.cpp" />
-    <ClCompile Include="period_search\blmatrix.c" />
+    <ClCompile Include="period_search\blmatrix.cpp" />
     <ClCompile Include="period_search\bright.cpp" />
     <ClCompile Include="period_search\bright_asimd.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -568,7 +568,7 @@
     <ClCompile Include="period_search\conv_fma.cpp" />
     <ClCompile Include="period_search\conv_sse2.cpp" />
     <ClCompile Include="period_search\conv_sse3.cpp" />
-    <ClCompile Include="period_search\covsrt.c" />
+    <ClCompile Include="period_search\covsrt.cpp" />
     <ClCompile Include="period_search\CpuInfo.cpp" />
     <ClCompile Include="period_search\curv.cpp" />
     <ClCompile Include="period_search\curv_asimd.cpp">
@@ -581,7 +581,7 @@
     <ClCompile Include="period_search\curv_avx512.cpp" />
     <ClCompile Include="period_search\curv_sse2.cpp" />
     <ClCompile Include="period_search\dot_product.cpp" />
-    <ClCompile Include="period_search\ellfit.c" />
+    <ClCompile Include="period_search\ellfit.cpp" />
     <ClCompile Include="period_search\EnumHelpers.cpp" />
     <ClCompile Include="period_search\gauss_errc.cpp" />
     <ClCompile Include="period_search\gauss_errc_asimd.cpp">
@@ -593,10 +593,10 @@
     <ClCompile Include="period_search\gauss_errc_avx512.cpp" />
     <ClCompile Include="period_search\gauss_errc_sse2.cpp" />
     <ClCompile Include="period_search\gauss_errc_sse3.cpp" />
-    <ClCompile Include="period_search\lubksb.c" />
-    <ClCompile Include="period_search\ludcmp.c" />
-    <ClCompile Include="period_search\matrix.c" />
-    <ClCompile Include="period_search\memory.c" />
+    <ClCompile Include="period_search\lubksb.cpp" />
+    <ClCompile Include="period_search\ludcmp.cpp" />
+    <ClCompile Include="period_search\matrix.cpp" />
+    <ClCompile Include="period_search\memory.cpp" />
     <ClCompile Include="period_search\mrqcof.cpp" />
     <ClCompile Include="period_search\mrqcof_asimd.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -607,12 +607,12 @@
     <ClCompile Include="period_search\mrqcof_fma.cpp" />
     <ClCompile Include="period_search\mrqcof_sse2.cpp" />
     <ClCompile Include="period_search\mrqcof_sse3.cpp" />
-    <ClCompile Include="period_search\mrqmin.c" />
+    <ClCompile Include="period_search\mrqmin.cpp" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
-    <ClCompile Include="period_search\phasec.c" />
-    <ClCompile Include="period_search\sphfunc.c" />
+    <ClCompile Include="period_search\phasec.cpp" />
+    <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\systeminfo.cpp" />
-    <ClCompile Include="period_search\trifac.c" />
+    <ClCompile Include="period_search\trifac.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
