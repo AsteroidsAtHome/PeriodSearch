@@ -1032,7 +1032,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // 18-SEP-2023
     //size_t pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     //auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
-    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
+    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc) / 128 + 1) * 128;
     auto pcc = (mfreq_context*)_aligned_malloc(pccSize, 128);
 #elif NVIDIA
     int pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
