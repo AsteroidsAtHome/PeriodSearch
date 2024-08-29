@@ -24,7 +24,7 @@ OBJ_DIR =build/Release
 # END DO-NOT-CHANGE
 
 # CXXFLAGS = -g -O3 .
-CXXFLAGS = -O2 -w -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protection -ffunction-sections \
+CXXFLAGS = -O2 -w -s -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protection -ffunction-sections \
 	-DNDEBUG \
 	-DAMD \
 	-DCL_HPP_ENABLE_EXCEPTIONS \
@@ -39,7 +39,7 @@ CXXFLAGS = -O2 -w -std=c++17 -m64 -fstack-protector-strong -fstack-clash-protect
 CC=g++
 CXX=g++
 # OPTFLAGS=
-OPTFLAGS= -O2 -w -m64
+OPTFLAGS= -O2 -s -w -m64
 CFLAGS=$(OPTFLAGS) \
 	-DNDEBUG \
 	-DAMD \
