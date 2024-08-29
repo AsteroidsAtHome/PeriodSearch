@@ -116,7 +116,7 @@ cl_uint faOptimizedSize = ((sizeof(freq_context) - 1) / 64 + 1) * 64;
 auto Fa = (freq_context*)aligned_alloc(4096, faOptimizedSize);
 #else
 // freq_context* Fa; // __attribute__((aligned(8)));
-cl_uint faSize = ((sizeof(freq_context) - 1) / 64 + 1) * 64;
+cl_uint faSize = (sizeof(freq_context) / 128 + 1) * 128;
 auto Fa = (freq_context*)aligned_alloc(128, faSize);
 // freq_context* Fa __attribute__((aligned(8))) = static_cast<freq_context*>(malloc(sizeof(freq_context)));
 #endif
@@ -1006,7 +1006,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     
     // cl_uint pccSize = CUDA_grid_dim_precalc * sizeof(mfreq_context);
     // auto pcc = new mfreq_context[CUDA_grid_dim_precalc];
-    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc - 1) / 64 + 1) * 64;
+    auto pccSize = ((sizeof(mfreq_context) * CUDA_grid_dim_precalc) / 128 + 1) * 128;
     auto pcc = (mfreq_context*)aligned_alloc(128, pccSize);
 
     // auto pcc = queue.enqueueMapBuffer(CUDA_MCC2, CL_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, pccSize, NULL, NULL, err);
@@ -1203,7 +1203,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     // auto memFr = (freq_result *)aligned_alloc(128, frSize);
     // auto memFr = new (freq_result *)aligned_alloc(128, frSize);
     // auto CUDA_FR = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,  frSize, memFr, err);
-    cl_uint frSize = sizeof(freq_result) * CUDA_grid_dim_precalc;
+    cl_uint frSize = (sizeof(freq_result) * CUDA_grid_dim_precalc / 128 + 1) * 128;
     // auto pfr = new freq_result[CUDA_grid_dim_precalc];
     auto pfr = (freq_result*)aligned_alloc(128, frSize);
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
