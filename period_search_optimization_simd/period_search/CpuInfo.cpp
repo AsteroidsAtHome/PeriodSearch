@@ -147,9 +147,9 @@ static bool IsBulldozer()
 
 	GetCpuid(0, a, b, c, d);
     char vendor[13];
-    memcpy(vendor + 0, &b, 4);
-    memcpy(vendor + 4, &d, 4);
-    memcpy(vendor + 8, &c, 4);
+    std::memcpy(vendor + 0, &b, 4);
+    std::memcpy(vendor + 4, &d, 4);
+    std::memcpy(vendor + 8, &c, 4);
     vendor[12] = '\0';
 
     if (strcmp(vendor, "AuthenticAMD") != 0) {
