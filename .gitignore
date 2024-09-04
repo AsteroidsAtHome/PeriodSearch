@@ -59,7 +59,7 @@ bld/
 **/packages/*
 # except build/, which is used as an MSBuild target.
 !**/packages/build/
-!/input_period_search/
+!input_period_search/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/packages/repositories.config
 
@@ -121,7 +121,7 @@ init_data*.xml
 period_search_in*
 period_search_out*
 # But keep test data
-!*/input_period_search/period_search_*
+!input_period_search/*.*
 period_search_state*
 test_*.txt
 test_values*.txt
