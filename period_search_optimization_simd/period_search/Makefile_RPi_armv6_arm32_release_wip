@@ -1,16 +1,28 @@
 # This should work on Linux.  Modify as needed for other platforms.
 #
-#	The following Makefile produces armv6 32bit period-search application. Built and tested on "RPi 4B+" w/2GB, running 32-bit Buster armhf distro 2019-06-20.
-#   Here is a linkg to the distro: https://downloads.raspberrypi.com/raspbian_lite/images/raspbian_lite-2019-06-24/
-#   Or you can try the newer Buster armhf image: https://downloads.raspberrypi.org/raspios_armhf/images/raspios_armhf-2021-05-28/ (Not fully tested yet)
-#	Try to use environment based on GLIBC v2.28
-#   Before you start you might need to install the following packages:
+#	For now (as of 5th April 2024) we'll keep this Make file as a refferense only.
+#	The following Makefile SHOULD produces armv7 32bit period-search application. Tested on RPi CM4 2GB, running 64-bit Buster distro.
+#
+#   If you run this Makefile on different platform than RPi 1 Zero, even using arm-linux-gnueabihf-g++ (Debian 8.3.0-2) 8.3.0compiler,
+#	compilation will produce error:
+# 		/usr/arm-linux-gnueabihf/include/bits/stdio.h: In function ‘int vprintf(const char*, __gnuc_va_list)’:
+# 		/usr/arm-linux-gnueabihf/include/bits/stdio.h:39:60: sorry, unimplemented: Thumb-1 hard-float VFP ABI
+# 		 vprintf (const char *__restrict __fmt, __gnuc_va_list __arg)
+#
+#  	More on that issue here:
+#	https://forums.raspberrypi.com/viewtopic.php?t=290804#p1758436
+#	"I suspect the cause of your failure is using a build environment based on Debian buster rather than raspbian buster. 
+#	Debian armhf's gcc has "-mthumb" as part of it's hardcoded default flags, which causes it to be unable to build armv6 code
+#	(as requested by the compiler flags, which are presumablly set by the raspberry pi foundation ffmpeg packaging."
+#	It is due to the compiler being not cappable to handle correctly armv6 architecture (debian compilator). 
+#
+#	You can try using the -marm options instead of -march=armv6, the error will be gone but when you run the binary on an armv6 platform
+#	it will produce the following error:
+#		Segmentation fault
 #
 #	Prepare BOINC API as follows:	
 #		./_autosetup # Only first time
-#		./configure --disable-server --disable-client --disable-manager CXXFLAGS="-std=c++17 -O3"
-#		or
-#		./configure --disable-server --disable-client --disable-manager --build=arm-linux-gnueabihf --target=arm-linux-gnueabi CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-marm -mtune=arm1176jzf-s -mcpu=arm6z -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3"
+#		./configure --disable-server --disable-client --disable-manager --build=arm-linux-gnueabihf --target=arm-linux-gnueabihf CC="arm-linux-gnueabihf-g++" CXX="arm-linux-gnueabihf-g++" CPP="arm-linux-gnueabihf-g++ -E" CXXFLAGS="-marm -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3"
 #		make
 #
 #	To check for the supported macroses use:
@@ -23,18 +35,21 @@ BOINC_DIR = ../../../boinc_src_armv6
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 
-# Use `readelf -p .GCC.command.line period_search_rpi_armv6_arm32` to see all used compiler commands
-CXXFLAGS = -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches \
+# Use `readelf -p .GCC.command.line period_search_rpi_armv7_arm32` to see all used compiler commands
+CXXFLAGS = -march=armv6 -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches \
     -DARM32 \
     -I$(BOINC_DIR) \
     -I$(BOINC_LIB_DIR) \
     -I$(BOINC_API_DIR) \
+	-I /usr/lib/arm-linux-gnueabihf \
     -L /usr/lib \
     -L.
 
-CC = g++ 
-CXX = g++ 
-OPTFLAGS = -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches
+CC = arm-linux-gnueabihf-g++ 
+CXX = arm-linux-gnueabihf-g++ 
+# CC = g++ 
+# CXX = g++ 
+OPTFLAGS = -march=armv6 -mcpu=arm6 -mfloat-abi=hard -mfpu=vfp -std=c++17 -O3 -frecord-gcc-switches
 CFLAGS = $(OPTFLAGS) -Wall
 LDFLAGS = -lm
 MY_LIBS = trifac.o areanorm.o sphfunc.o ellfit.o ludcmp.o lubksb.o mrqmin.o mrqcof.o\
