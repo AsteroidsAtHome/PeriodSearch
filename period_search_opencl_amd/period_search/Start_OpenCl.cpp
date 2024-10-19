@@ -214,9 +214,11 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
         platform = platforms[i];
         err_num = clGetPlatformInfo(platform, CL_PLATFORM_NAME, 1024, name, NULL);
         err_num = clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 1024, vendor, NULL);
+        if (!strcmp(name, "Clover")) {
+            continue;
+        }
 #if defined (AMD)
-        if (!strcmp(vendor, "Advanced Micro Devices, Inc.") ||
-            !strcmp(vendor, "Mesa"))
+        if (!strcmp(vendor, "Advanced Micro Devices, Inc."))
         {
             break;
         }
@@ -231,6 +233,10 @@ cl_int ClPrepare(cl_int deviceId, cl_double* beta_pole, cl_double* lambda_pole, 
             break;
         }
 #endif
+        if (!strcmp(name, "rusticl"))
+        {
+            break;
+        }
     }
 
     std::cerr << "Platform name: " << name << endl;
