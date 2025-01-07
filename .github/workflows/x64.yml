@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { variant: 'cuda', os: 'ubuntu-20.04', working-directory: './period_search_cuda/period_search', makefile: 'Makefile' }
+          - { variant: 'cuda', os: 'ubuntu-20.04', working-directory: './period_search_cuda/period_search', makefile: 'Makefile_CUDAv12' }
           - { variant: 'opencl', os: 'ubuntu-20.04', working-directory: './period_search_opencl_amd/period_search', makefile: 'Makefile' }
           - { variant: 'cpu', os: 'ubuntu-20.04', working-directory: './period_search_optimization_simd/period_search', makefile: 'Makefile' }
 
