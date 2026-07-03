@@ -10,7 +10,7 @@
 
 __device__ void curv(freq_context *CUDA_LCC,double cg[],int brtmpl,int brtmph)
 {
-   int i, m, n, l, k;
+   int i, m, n, l;
    
    double fsum,
           g;
@@ -34,9 +34,8 @@ __device__ void curv(freq_context *CUDA_LCC,double cg[],int brtmpl,int brtmph)
         }
       g = exp(g);
       (*CUDA_LCC).Area[i] = CUDA_Darea[i] * g;
-      for (k = 1; k <= n; k++)
-         (*CUDA_LCC).Dg[i+k*(CUDA_Numfac1)] = g * CUDA_Dsph[i][k];
-
+      /* Dg is no longer materialized: Dg[i][k] == g * CUDA_Dsph[i][k] is
+	 folded into the facet weights via Area (= Darea * g) - see bright.cu */
    }
    __syncthreads();
 }

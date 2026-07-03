@@ -228,6 +228,7 @@ __global__ void CudaCalculateIter1Mrqcof1End(void)
 	if (!(*CUDA_LCC).isAlamda) return;
 
 	(*CUDA_LCC).Ochisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).alpha);
+
 }
 
 __global__ void CudaCalculateIter1Mrqcof2Start(void)

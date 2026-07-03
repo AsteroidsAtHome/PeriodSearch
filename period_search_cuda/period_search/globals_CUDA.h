@@ -145,3 +145,45 @@ struct freq_result
 };
 
 __device__ extern freq_result *CUDA_FR;
+
+/* ---- shared-memory staging for the 2026 warp-cooperative kernels ---- */
+
+/* transposed dytemp row stride: dytempT[(jp-1)*DYT_STRIDE + l], l = 1..ma.
+   Requires ma <= DYT_STRIDE-1 (spherical-harmonics degree <= 6, i.e. every
+   production workunit); enforced on the host. */
+#define DYT_STRIDE 64
+#define CURVE2_K 8
+#define GEOM_PT_SIZE 26
+#define GEO_BATCH 16
+
+#ifdef __CUDACC__
+struct brightshare
+{
+	double wcA[32];                     /* compacted facet weights, point A */
+	double wcB[32];                     /* compacted facet weights, point B */
+	int    fc[32];                      /* compacted facet indices */
+	double geo[GEO_BATCH][GEOM_PT_SIZE];/* per-point geometry */
+	double inv[11];                     /* per-curve invariants */
+};
+
+struct curve2share
+{
+	double T[CURVE2_K][DYT_STRIDE];     /* staged dyda tile, rows 1..ma */
+	double s2w[CURVE2_K];
+	double dws[CURVE2_K];
+};
+
+/* bright and curve2 never use their staging at the same time, so they share
+   one per-block union: the shared footprint is max(...), not the sum */
+union mrqshare
+{
+	brightshare b;
+	curve2share c2;
+};
+
+__device__ __forceinline__ mrqshare* mrq_share_block()
+{
+	__shared__ mrqshare s;
+	return &s;
+}
+#endif

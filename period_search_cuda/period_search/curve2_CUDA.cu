@@ -9,265 +9,274 @@
 //#include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+/* 2026 rewrite: the normal equations are accumulated once per CURVE2_K-point
+   tile (a rank-K update computed from shared memory) instead of once per data
+   point. The old code did, for every point, a read-modify-write sweep of the
+   whole triangular alpha matrix in global memory - by far the largest memory
+   stream of the application after Dg. Staging reads dytemp coalesced (it is
+   stored transposed, see bright.cu) and the relative-lightcurve
+   renormalization is folded into the staging, which removes one more full
+   read+write pass over dytemp.
+
+   One warp per block. The two branches below reproduce the original
+   MrqcofCurve2's absolute (ia[1]!=0) and relative (ia[1]==0) address
+   arithmetic element for element; within a tile only the summation order over
+   the K points changes (a+b+c+d... becomes one fused sum), which is the usual
+   reordering freedom.
+
+   T[p][l] holds the staged dyda of point p, 1-based parameter row l. Tiles
+   past the end of the lightcurve are zero-filled so they add exact zeros. */
+
 __device__ void MrqcofCurve2(freq_context* CUDA_LCC, double* alpha, double beta[], int inrel, int lpoints)
 {
-  int l, jp, j, k, m, lnp1, lnp2, Lpoints1 = lpoints + 1;
-  double dy, sig2i, wt, ymod, coef1, coef, wght, ltrial_chisq;
-  //int2 xx;
+  const int tid = threadIdx.x;
+  curve2share* __restrict__ shw = &mrq_share_block()->c2;
+  double (* __restrict__ T)[DYT_STRIDE] = shw->T;
+  double* __restrict__ s2w = shw->s2w;
+  double* __restrict__ dws = shw->dws;
 
+  const int ma = CUDA_ma;
+  const int mfit1 = CUDA_mfit1;
+  const int lastone = CUDA_lastone, lastma = CUDA_lastma;
+  double* __restrict__ dytemp = (*CUDA_LCC).dytemp;
+  double* __restrict__ ytemp = (*CUDA_LCC).ytemp;
 
-  //precalc thread boundaries
-  int tmph, tmpl;
-  tmph = lpoints / CUDA_BLOCK_DIM;
-  if (lpoints % CUDA_BLOCK_DIM) tmph++;
-  tmpl = threadIdx.x * tmph;
-  lnp1 = (*CUDA_LCC).np1 + tmpl;
-  tmph = tmpl + tmph;
-  if (tmph > lpoints) tmph = lpoints;
-  tmpl++;
+  const int lnp1base = (*CUDA_LCC).np1;
+  const int lnp2base = (*CUDA_LCC).np2;
+  const double ave = (*CUDA_LCC).ave;
+  double ltrial_chisq = (*CUDA_LCC).trial_chisq;
 
-  int matmph, matmpl;
-  matmph = CUDA_ma / CUDA_BLOCK_DIM;
-  if (CUDA_ma % CUDA_BLOCK_DIM) matmph++;
-  matmpl = threadIdx.x * matmph;
-  matmph = matmpl + matmph;
-  if (matmph > CUDA_ma) matmph = CUDA_ma;
-  matmpl++;
+  const int j1 = 1 + tid;   /* parameter rows owned by this lane */
+  const int j2 = 33 + tid;
 
-  int latmph, latmpl;
-  latmph = CUDA_lastone / CUDA_BLOCK_DIM;
-  if (CUDA_lastone % CUDA_BLOCK_DIM) latmph++;
-  latmpl = threadIdx.x * latmph;
-  latmph = latmpl + latmph;
-  if (latmph > CUDA_lastone) latmph = CUDA_lastone;
-  latmpl++;
-
-  /*   if ((*CUDA_LCC).Lastcall != 1) always ==0
-       {*/
-  if (inrel /*==1*/)
+#pragma unroll 1
+  for (int jp0 = 1; jp0 <= lpoints; jp0 += CURVE2_K)
     {
-      for (jp = tmpl; jp <= tmph; jp++)
+      int P = lpoints - jp0 + 1;
+      if (P > CURVE2_K) P = CURVE2_K;
+
+      /* ---- stage the tile (lanes = parameters, coalesced reads) ---- */
+#pragma unroll 1
+      for (int p = 0; p < CURVE2_K; p++)
 	{
-	  lnp1++;
-	  int ixx = jp + 1 * Lpoints1;
-	  /* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
-	  (*CUDA_LCC).dytemp[ixx] = 0;
-
-	  //xx = tex1Dfetch(texsig, lnp1);
-	  //coef = __hiloint2double(xx.y, xx.x) * lpoints / (*CUDA_LCC).ave;
-	  coef = CUDA_sig[lnp1] * lpoints / (*CUDA_LCC).ave;
-
-	  double yytmp = (*CUDA_LCC).ytemp[jp];
-	  coef1 = yytmp / (*CUDA_LCC).ave;
-	  (*CUDA_LCC).ytemp[jp] = coef * yytmp;
-
-	  ixx += Lpoints1;
-	  for (l = 2; l <= CUDA_ma; l++, ixx += Lpoints1)
-	    (*CUDA_LCC).dytemp[ixx] = coef * ((*CUDA_LCC).dytemp[ixx] - coef1 * (*CUDA_LCC).dave[l]);
+	  double r1 = 0.0, r2 = 0.0;
+	  if (p < P)
+	    {
+	      const int jp = jp0 + p;
+	      double const* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
+	      if (inrel)
+		{
+		  /* renormalization for relative lightcurves, folded in;
+		     same arithmetic as the old in-place pass */
+		  double yytmp = ytemp[jp];
+		  double coef = CUDA_sig[lnp1base + jp] * lpoints / ave;
+		  double coef1 = yytmp / ave;
+		  if (j1 >= 2 && j1 <= ma)
+		    r1 = coef * (row[j1] - coef1 * (*CUDA_LCC).dave[j1]);
+		  if (j2 <= ma)
+		    r2 = coef * (row[j2] - coef1 * (*CUDA_LCC).dave[j2]);
+		  /* j1 == 1: the size-scale derivative is explicitly zero */
+		}
+	      else
+		{
+		  if (j1 <= ma) r1 = row[j1];
+		  if (j2 <= ma) r2 = row[j2];
+		}
+	    }
+	  T[p][j1] = r1;
+	  T[p][j2] = r2;
 	}
-    }
-  __syncthreads();
+      __syncwarp();
 
-  if (threadIdx.x == 0)
-    {
-      (*CUDA_LCC).np1 += lpoints;
-    }
-
-  lnp2 = (*CUDA_LCC).np2;
-  ltrial_chisq = (*CUDA_LCC).trial_chisq;
-
-  if (CUDA_ia[1]) //not relative
-    {
-      for (jp = 1; jp <= lpoints; jp++)
+      /* ---- per-point scalars, ascending jp to keep the chisq order ---- */
+#pragma unroll 1
+      for (int p = 0; p < CURVE2_K; p++)
 	{
-	  ymod = (*CUDA_LCC).ytemp[jp];
-
-	  int ixx = jp + matmpl * Lpoints1;
-	  for (l = matmpl; l <= matmph; l++, ixx += Lpoints1)
-	    (*CUDA_LCC).dyda[l] = (*CUDA_LCC).dytemp[ixx];
-	  __syncthreads();
-
-	  lnp2++;
-			
-	  //xx = tex1Dfetch(texsig, lnp2);
-	  //sig2i = 1 / (__hiloint2double(xx.y, xx.x) * __hiloint2double(xx.y, xx.x));
-	  sig2i = 1 / (CUDA_sig[lnp2] * CUDA_sig[lnp2]);
-
-	  //xx = tex1Dfetch(texWeight, lnp2);
-	  //wght = __hiloint2double(xx.y, xx.x);
-	  wght = CUDA_Weight[lnp2];
-
-	  //xx = tex1Dfetch(texbrightness, lnp2);
-	  //dy = __hiloint2double(xx.y, xx.x) - ymod;
-	  dy = CUDA_brightness[lnp2] - ymod;
-
-	  j = 0;
-	  //
-	  double sig2iwght = sig2i * wght;
-	  //
-	  for (l = 1; l <= CUDA_lastone; l++)
+	  double s2wv = 0.0, dyv = 0.0;
+	  if (p < P)
 	    {
-	      j++;
-	      wt = (*CUDA_LCC).dyda[l] * sig2iwght;
-	      //				   k = 0;
-	      //precalc thread boundaries
-	      tmph = l / CUDA_BLOCK_DIM;
-	      if (l % CUDA_BLOCK_DIM) tmph++;
-	      tmpl = threadIdx.x * tmph;
-	      tmph = tmpl + tmph;
-	      if (tmph > l) tmph = l;
-	      tmpl++;
-	      for (m = tmpl; m <= tmph; m++)
+	      const int jp = jp0 + p;
+	      const int lnp2 = lnp2base + jp;
+	      double ymod;
+	      if (inrel)
 		{
-		  //				  k++;
-		  alpha[j * (CUDA_mfit1)+m] = alpha[j * (CUDA_mfit1)+m] + wt * (*CUDA_LCC).dyda[m];
-		} /* m */
-	      __syncthreads();
-	      if (threadIdx.x == 0)
-		{
-		  beta[j] = beta[j] + dy * wt;
+		  double coef = CUDA_sig[lnp1base + jp] * lpoints / ave;
+		  ymod = coef * ytemp[jp];
 		}
-	      __syncthreads();
-	    } /* l */
-	  for (; l <= CUDA_lastma; l++)
+	      else
+		ymod = ytemp[jp];
+	      double sig2i = 1 / (CUDA_sig[lnp2] * CUDA_sig[lnp2]);
+	      double wght = CUDA_Weight[lnp2];
+	      dyv = CUDA_brightness[lnp2] - ymod;
+	      s2wv = sig2i * wght;
+	      ltrial_chisq = ltrial_chisq + dyv * dyv * s2wv;
+	    }
+	  if (tid == 0)
 	    {
-	      if (CUDA_ia[l])
-		{
-		  j++;
-		  wt = (*CUDA_LCC).dyda[l] * sig2iwght;
-		  //				   k = 0;
+	      s2w[p] = s2wv;
+	      dws[p] = dyv * s2wv;
+	    }
+	}
+      __syncwarp();
 
-		  for (m = latmpl; m <= latmph; m++)
-		    {
-		      //					  k++;
-		      alpha[j * (CUDA_mfit1)+m] = alpha[j * (CUDA_mfit1)+m] + wt * (*CUDA_LCC).dyda[m];
-		    } /* m */
-		  __syncthreads();
-		  if (threadIdx.x == 0)
-		    {
-		      k = CUDA_lastone;
-		      m = CUDA_lastone + 1;
-		      for (; m <= l; m++)
-			{
-			  if (CUDA_ia[m])
-			    {
-			      k++;
-			      alpha[j * (CUDA_mfit1)+k] = alpha[j * (CUDA_mfit1)+k] + wt * (*CUDA_LCC).dyda[m];
-			    }
-			} /* m */
-		      beta[j] = beta[j] + dy * wt;
-		    }
-		  __syncthreads();
-		}
-	    } /* l */
-	  ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
-	} /* jp */
-    }
-  else //relative ia[1]==0
-    {
-      for (jp = 1; jp <= lpoints; jp++)
+      /* ---- rank-K triangular update, both original variants ---- */
+      if (CUDA_ia[1]) /* absolute: rows l = 1..lastone, alpha[l*mfit1 + m], m = 1..l */
 	{
-	  ymod = (*CUDA_LCC).ytemp[jp];
-
-	  int ixx = jp + matmpl * Lpoints1;
-	  for (l = matmpl; l <= matmph; l++, ixx += Lpoints1)
-	    (*CUDA_LCC).dyda[l] = (*CUDA_LCC).dytemp[ixx];
-	  __syncthreads();
-
-	  lnp2++;
-
-	  //xx = tex1Dfetch(texsig, lnp2);
-	  //sig2i = 1 / (__hiloint2double(xx.y, xx.x) * __hiloint2double(xx.y, xx.x));
-	  sig2i = 1 / (CUDA_sig[lnp2] * CUDA_sig[lnp2]);
-
-	  //xx = tex1Dfetch(texWeight, lnp2);
-	  //wght = __hiloint2double(xx.y, xx.x);
-	  wght = CUDA_Weight[lnp2];
-
-	  //xx = tex1Dfetch(texbrightness, lnp2);
-	  //dy = __hiloint2double(xx.y, xx.x) - ymod;
-	  dy = CUDA_brightness[lnp2] - ymod;
-
-	  j = 0;
-	  //
-	  double sig2iwght = sig2i * wght;
-	  //l==1
-	  //
-	  for (l = 2; l <= CUDA_lastone; l++)
+#pragma unroll 1
+	  for (int l = 1; l <= lastone; l++)
 	    {
+	      double w[CURVE2_K];
+#pragma unroll
+	      for (int p = 0; p < CURVE2_K; p++)
+		w[p] = T[p][l] * s2w[p];
+
+	      double* __restrict__ alphrow = alpha + l * mfit1;
+#pragma unroll 1
+	      for (int m = 1 + tid; m <= l; m += 32)
+		{
+		  double acc = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    acc += w[p] * T[p][m];
+		  alphrow[m] = alphrow[m] + acc;
+		}
+	      if (tid == 0)
+		{
+		  double b = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    b += dws[p] * T[p][l];
+		  beta[l] = beta[l] + b;
+		}
+	    }
+	  /* gated tail rows (lastone < l <= lastma), j counts gated rows */
+	  int j = lastone;
+#pragma unroll 1
+	  for (int l = lastone + 1; l <= lastma; l++)
+	    {
+	      if (!CUDA_ia[l]) continue;
 	      j++;
-	      wt = (*CUDA_LCC).dyda[l] * sig2iwght;
-	      //				   k = 0;
-	      //precalc thread boundaries
-	      tmph = l / CUDA_BLOCK_DIM;
-	      if (l % CUDA_BLOCK_DIM) tmph++;
-	      tmpl = threadIdx.x * tmph;
-	      tmph = tmpl + tmph;
-	      if (tmph > l) tmph = l;
-	      tmpl++;
-	      //m==1
-	      if (tmpl == 1) tmpl++;
-	      //
-	      for (m = tmpl; m <= tmph; m++)
-		{
-		  //					  k++;
-		  alpha[j * (CUDA_mfit1)+m - 1] = alpha[j * (CUDA_mfit1)+m - 1] + wt * (*CUDA_LCC).dyda[m];
-		} /* m */
-	      __syncthreads();
-	      if (threadIdx.x == 0)
-		{
-		  beta[j] = beta[j] + dy * wt;
-		}
-	      __syncthreads();
-	    } /* l */
-	  for (; l <= CUDA_lastma; l++)
-	    {
-	      if (CUDA_ia[l])
-		{
-		  j++;
-		  wt = (*CUDA_LCC).dyda[l] * sig2iwght;
-		  //				   k = 0;
+	      double w[CURVE2_K];
+#pragma unroll
+	      for (int p = 0; p < CURVE2_K; p++)
+		w[p] = T[p][l] * s2w[p];
 
-		  tmpl = latmpl;
-		  //m==1
-		  if (tmpl == 1) tmpl++;
-		  //
-		  for (m = tmpl; m <= latmph; m++)
+	      double* __restrict__ alphrow = alpha + j * mfit1;
+#pragma unroll 1
+	      for (int m = 1 + tid; m <= lastone; m += 32)
+		{
+		  double acc = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    acc += w[p] * T[p][m];
+		  alphrow[m] = alphrow[m] + acc;
+		}
+	      if (tid == 0)
+		{
+		  int k = lastone;
+		  for (int m = lastone + 1; m <= l; m++)
 		    {
-		      //k++;
-		      alpha[j * (CUDA_mfit1)+m - 1] = alpha[j * (CUDA_mfit1)+m - 1] + wt * (*CUDA_LCC).dyda[m];
-		    } /* m */
-		  __syncthreads();
-		  if (threadIdx.x == 0)
-		    {
-		      k = CUDA_lastone - 1;
-		      m = CUDA_lastone + 1;
-		      for (; m <= l; m++)
+		      if (CUDA_ia[m])
 			{
-			  if (CUDA_ia[m])
-			    {
-			      k++;
-			      alpha[j * (CUDA_mfit1)+k] = alpha[j * (CUDA_mfit1)+k] + wt * (*CUDA_LCC).dyda[m];
-			    }
-			} /* m */
-		      beta[j] = beta[j] + dy * wt;
+			  k++;
+			  double acc = 0.0;
+#pragma unroll
+			  for (int p = 0; p < CURVE2_K; p++)
+			    acc += w[p] * T[p][m];
+			  alphrow[k] = alphrow[k] + acc;
+			}
 		    }
-		  __syncthreads();
+		  double b = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    b += dws[p] * T[p][l];
+		  beta[j] = beta[j] + b;
 		}
-	    } /* l */
-	  ltrial_chisq = ltrial_chisq + dy * dy * sig2iwght;
-	} /* jp */
-    }
-  /*     } always ==0 /* Lastcall != 1 */
+	    }
+	}
+      else /* relative (ia[1]==0): rows l = 2..lastone, j = l-1, cols m-1 for m = 2..l */
+	{
+#pragma unroll 1
+	  for (int l = 2; l <= lastone; l++)
+	    {
+	      double w[CURVE2_K];
+#pragma unroll
+	      for (int p = 0; p < CURVE2_K; p++)
+		w[p] = T[p][l] * s2w[p];
 
-  /*  if (((*CUDA_LCC).Lastcall == 1) && (CUDA_Inrel[i] == 1)) always ==0
-      (*CUDA_LCC).Sclnw[i] = (*CUDA_LCC).Scale * CUDA_Lpoints[i] * CUDA_sig[np]/ave;*/
+	      double* __restrict__ alphrow = alpha + (l - 1) * mfit1;
+#pragma unroll 1
+	      for (int m = 2 + tid; m <= l; m += 32)
+		{
+		  double acc = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    acc += w[p] * T[p][m];
+		  alphrow[m - 1] = alphrow[m - 1] + acc;
+		}
+	      if (tid == 0)
+		{
+		  double b = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    b += dws[p] * T[p][l];
+		  beta[l - 1] = beta[l - 1] + b;
+		}
+	    }
+	  int j = lastone - 1;
+#pragma unroll 1
+	  for (int l = lastone + 1; l <= lastma; l++)
+	    {
+	      if (!CUDA_ia[l]) continue;
+	      j++;
+	      double w[CURVE2_K];
+#pragma unroll
+	      for (int p = 0; p < CURVE2_K; p++)
+		w[p] = T[p][l] * s2w[p];
 
-  if (threadIdx.x == 0)
+	      double* __restrict__ alphrow = alpha + j * mfit1;
+#pragma unroll 1
+	      for (int m = 2 + tid; m <= lastone; m += 32)
+		{
+		  double acc = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    acc += w[p] * T[p][m];
+		  alphrow[m - 1] = alphrow[m - 1] + acc;
+		}
+	      if (tid == 0)
+		{
+		  int k = lastone - 1;
+		  for (int m = lastone + 1; m <= l; m++)
+		    {
+		      if (CUDA_ia[m])
+			{
+			  k++;
+			  double acc = 0.0;
+#pragma unroll
+			  for (int p = 0; p < CURVE2_K; p++)
+			    acc += w[p] * T[p][m];
+			  alphrow[k] = alphrow[k] + acc;
+			}
+		    }
+		  double b = 0.0;
+#pragma unroll
+		  for (int p = 0; p < CURVE2_K; p++)
+		    b += dws[p] * T[p][l];
+		  beta[j] = beta[j] + b;
+		}
+	    }
+	}
+      __syncwarp();
+    } /* jp0 */
+
+  if (tid == 0)
     {
-      (*CUDA_LCC).np2 = lnp2;
+      (*CUDA_LCC).np1 = lnp1base + lpoints;
+      (*CUDA_LCC).np2 = lnp2base + lpoints;
       (*CUDA_LCC).trial_chisq = ltrial_chisq;
     }
+  __syncwarp();
 }
 
 

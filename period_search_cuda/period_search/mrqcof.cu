@@ -75,148 +75,94 @@ __device__ double mrqcof_end(freq_context *CUDA_LCC,double *alpha)
 
 __device__ void mrqcof_matrix(freq_context *CUDA_LCC, double a[], int Lpoints)
 {
-   matrix_neo(CUDA_LCC, a,(*CUDA_LCC).np, Lpoints);
+   /* geometry is computed inside bright_curve1_warp() since the 2026 rewrite */
 }
 
 __device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[],int Inrel,int Lpoints)
 {
-	int l,k,jp, lnp,Lpoints1=Lpoints+1;
-   double lave;
-   __shared__ double tmave[CUDA_BLOCK_DIM];
-
-   lnp=(*CUDA_LCC).np;
-   lave=(*CUDA_LCC).ave;
-//precalc thread boundaries
-    int brtmph,brtmpl;
-	brtmph=Lpoints/CUDA_BLOCK_DIM;
-	if(Lpoints%CUDA_BLOCK_DIM) brtmph++;
-	brtmpl=threadIdx.x*brtmph;
-	brtmph=brtmpl+brtmph;
-	if (brtmph>Lpoints) brtmph=Lpoints;
-	brtmpl++;
-//
-
-   for (jp = brtmpl; jp <= brtmph; jp++)
-    bright(CUDA_LCC,a,jp,Lpoints1,Inrel);
-
-   __syncthreads();
-
-  if (Inrel == 1) {
-    int tmph,tmpl;
-	tmph=CUDA_ma/CUDA_BLOCK_DIM;
-	if(CUDA_ma%CUDA_BLOCK_DIM) tmph++;
-	tmpl=threadIdx.x*tmph;
-	tmph=tmpl+tmph;
-	if (tmph>CUDA_ma) tmph=CUDA_ma;
-	tmpl++;
-	if (tmpl==1) tmpl++;
-
-	  int ixx;
-	  ixx=tmpl*Lpoints1;
-	  for (l=tmpl; l <= tmph; l++)
-		{
-	  //jp==1
-			ixx++;
-			(*CUDA_LCC).dave[l] = (*CUDA_LCC).dytemp[ixx];
-      //jp>=2
-			ixx++;
-		   for (jp = 2; jp <= Lpoints; jp++,ixx++)
-		   {
-			(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dytemp[ixx];
-		   }
-
-	  }
-		tmave[threadIdx.x] = 0;
-	   for (jp = brtmpl; jp <= brtmph; jp++) tmave[threadIdx.x] += (*CUDA_LCC).ytemp[jp];
-	   __syncthreads();
-//parallel reduction
-	   k=CUDA_BLOCK_DIM>>1;
-	   while (k>1)
-	   {
-		   if (threadIdx.x<k) tmave[threadIdx.x]+=tmave[threadIdx.x+k];
-		   k=k>>1;
-		   __syncthreads();
-	   }
-	   if (threadIdx.x==0) lave=tmave[0]+tmave[1];
-//parallel reduction end
-
-  }
-	  if (threadIdx.x==0)
-	  {
-	   (*CUDA_LCC).np=lnp+Lpoints;
-	   (*CUDA_LCC).ave=lave;
-	  }
+   /* warp-cooperative rewrite: geometry, brightness, derivatives, and the
+	  dave/ave sums are all produced by one warp in bright_curve1_warp()
+	  (see bright.cu). alpha/beta are untouched here - they are accumulated
+	  in MrqcofCurve2. */
+   bright_curve1_warp(CUDA_LCC, a, Inrel, Lpoints);
 }
 
 __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[],int Inrel,int Lpoints)
 {
-	int l,jp, lnp;
-   double ymod, lave;
+	/* the last "lightcurve" is the convexity regularization: brightness and
+	   derivatives depend only on Area and Dsph (all rotation/phase columns
+	   are zero, as in the old conv()). One warp per block; the Dg fold
+	   applies here too: Dg[i][l]*Darea[i]*Nor = Dsph[i][l]*(Area[i]*Nor). */
+	const int tid = threadIdx.x;
+	brightshare* __restrict__ shw = &mrq_share_block()->b;
+	double* __restrict__ ww = shw->wcA;
 
-   lnp=(*CUDA_LCC).np;
-   //
-   if (threadIdx.x==0)
-   {
-	   if (Inrel == 1) /* is the LC relative? */
-	   {
-		  lave = 0;
-		  for (l = 1; l <= CUDA_ma; l++)
-		  (*CUDA_LCC).dave[l]=0;
-	   }
-	   else
-		  lave=(*CUDA_LCC).ave;
-   }
-//precalc thread boundaries
-    int tmph,tmpl;
-	tmph=CUDA_ma/CUDA_BLOCK_DIM;
-	if(CUDA_ma%CUDA_BLOCK_DIM) tmph++;
-	tmpl=threadIdx.x*tmph;
-	tmph=tmpl+tmph;
-	if (tmph>CUDA_ma) tmph=CUDA_ma;
-	tmpl++;
-//
-    int brtmph,brtmpl;
-	brtmph=CUDA_Numfac/CUDA_BLOCK_DIM;
-	if(CUDA_Numfac%CUDA_BLOCK_DIM) brtmph++;
-	brtmpl=threadIdx.x*brtmph;
-	brtmph=brtmpl+brtmph;
-	if (brtmph>CUDA_Numfac) brtmph=CUDA_Numfac;
-	brtmpl++;
+	const int ma = CUDA_ma, nco = CUDA_Ncoef, nf = CUDA_Numfac;
+	double* __restrict__ dytemp = (*CUDA_LCC).dytemp;
+	double* __restrict__ ytemp = (*CUDA_LCC).ytemp;
+	double const* __restrict__ areap = &CUDA_Area[blockIdx.x * CUDA_Numfac1];
+	int lnp = (*CUDA_LCC).np;
+	double lave = (Inrel == 1) ? 0 : (*CUDA_LCC).ave;
 
-	__syncthreads();
+	const int c1 = 1 + tid, c2 = 33 + tid;
+	double dave1 = 0, dave2 = 0;
 
-
-      for (jp = 1; jp <= Lpoints; jp++)
-      {
-         lnp++;
-
-         ymod = conv(CUDA_LCC,jp-1,tmpl,tmph,brtmpl,brtmph);
-
-		 if (threadIdx.x==0)
-		 {
-			 (*CUDA_LCC).ytemp[jp] = ymod;
-
-			 if (Inrel == 1)
-				lave = lave + ymod;
-		 }
-		for (l=tmpl; l <= tmph; l++)
+#pragma unroll 1
+	for (int jp = 1; jp <= Lpoints; jp++)
+	{
+		lnp++;
+		double ym = 0, a1 = 0, a2 = 0;
+#pragma unroll 1
+		for (int f0 = 1; f0 <= nf; f0 += 32)
 		{
-			(*CUDA_LCC).dytemp[jp+l*(Lpoints+1)] = (*CUDA_LCC).dyda[l];
-			if (Inrel == 1)
-				(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dyda[l];
+			const int i = f0 + tid;
+			double w = 0.0;
+			if (i <= nf)
+			{
+				w = areap[i] * CUDA_Nor[i][jp - 1];
+				ym += w;
+			}
+			ww[tid] = w;
+			__syncwarp();
+			int kend = nf - f0 + 1;
+			if (kend > 32) kend = 32;
+#pragma unroll 4
+			for (int k = 0; k < kend; k++)
+			{
+				double w2 = ww[k];
+				double const* __restrict__ row = CUDA_Dsph[f0 + k];
+				a1 += w2 * row[c1];
+				a2 += w2 * row[c2];
+			}
+			__syncwarp();
 		}
-		/* save lightcurves */
-		 __syncthreads();
+#pragma unroll
+		for (int off = 16; off > 0; off >>= 1)
+			ym += __shfl_xor_sync(0xffffffff, ym, off);
 
-/*         if ((*CUDA_LCC).Lastcall == 1) always ==0
-			 (*CUDA_LCC).Yout[np] = ymod;*/
-      } /* jp, lpoints */
-	 if (threadIdx.x==0)
-	 {
-		  (*CUDA_LCC).np=lnp;
-		  (*CUDA_LCC).ave=lave;
-	 }
+		double v1 = (c1 <= nco) ? a1 : 0.0;
+		double v2 = (c2 <= nco) ? a2 : 0.0;
+		double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
+		if (c1 <= ma) { row[c1] = v1; dave1 += v1; }
+		if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
+		if (tid == 0) ytemp[jp] = ym;
+		if (Inrel == 1) lave += ym;
+		__syncwarp();
+	}
+
+	if (Inrel == 1)
+	{
+		/* the old code reset dave[] and accumulated the 3 points into it;
+		   the per-lane column sums are exactly that */
+		if (c1 <= ma) (*CUDA_LCC).dave[c1] = dave1;
+		if (c2 <= ma) (*CUDA_LCC).dave[c2] = dave2;
+	}
+	if (tid == 0)
+	{
+		(*CUDA_LCC).np = lnp;
+		(*CUDA_LCC).ave = lave;
+	}
+	__syncwarp();
 }
-

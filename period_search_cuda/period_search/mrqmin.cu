@@ -40,20 +40,10 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 		__syncthreads();
 	}
 
-	for (j = brtmpl; j <= brtmph; j++)
-	{
-		int ixx = j * mfit1 + 1;
-		for (int k = 1; k <= CUDA_mfit; k++, ixx++)
-		{
-			(*CUDA_LCC).covar[ixx] = (*CUDA_LCC).alpha[ixx];
-		}
-
-		(*CUDA_LCC).covar[j * mfit1 + j] = (*CUDA_LCC).alpha[j * mfit1 + j] * (1 + (*CUDA_LCC).Alamda);
-		(*CUDA_LCC).da[j] = (*CUDA_LCC).beta[j];
-	}
-	__syncthreads();
-
-	int err_code = gauss_errc(CUDA_LCC, ma);
+	/* the damped matrix is staged straight from alpha into shared memory by
+	   the solver; covar is not touched (it is rezeroed by mrqcof_start before
+	   mrqcof2 accumulates into it) */
+	int err_code = gauss_errc_shared(CUDA_LCC, ma);
 	if(err_code)
 	{
 		return err_code;
