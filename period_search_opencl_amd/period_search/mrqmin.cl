@@ -100,7 +100,7 @@ void mrqmin_2_end(
 
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / (*CUDA_CC).Alamda_incr;
+		(*CUDA_LCC).Alamda = ddiv((*CUDA_LCC).Alamda, (*CUDA_CC).Alamda_incr);
 		for (j = 1; j <= (*CUDA_CC).Mfit; j++)
 		{
 			for (k = 1; k <= (*CUDA_CC).Mfit; k++)
