@@ -55,19 +55,21 @@
     avx_dyda3 = vfmaq_f64(avx_dyda3, vaddq_f64(avx_sum3, avx_sum30), avx_Area); \
     \
     avx_d = vfmaq_f64(avx_d, vmulq_f64(avx_lmu, avx_lmu0), avx_Area); \
-    avx_d1 = vaddq_f64(avx_d1, vdivq_f64(vmulq_f64(vmulq_f64(avx_Area, avx_lmu), avx_lmu0), vaddq_f64(avx_lmu, avx_lmu0)));
+    avx_d1 = vfmaq_f64(avx_d1, vmulq_f64(vmulq_f64(avx_Area, avx_lmu), avx_lmu0), avx_inv);
 // end of inner_calc
 
 #define INNER_CALC_DSMU \
     avx_Area = vld1q_f64(&gl.Area[i]); \
     avx_dnom = vaddq_f64(avx_lmu, avx_lmu0); \
-    avx_s = vmulq_f64(vmulq_f64(avx_lmu, avx_lmu0), vaddq_f64(avx_cl, vdivq_f64(avx_cls, avx_dnom))); \
+    avx_inv = vdivq_f64(avx_11, avx_dnom); \
+    avx_inv = vbslq_f64(vreinterpretq_u64_f64(cmp), avx_inv, avx_11); \
+    avx_s = vmulq_f64(vmulq_f64(avx_lmu, avx_lmu0), vaddq_f64(avx_cl, vmulq_f64(avx_cls, avx_inv))); \
     avx_pdbr = vmulq_f64(vld1q_f64(&gl.Darea[i]), avx_s); \
     avx_pbr = vmulq_f64(avx_Area, avx_s); \
-    avx_powdnom = vdivq_f64(avx_lmu0, avx_dnom); \
+    avx_powdnom = vmulq_f64(avx_lmu0, avx_inv); \
     avx_powdnom = vmulq_f64(avx_powdnom, avx_powdnom); \
     avx_dsmu = vfmaq_f64(vmulq_f64(avx_cls, avx_powdnom), avx_cl, avx_lmu0); \
-    avx_powdnom = vdivq_f64(avx_lmu, avx_dnom); \
+    avx_powdnom = vmulq_f64(avx_lmu, avx_inv); \
     avx_powdnom = vmulq_f64(avx_powdnom, avx_powdnom); \
     avx_dsmu0 = vfmaq_f64(vmulq_f64(avx_cls, avx_powdnom), avx_cl, avx_lmu);
 // end of inner_calc_dsmu
@@ -182,7 +184,7 @@ void CalcStrategyAsimd::bright(const double t, std::vector<double>& cg, const in
       float64x2_t avx_Nor1 = vld1q_f64(&gl.Nor[0][i]);
       float64x2_t avx_Nor2 = vld1q_f64(&gl.Nor[1][i]);
       float64x2_t avx_Nor3 = vld1q_f64(&gl.Nor[2][i]);
-      float64x2_t avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr;
+      float64x2_t avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr, avx_inv;
       float64x2_t avx_Area;
 
       avx_lmu = vmulq_f64(avx_e1, avx_Nor1);

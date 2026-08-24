@@ -48,18 +48,20 @@
             avx_dyda3=_mm_add_pd(avx_dyda3,_mm_mul_pd(avx_Area,_mm_add_pd(avx_sum3,avx_sum30))); \
 			\
 			avx_d=_mm_add_pd(avx_d,_mm_mul_pd(_mm_mul_pd(avx_lmu,avx_lmu0),avx_Area)); \
-			avx_d1=_mm_add_pd(avx_d1,_mm_div_pd(_mm_mul_pd(_mm_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm_add_pd(avx_lmu,avx_lmu0)));
+			avx_d1=_mm_add_pd(avx_d1,_mm_mul_pd(_mm_mul_pd(_mm_mul_pd(avx_Area,avx_lmu),avx_lmu0),avx_inv));
 // end of inner_calc
 #define INNER_CALC_DSMU \
 	  avx_Area=_mm_load_pd(&gl.Area[i]); \
 	  avx_dnom=_mm_add_pd(avx_lmu,avx_lmu0); \
-	  avx_s=_mm_mul_pd(_mm_mul_pd(avx_lmu,avx_lmu0),_mm_add_pd(avx_cl,_mm_div_pd(avx_cls,avx_dnom))); \
+	  avx_inv=_mm_div_pd(avx_11,avx_dnom); \
+	  avx_inv=_mm_or_pd(_mm_and_pd(cmp,avx_inv),_mm_andnot_pd(cmp,avx_11)); \
+	  avx_s=_mm_mul_pd(_mm_mul_pd(avx_lmu,avx_lmu0),_mm_add_pd(avx_cl,_mm_mul_pd(avx_cls,avx_inv))); \
 	  avx_pdbr=_mm_mul_pd(_mm_load_pd(&gl.Darea[i]),avx_s); \
 	  avx_pbr=_mm_mul_pd(avx_Area,avx_s); \
-	  avx_powdnom=_mm_div_pd(avx_lmu0,avx_dnom); \
+	  avx_powdnom=_mm_mul_pd(avx_lmu0,avx_inv); \
 	  avx_powdnom=_mm_mul_pd(avx_powdnom,avx_powdnom); \
 	  avx_dsmu=_mm_add_pd(_mm_mul_pd(avx_cls,avx_powdnom),_mm_mul_pd(avx_cl,avx_lmu0)); \
-	  avx_powdnom=_mm_div_pd(avx_lmu,avx_dnom); \
+	  avx_powdnom=_mm_mul_pd(avx_lmu,avx_inv); \
 	  avx_powdnom=_mm_mul_pd(avx_powdnom,avx_powdnom); \
 	  avx_dsmu0=_mm_add_pd(_mm_mul_pd(avx_cls,avx_powdnom),_mm_mul_pd(avx_cl,avx_lmu));
 // end of inner_calc_dsmu
@@ -167,7 +169,7 @@ void CalcStrategySse3::bright(const double t, std::vector<double>& cg, const int
 		__m128d avx_Nor1 = _mm_load_pd(&gl.Nor[0][i]);
 		__m128d avx_Nor2 = _mm_load_pd(&gl.Nor[1][i]);
 		__m128d avx_Nor3 = _mm_load_pd(&gl.Nor[2][i]);
-		__m128d avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr;
+		__m128d avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr, avx_inv;
 		__m128d avx_Area;
 
 		avx_lmu = _mm_mul_pd(avx_e1, avx_Nor1);

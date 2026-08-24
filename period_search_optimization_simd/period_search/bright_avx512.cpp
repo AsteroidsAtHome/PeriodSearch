@@ -85,19 +85,21 @@ inline static double reduce_pd(__m512d a) {
 			avx_dyda3=_mm512_fmadd_pd(avx_Area,_mm512_add_pd(avx_sum3,avx_sum30), avx_dyda3); \
 			\
 			avx_d=_mm512_fmadd_pd(_mm512_mul_pd(avx_lmu,avx_lmu0),avx_Area, avx_d); \
-			avx_d1=_mm512_add_pd(avx_d1,_mm512_div_pd(_mm512_mul_pd(_mm512_mul_pd(avx_Area,avx_lmu),avx_lmu0),_mm512_add_pd(avx_lmu,avx_lmu0)));
+			avx_d1=_mm512_fmadd_pd(_mm512_mul_pd(_mm512_mul_pd(avx_Area,avx_lmu),avx_lmu0),avx_inv, avx_d1);
 // end of inner_calc
 
 #define INNER_CALC_DSMU \
 	  avx_Area=_mm512_load_pd(&gl.Area[i]); \
 	  avx_dnom=_mm512_add_pd(avx_lmu,avx_lmu0); \
-	  avx_s=_mm512_mul_pd(_mm512_mul_pd(avx_lmu,avx_lmu0),_mm512_add_pd(avx_cl,_mm512_div_pd(avx_cls,avx_dnom))); \
+	  avx_inv=_mm512_div_pd(avx_11,avx_dnom); \
+	  avx_inv=blendv_pd(avx_11,avx_inv,cmp); \
+	  avx_s=_mm512_mul_pd(_mm512_mul_pd(avx_lmu,avx_lmu0),_mm512_fmadd_pd(avx_cls,avx_inv,avx_cl)); \
 	  avx_pdbr=_mm512_mul_pd(_mm512_load_pd(&gl.Darea[i]),avx_s); \
 	  avx_pbr=_mm512_mul_pd(avx_Area,avx_s); \
-	  avx_powdnom=_mm512_div_pd(avx_lmu0,avx_dnom); \
+	  avx_powdnom=_mm512_mul_pd(avx_lmu0,avx_inv); \
 	  avx_powdnom=_mm512_mul_pd(avx_powdnom,avx_powdnom); \
 	  avx_dsmu=_mm512_fmadd_pd(avx_cl,avx_lmu0, _mm512_mul_pd(avx_cls,avx_powdnom)); \
-	  avx_powdnom=_mm512_div_pd(avx_lmu,avx_dnom); \
+	  avx_powdnom=_mm512_mul_pd(avx_lmu,avx_inv); \
 	  avx_powdnom=_mm512_mul_pd(avx_powdnom,avx_powdnom); \
 	  avx_dsmu0=_mm512_fmadd_pd(avx_cl,avx_lmu, _mm512_mul_pd(avx_cls,avx_powdnom));
 // end of inner_calc_dsmu
@@ -212,7 +214,7 @@ void CalcStrategyAvx512::bright(const double t, std::vector<double>& cg, const i
 		__m512d avx_Nor1 = _mm512_load_pd(&gl.Nor[0][i]);
 		__m512d avx_Nor2 = _mm512_load_pd(&gl.Nor[1][i]);
 		__m512d avx_Nor3 = _mm512_load_pd(&gl.Nor[2][i]);
-		__m512d avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr;
+		__m512d avx_s, avx_dnom, avx_dsmu, avx_dsmu0, avx_powdnom, avx_pdbr, avx_pbr, avx_inv;
 		__m512d avx_Area;
 
 		avx_lmu = _mm512_mul_pd(avx_e1, avx_Nor1);
