@@ -823,7 +823,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="period_search\areanorm.cpp" />
-    <ClCompile Include="period_search\arrayHelpers.cpp" />
     <ClCompile Include="period_search\blmatrix.cpp" />
     <ClCompile Include="period_search\bright.cpp" />
     <ClCompile Include="period_search\bright_asimd.cpp">
@@ -965,7 +964,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_7|ARM64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_7|ARM64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="period_search\dot_product.cpp" />
     <ClCompile Include="period_search\ellfit.cpp" />
     <ClCompile Include="period_search\EnumHelpers.cpp" />
     <ClCompile Include="period_search\gauss_errc.cpp" />
@@ -1010,7 +1008,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_7|ARM64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_7|ARM64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="period_search\LcHelpers.cpp" />
     <ClCompile Include="period_search\lubksb.cpp" />
     <ClCompile Include="period_search\ludcmp.cpp" />
     <ClCompile Include="period_search\matrix.cpp" />
@@ -1084,7 +1081,6 @@
     <ClInclude Include="period_search\CalcStrategyAvx.hpp" />
     <ClInclude Include="period_search\LcHelpers.hpp" />
     <ClInclude Include="period_search\resource.h" />
-    <ClInclude Include="period_search\SIMDHelpers.h" />
     <ClInclude Include="period_search\systeminfo.h" />
     <ClInclude Include="period_search\VersionInfo.h" />
   </ItemGroup>
