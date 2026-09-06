@@ -16,6 +16,7 @@
 #include "CalcStrategySse3.hpp"
 #include "CalcStrategySse2.hpp"
 #include "CalcStrategyNone.hpp"
+#include "CalcStrategySve.hpp" // for testing only
 #include "SIMDHelpers.h"
 
 #if !defined __GNUC__ && defined _WIN32 // !ARM
@@ -322,6 +323,11 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
         simd = SIMDEnum::OptNONE;
     }
 
+    if (simd == SIMDEnum::OptSVE)
+    {
+        simd = SIMDEnum::OptNONE;
+    }
+
     if (tempSimd != simd)
     {
         std::cerr << "Choosen optimization " << getSIMDEnumName(tempSimd) << " is not supported. Switching to " << getSIMDEnumName(simd) << "." << std::endl;
@@ -400,6 +406,9 @@ void SetOptimizationStrategy(const SIMDEnum useOptimization)
         break;
     case SIMDEnum::OptSSE2:
         calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySse2>(64));
+        break;
+    case SIMDEnum::OptSVE:
+        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySve>(64));
         break;
     //case SIMDEnum::OptASIMD:
     //	calcCtx.set_strategy(std::make_unique<CalcStrategyAsimd>(64));  // TODO: Needs to be finished

@@ -89,6 +89,7 @@
 #include "CalcStrategyNone.hpp"
 #include "LcHelpers.hpp"
 #include "SIMDHelpers.h"
+#include "benchmark.hpp"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -248,6 +249,15 @@ int main(int argc, char** argv)
 
     //wiringPiSetupSys();
     //pinMode(LED, OUTPUT);
+
+    for (i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--benchmark") == 0)
+        {
+            free(str_temp);
+            return RunBenchmark();
+        }
+    }
 
     int retval = boinc_init();
     if (retval)

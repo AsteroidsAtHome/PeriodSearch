@@ -33,5 +33,6 @@ extern struct SIMDSupport
 	bool hasSSE3 = false;
 	bool hasSSE2 = false;
 	bool hasASIMD = false;
+	bool hasSVE = false;
 	bool isBulldozer = false;
 } CPUopt;
