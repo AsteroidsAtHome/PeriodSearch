@@ -5,7 +5,6 @@
 #include <vector>
 #include <immintrin.h>
 #include "declarations.h"
-#include "bitcount.h"
 #include "CalcStrategyAvx512.hpp"
 
 #if defined(__GNUC__)
@@ -49,63 +48,84 @@ void CalcStrategyAvx512::gauss_errc(struct globals& gl, const int n, std::vector
 	//memset(ipiv, 0, n * sizeof(int));
 	std::vector<int> ipiv(n + 1 + 1, 0);
 
-	__m512d avx_ones = _mm512_set1_pd(1.0);
-	__m512d avx_zeros = _mm512_set1_pd(0.0);
+	/* Pivot search. The ipiv state changes only once per pivot step, so the column
+	   bookkeeping is hoisted out of the row loop (O(n) per step instead of O(n*n))
+	   and the inner loop is left branch-free: a per-lane running maximum plus the
+	   index that produced it, reduced once per step. */
+	const int P = (n + 7) & ~7;						// columns rounded up to a whole vector
+	std::vector<unsigned char> colmask(P >> 3, 0);	// one bit per column, set = still free
+	alignas(64) double max_val[8], max_idx[8];
+	double best;
+
 	__m512d sign_mask = _mm512_set1_pd(-0.0);
+	__m512d avx_step = _mm512_set1_pd(8.0);
+	__m512d avx_lane = _mm512_set_pd(7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0);
 
 	for (i = 1; i <= n; i++)
 	{
-		big = 0.0;
-		for (j = 0; j < n; j++) {
-			if (ipiv[j] != 1)
+		for (k = 0; k < P; k += 8)
+		{
+			__mmask8 m = 0;
+
+			for (l = 0; l < 8 && k + l < n; l++)		// columns past n stay masked off
 			{
-				for (k = 0; k + 8 < n; k += 8) {
-					__m512d avx_ipiv = _mm512_set_pd(ipiv[k + 7], ipiv[k + 6], ipiv[k + 5], ipiv[k + 4], ipiv[k + 3], ipiv[k + 2], ipiv[k + 1], ipiv[k]);
-
-					__mmask8 avx_iszero = _mm512_cmp_pd_mask(avx_ipiv, avx_zeros, _CMP_GT_OS);
-					if (avx_iszero == 255) { // all ipiv[k] == 1
-						continue;
-					}
-
-					__mmask8 avx_iserror = _mm512_cmp_pd_mask(avx_ipiv, avx_ones, _CMP_GT_OS);					
-					if (avx_iserror) { // any ipiv[k] == 2
-						error = 1;
-						return;
-					}
-
-					__m512d avx_val = _mm512_loadu_pd(&a[j][k]);
-					__m512d avx_abs = _mm512_andnot_pd(sign_mask, avx_val);
-
-					__mmask8 active_mask = _mm512_cmp_pd_mask(avx_ipiv, avx_zeros, _CMP_EQ_OQ);
-
-					__m512d avx_active = _mm512_mask_mov_pd(_mm512_set1_pd(-INFINITY), active_mask, avx_abs);
-
-					double max_val = _mm512_reduce_max_pd(avx_active);
-
-					if (max_val >= big) {
-						__mmask8 max_mask = _mm512_cmp_pd_mask(avx_active, _mm512_set1_pd(max_val), _CMP_EQ_OQ);
-
-						int idx = ctz(max_mask);
-						icol = k + idx;
-						irow = j;
-						big = max_val;
-					}
+				if (ipiv[k + l] > 1)
+				{
+					error = 1;
+					return;
 				}
 
-				for (; k < n; k++) {
-					if (ipiv[k] == 0) {
-						if (fabs(a[j][k]) >= big) {
-							big = fabs(a[j][k]);
-							irow = j;
-							icol = k;
-						}
-					} else if (ipiv[k] > 1) {
-						error = 1;
-						return;
-					}
-				}
+				if (ipiv[k + l] == 0) m |= static_cast<__mmask8>(1u << l);
+			}
+
+			colmask[k >> 3] = m;
+		}
+
+		__m512d avx_big = _mm512_setzero_pd();	// per-lane running 'big', starts at 0.0
+		__m512d avx_idx = _mm512_set1_pd(-1.0);	// per-lane winning index j*P+k, -1 = none
+
+		for (j = 0; j < n; j++)
+		{
+			if (ipiv[j] == 1) continue;
+
+			__m512d avx_cur = _mm512_add_pd(_mm512_set1_pd(static_cast<double>(j) * P), avx_lane);
+
+			for (k = 0; k < P; k += 8)
+			{
+				const __mmask8 cmk = colmask[k >> 3];
+				// maskz load: used columns and the k >= n padding are never touched
+				__m512d avx_abs = _mm512_andnot_pd(sign_mask, _mm512_maskz_loadu_pd(cmk, &a[j][k]));
+
+				__mmask8 avx_ge = _mm512_mask_cmp_pd_mask(cmk, avx_abs, avx_big, _CMP_GE_OQ);
+				avx_big = _mm512_mask_mov_pd(avx_big, avx_ge, avx_abs);
+				avx_idx = _mm512_mask_mov_pd(avx_idx, avx_ge, avx_cur);
+				avx_cur = _mm512_add_pd(avx_cur, avx_step);
 			}
 		}
+
+		/* Largest value wins; ties go to the largest index, which reproduces the
+		   scalar '>=' ("the last one seen wins") exactly. */
+		_mm512_store_pd(max_val, avx_big);
+		_mm512_store_pd(max_idx, avx_idx);
+		big = max_val[0];
+		best = max_idx[0];
+
+		for (l = 1; l < 8; l++)
+		{
+			if (max_val[l] > big || (max_val[l] == big && max_idx[l] > best))
+			{
+				big = max_val[l];
+				best = max_idx[l];
+			}
+		}
+
+		if (best >= 0.0)
+		{
+			const int idx = static_cast<int>(best);
+			irow = idx / P;
+			icol = idx - irow * P;
+		}
+
 		++(ipiv[icol]);
 		if (irow != icol)
 		{
