@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <array>
+#include <cstdint>
 
 #include "Enums.h"
 #include "declarations.h"
