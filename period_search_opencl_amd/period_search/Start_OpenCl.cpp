@@ -2281,8 +2281,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             boinc_fraction_done(oldFractionDone);
 
 #ifdef _DEBUG
-            float fraction2 = fractionDone2 * 100;
-            //float fraction = fractionDone * 100;
+            float fraction2 = fractionDone * 100;
             std::time_t t = std::time(nullptr);   // get time now
             std::tm* now = std::localtime(&t);
 
