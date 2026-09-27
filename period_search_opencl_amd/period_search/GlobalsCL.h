@@ -24,11 +24,12 @@ typedef struct mfreq_context
 	//double* ytemp;
 
 	double Area[MAX_N_FAC + 1];
-	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	double ytemp[POINTS_MAX + 1];
-
+	/* The point- and fit-dimensioned work arrays (alpha, covar, dytemp,
+	   ytemp, jp_*, e_*, de, de0) live in a separate runtime-sized scratch
+	   buffer - one slice of freq_context.scrStride doubles per work-group,
+	   at the offsets recorded in freq_context - instead of compile-time
+	   worst-case arrays here. That cuts per-context memory ~6x (2.27 MB ->
+	   ~0.4 MB for typical workunits). */
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
 	double da[MAX_N_PAR + 1];

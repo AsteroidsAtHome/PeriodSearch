@@ -164,7 +164,7 @@ int gauss_errc(
 				return(2);
 			}
 
-			pivBC[0] = 1.0 / covL[covarIdx];
+			pivBC[0] = ddiv(1.0, covL[covarIdx]);
 			covL[covarIdx] = 1.0;
 
 			daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];

@@ -1,4 +1,4 @@
-#if !defined INTEL
+﻿#if !defined INTEL
 
 #if !defined _WIN32
 #ifndef CL_TARGET_OPENCL_VERSION
@@ -172,6 +172,82 @@ cl_int SaveKernelsToBinary(cl_program binProgram, const char* kernelFileName)
     //file.close();
 
     return 0;
+}
+
+/* Probe: does this driver's native f64 division produce correctly-rounded
+   results? */
+static int DivProbe(cl_context context, cl_device_id device)
+{
+    static const double TX[] = { 1.0, 1.0, 7.0, 1234.0, 0.1, 1e8, -5.5, 3.141592653589793 };
+    static const double TY[] = { 10.0, 3.0, 3.0, 7.89, 0.7, 9.0, 2.2, 0.318309886183791 };
+    const int N = (int)(sizeof(TX) / sizeof(TX[0]));
+
+    double XY[2 * N];
+    unsigned long long EXP[N];
+    for (int i = 0; i < N; i++)
+    {
+        XY[2 * i] = TX[i];
+        XY[2 * i + 1] = TY[i];
+        double r = TX[i] / TY[i]; /* host reference */
+        memcpy(&EXP[i], &r, sizeof(r));
+    }
+
+    static const char src[] =
+        "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n"
+        "__kernel void divprobe(__global int* res, __global const double* xy, __global const ulong* exp)\n"
+        "{\n"
+        "    int ok = 1;\n"
+        "    for (int i = 0; i < 8; i++)\n"
+        "    {\n"
+        "        double q = xy[2 * i] / xy[2 * i + 1];\n"
+        "        if (as_ulong(q) != exp[i]) ok = 0;\n"
+        "    }\n"
+        "    *res = ok;\n"
+        "}\n";
+
+    cl_int err;
+    const char* srcp = src;
+    cl_program p = clCreateProgramWithSource(context, 1, &srcp, NULL, &err);
+    if (err != CL_SUCCESS) { fprintf(stderr, "[DIVPROBE] create failed: %d\n", err); return 1; }
+    err = clBuildProgram(p, 1, &device, "-w", NULL, NULL);
+    if (err != CL_SUCCESS)
+    {
+        size_t blen = 0;
+        clGetProgramBuildInfo(p, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &blen);
+        char* blog = new char[blen + 1];
+        clGetProgramBuildInfo(p, device, CL_PROGRAM_BUILD_LOG, blen + 1, blog, NULL);
+        fprintf(stderr, "[DIVPROBE] build failed: %s\n", blog);
+        delete[] blog;
+        clReleaseProgram(p);
+        return 1;
+    }
+    cl_kernel k = clCreateKernel(p, "divprobe", &err);
+    cl_int zero = 0;
+    cl_mem resBuf = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_int), &zero, &err);
+    cl_mem xyBuf = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(XY), XY, &err);
+    cl_mem expBuf = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(EXP), EXP, &err);
+    clSetKernelArg(k, 0, sizeof(cl_mem), &resBuf);
+    clSetKernelArg(k, 1, sizeof(cl_mem), &xyBuf);
+    clSetKernelArg(k, 2, sizeof(cl_mem), &expBuf);
+
+    cl_command_queue q = clCreateCommandQueue(context, device, 0, &err);
+    size_t g = 1;
+    clEnqueueNDRangeKernel(q, k, 1, NULL, &g, NULL, 0, NULL, NULL);
+    cl_int res = -1;
+    clEnqueueReadBuffer(q, resBuf, CL_BLOCKING, 0, sizeof(res), &res, 0, NULL, NULL);
+    clFinish(q);
+
+    clReleaseCommandQueue(q);
+    clReleaseMemObject(resBuf);
+    clReleaseMemObject(xyBuf);
+    clReleaseMemObject(expBuf);
+    clReleaseKernel(k);
+    clReleaseProgram(p);
+
+    if(!res) {
+      cerr << "Warning: Native f64 division is broken! using a workaround" << std::endl;
+    }
+    return res == 1 ? 1 : 0;
 }
 
 cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId, int clCustomPlatformId, int clCustomDeviceId, cl_double* beta_pole, cl_double* lambda_pole, cl_double* par, cl_double lcoef, cl_double a_lamda_start, cl_double a_lamda_incr,
@@ -529,9 +605,12 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
             return EXIT_FAILURE;
         }
 
-        //char options[]{ "-Werror" };
-        char options[]{ "-w" };
+
 #if defined (AMD)
+        const int nativeDivOK = DivProbe(context, device);
+        char options[64];
+        snprintf(options, sizeof(options), "-w -D NATIVE_DIV_OK=%d", nativeDivOK);
+        //char options[]{ "-Werror" };
         err_num = clBuildProgram(binProgram, 1, &device, options, NULL, NULL); // "-Werror -cl-std=CL1.1"
 #elif defined (NVIDIA)
         binProgram.build(devices, "-D NVIDIA -w -cl-std=CL1.2"); // "-w" "-Werror"

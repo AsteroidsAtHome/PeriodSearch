@@ -63,13 +63,13 @@ void mrqcof_curve2(
 			//if (blockIdx.x == 0)
 			//	printf("[%d][%d] dytemp[%3d]: %10.7f\n", blockIdx.x, jp, ixx, dytempG[ixx]);
 
-			coef = (*CUDA_CC).Sig[lnp1] * lpoints / (*CUDA_LCC).ave;
+			coef = ddiv((*CUDA_CC).Sig[lnp1] * lpoints, (*CUDA_LCC).ave);
 
 			//if (threadIdx.x == 0)
 			//	printf("[%d][%3d][%d] coef: %10.7f\n", blockIdx.x, threadIdx.x, jp, coef);
 
 			double yytmp = ytempG[jp];
-			coef1 = yytmp / (*CUDA_LCC).ave;
+			coef1 = ddiv(yytmp, (*CUDA_LCC).ave);
 
 			//if (blockIdx.x == 0 && threadIdx.x == 0)
 			//	printf("[Device | mrqcof_curve2_1] [%3d]  yytmp[%3d]: %10.7f, ave: %10.7f\n", threadIdx.x, jp, yytmp, (*CUDA_LCC).ave);
@@ -138,7 +138,7 @@ void mrqcof_curve2(
 		{
 			jp = jp0 + threadIdx.x;
 			ymod = ytempG[jp];
-			sig2i = 1 / ((*CUDA_CC).Sig[lnp2 + jp] * (*CUDA_CC).Sig[lnp2 + jp]);
+			sig2i = ddiv(1.0, ((*CUDA_CC).Sig[lnp2 + jp] * (*CUDA_CC).Sig[lnp2 + jp]));
 			wght = (*CUDA_CC).Weight[lnp2 + jp];
 			dy = (*CUDA_CC).Brightness[lnp2 + jp] - ymod;
 			double sig2iwght = sig2i * wght;

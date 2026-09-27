@@ -82,7 +82,7 @@ void matrix_neo(
 		//	printf("[neo] alpha[%3d]: %.7f, cg[%3d]: %10.7f\n", jp, alpha, q, (*CUDA_LCC).cg[q]);
 
 		/* Exp-lin model (const.term=1.) */
-		double f = exp(-alpha / cg[(*CUDA_CC).Ncoef0 + 2]);	//f is temp here
+		double f = exp(-ddiv(alpha, cg[(*CUDA_CC).Ncoef0 + 2]));	//f is temp here
 
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
 		//	printf("[neo] [%2d][%3d] jp[%3d] f: %10.7f, cg[%3d] %10.7f, alpha %10.7f\n",
@@ -90,7 +90,7 @@ void matrix_neo(
 
 		jp_ScaleG[jp] = 1 + cg[(*CUDA_CC).Ncoef0 + 1] * f + (cg[(*CUDA_CC).Ncoef0 + 3] * alpha);
 		jp_dphp_1G[jp] = f;
-		jp_dphp_2G[jp] = cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha / (cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
+		jp_dphp_2G[jp] = ddiv(cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha, cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
 		jp_dphp_3G[jp] = alpha;
 
 		//if (blockIdx.x == 0)
@@ -319,7 +319,7 @@ void bright(
 		if ((lmu > TINY) && (lmu0 > TINY))
 		{
 			dnom = lmu + lmu0;
-			s = lmu * lmu0 * (cl + cls / dnom);
+			s = lmu * lmu0 * (cl + ddiv(cls, dnom));
 			ar = (*CUDA_LCC).Area[j];
 			br += ar * s;
 
@@ -331,9 +331,9 @@ void bright(
 			dbr[incl_count] = ar * s;
 			incl_count++;
 
-			double lmu0_dnom = lmu0 / dnom;
+			double lmu0_dnom = ddiv(lmu0, dnom);
 			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-			double lmu_dnom = lmu / dnom;
+			double lmu_dnom = ddiv(lmu, dnom);
 			dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
 
 
@@ -348,7 +348,7 @@ void bright(
 			tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
 
 			tmp4 += lmu * lmu0 * ar;
-			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
+			tmp5 += ar * ddiv(lmu * lmu0, lmu + lmu0);
 		}
 	}
 
