@@ -37,8 +37,8 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 
-		__syncthreads();
 	}
+	__syncthreads();
 
 	/* the damped matrix is staged straight from alpha into shared memory by
 	   the solver; covar is not touched (it is rezeroed by mrqcof_start before

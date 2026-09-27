@@ -75,7 +75,7 @@ int gauss_errc(
 
 	for (i = 1; i <= n; i++)
 	{
-		big = 0;
+		big = -1.0;
 		irow = 0;
 		licol = 0;
 		for (j = brtmpl; j <= brtmph; j++)
@@ -145,32 +145,28 @@ int gauss_errc(
 
 			if (covL[covarIdx] == 0.0)
 			{
-				/* singular pivot: report the (partial) step like the old code
-				   did, then bail with error 2 */
-				for (j = 1; j <= n; j++)
-				{
-					(*CUDA_LCC).da[j] = daL[j];
-				}
-				j = 0;
 				for (int l2 = 1; l2 <= (*CUDA_CC).ma; l2++)
 				{
-					if ((*CUDA_CC).ia[l2])
-					{
-						j++;
-						(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2] + (*CUDA_LCC).da[j];
-					}
+					(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2];
 				}
 
-				return(2);
+				icolBC[0] = -1;
 			}
+			else
+			{
+				pivBC[0] = ddiv(1.0, covL[covarIdx]);
+				covL[covarIdx] = 1.0;
 
-			pivBC[0] = ddiv(1.0, covL[covarIdx]);
-			covL[covarIdx] = 1.0;
-
-			daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+				daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+			}
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+
+		if (icolBC[0] < 0)
+		{
+			return(2);
+		}
 
 		for (l = brtmpl; l <= brtmph; l++)
 		{
