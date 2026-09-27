@@ -89,7 +89,6 @@ void mrqcof_start(
 		beta[j] = 0;
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads(); //pro jistotu
 
 	//int q = (*CUDA_CC).Ncoef0 + 2;
 	//if (blockIdx.x == 0)
@@ -143,7 +142,13 @@ void mrqcof_curve1(
 	if (brtmph > Lpoints) brtmph = Lpoints;
 	brtmpl++;
 
-	for (jp = brtmpl; jp <= brtmph; jp++)
+	/* points are dealt out round-robin (jp = t+1, t+1+BLOCK_DIM, ...) rather than
+	   in contiguous blocks of ceil(Lpoints/BLOCK_DIM): every point is
+	   independent, and this packs the last partial round into as few
+	   wavefronts as possible (156 points: 5 wave32 rounds instead of 6). The
+	   ytemp partial sums below keep the contiguous blocks, so ave is summed
+	   in the same order as before. */
+	for (jp = threadIdx.x + 1; jp <= Lpoints; jp += BLOCK_DIM)
 	{
 			/*  ---  BRIGHT  ---  */
 		bright(CUDA_LCC, CUDA_CC, cg, jp, Lpoints1, Inrel, scr);
@@ -266,11 +271,41 @@ void mrqcof_curve1_last(
 	//if (threadIdx.x == 0)
 	//	printf("conv>>> [%d] \n", blockIdx.x);
 
+	/* convexity derivatives dyda[l] = sum_i Area[i] * Dsph[i][l] * Nor[i][nc]
+	   of every point (nc = jp-1) in ONE pass over the facets - it used to be
+	   one pass per point inside conv(). Area/Dsph are read once for all
+	   points and the per-point sums become independent chains; each sum keeps
+	   its facet order and operand rounding, and dave[l] still accumulates the
+	   points in ascending order (each l belongs to one work-item). */
+	for (l = tmpl; l <= tmph; l++)
+	{
+		for (int jb = 0; jb < Lpoints; jb += 3)
+		{
+			double d[3] = { 0, 0, 0 };
+			if (l <= (*CUDA_CC).Ncoef)
+			{
+				for (int i = 1; i <= (*CUDA_CC).Numfac; i++)
+				{
+					/* Darea[i] * Dg[i][l] == Area[i] * Dsph[i][l] (Area = Darea*g) */
+					double ad = (*CUDA_LCC).Area[i] * (*CUDA_CC).Dsph[i][l];
+					for (int q = 0; q < 3; q++)
+						d[q] += ad * (*CUDA_CC).Nor[i][jb + q];
+				}
+			}
+			for (int q = 0; q < 3 && jb + q < Lpoints; q++)
+			{
+				dytempG[(jb + q) * DYT_STRIDE + l] = d[q];
+				if (Inrel == 1)
+					(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + d[q];
+			}
+		}
+	}
+
 	for (jp = 1; jp <= Lpoints; jp++)
 	{
 		lnp++;
 		// *--- CONV() ---* //
-		ymod = conv(CUDA_LCC, CUDA_CC, res, jp - 1, tmpl, tmph, brtmpl, brtmph);
+		ymod = conv(CUDA_LCC, CUDA_CC, res, jp - 1, brtmpl, brtmph);
 
 		if (threadIdx.x == 0)
 		{
@@ -278,13 +313,6 @@ void mrqcof_curve1_last(
 
 			if (Inrel == 1)
 				lave = lave + ymod;
-		}
-		for (l = tmpl; l <= tmph; l++)
-		{
-			dytempG[(jp - 1) * DYT_STRIDE + l] = (*CUDA_LCC).dyda[l];
-
-			if (Inrel == 1)
-				(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dyda[l];
 		}
 		/* save lightcurves */
 		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
@@ -310,9 +338,12 @@ double mrqcof_end(
 	threadIdx.x = get_local_id(0);
 	blockIdx.x = get_group_id(0);
 
+	/* mirror the lower triangle; each row is split over the work-group
+	   (reads are contiguous, source and destination never overlap) */
+	int lsize = get_local_size(0);
 	for (int j = 2; j <= (*CUDA_CC).Mfit; j++)
 	{
-		for (k = 1; k <= j - 1; k++)
+		for (k = 1 + threadIdx.x; k <= j - 1; k += lsize)
 		{
 			alpha[k * (*CUDA_CC).Mfit1 + j] = alpha[j * (*CUDA_CC).Mfit1 + k];
 			//if (blockIdx.x ==0 && threadIdx.x == 0)

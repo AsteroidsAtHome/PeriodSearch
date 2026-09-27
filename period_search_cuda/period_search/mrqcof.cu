@@ -58,16 +58,16 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
          alpha[j*(CUDA_mfit1)+k]=0;
       beta[j]=0;
    }
-
-   __syncthreads(); //pro jistotu
 }
 
 __device__ double mrqcof_end(freq_context *CUDA_LCC,double *alpha)
 {
    int j,k;
 
+   /* mirror the lower triangle; each row is split over the block's threads
+      (source and destination never overlap) */
    for (j = 2; j <= CUDA_mfit; j++)
-      for (k = 1; k <= j-1; k++)
+      for (k = 1 + threadIdx.x; k <= j-1; k += blockDim.x)
          alpha[k*(CUDA_mfit1)+j] = alpha[j*(CUDA_mfit1)+k];
 
    return (*CUDA_LCC).trial_chisq;
@@ -97,7 +97,6 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	   applies here too: Dg[i][l]*Darea[i]*Nor = Dsph[i][l]*(Area[i]*Nor). */
 	const int tid = threadIdx.x;
 	brightshare* __restrict__ shw = &mrq_share_block()->b;
-	double* __restrict__ ww = shw->wcA;
 
 	const int ma = CUDA_ma, nco = CUDA_Ncoef, nf = CUDA_Numfac;
 	double* __restrict__ dytemp = (*CUDA_LCC).dytemp;
@@ -109,46 +108,68 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	const int c1 = 1 + tid, c2 = 33 + tid;
 	double dave1 = 0, dave2 = 0;
 
+	/* the points (the 3 convexity pseudo-points) are processed together, up to
+	   three per pass over the facets - it used to be one pass per point. Each
+	   CUDA_Dsph row element is loaded once for all of them and the per-point
+	   sums are independent chains; every sum keeps its facet order, and
+	   dave/lave still accumulate the points in ascending order. */
+	double* __restrict__ ww3 = &shw->geo[0][0];   /* 3 x 32 staged weights */
 #pragma unroll 1
-	for (int jp = 1; jp <= Lpoints; jp++)
+	for (int jb = 1; jb <= Lpoints; jb += 3)
 	{
-		lnp++;
-		double ym = 0, a1 = 0, a2 = 0;
+		const int npts = (Lpoints - jb + 1 < 3) ? (Lpoints - jb + 1) : 3;
+		double ym[3] = { 0, 0, 0 }, a1[3] = { 0, 0, 0 }, a2[3] = { 0, 0, 0 };
 #pragma unroll 1
 		for (int f0 = 1; f0 <= nf; f0 += 32)
 		{
 			const int i = f0 + tid;
-			double w = 0.0;
-			if (i <= nf)
+#pragma unroll
+			for (int q = 0; q < 3; q++)
 			{
-				w = areap[i] * CUDA_Nor[i][jp - 1];
-				ym += w;
+				double w = 0.0;
+				if (i <= nf && q < npts)
+				{
+					w = areap[i] * CUDA_Nor[i][jb + q - 1];
+					ym[q] += w;
+				}
+				ww3[q * 32 + tid] = w;
 			}
-			ww[tid] = w;
 			__syncwarp();
 			int kend = nf - f0 + 1;
 			if (kend > 32) kend = 32;
 #pragma unroll 4
 			for (int k = 0; k < kend; k++)
 			{
-				double w2 = ww[k];
 				double const* __restrict__ row = CUDA_Dsph[f0 + k];
-				a1 += w2 * row[c1];
-				a2 += w2 * row[c2];
+				double r1 = row[c1], r2 = row[c2];
+#pragma unroll
+				for (int q = 0; q < 3; q++)
+				{
+					double w2 = ww3[q * 32 + k];
+					a1[q] += w2 * r1;
+					a2[q] += w2 * r2;
+				}
 			}
 			__syncwarp();
 		}
-#pragma unroll
-		for (int off = 16; off > 0; off >>= 1)
-			ym += __shfl_xor_sync(0xffffffff, ym, off);
 
-		double v1 = (c1 <= nco) ? a1 : 0.0;
-		double v2 = (c2 <= nco) ? a2 : 0.0;
-		double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
-		if (c1 <= ma) { row[c1] = v1; dave1 += v1; }
-		if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
-		if (tid == 0) ytemp[jp] = ym;
-		if (Inrel == 1) lave += ym;
+		for (int q = 0; q < npts; q++)
+		{
+			const int jp = jb + q;
+			lnp++;
+#pragma unroll
+			for (int off = 16; off > 0; off >>= 1)
+				ym[q] += __shfl_xor_sync(0xffffffff, ym[q], off);
+
+			double v1 = (c1 <= nco) ? a1[q] : 0.0;
+			double v2 = (c2 <= nco) ? a2[q] : 0.0;
+			double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
+			if (c1 <= ma) { row[c1] = v1; dave1 += v1; }
+			if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
+			if (tid == 0) ytemp[jp] = ym[q];
+			if (Inrel == 1) lave += ym[q];
+		}
+		/* ww3 is re-written by the next pass */
 		__syncwarp();
 	}
 

@@ -32,8 +32,4 @@
 #define DEG2RAD      (PI / 180)
 #define RAD2DEG      (180 / PI)
 
-#if defined INTEL
-#define BLOCK_DIM 64
-#else
 #define BLOCK_DIM 128
-#endif

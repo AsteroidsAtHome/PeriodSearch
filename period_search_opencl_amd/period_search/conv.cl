@@ -8,14 +8,11 @@ double conv(
 	__global struct freq_context* CUDA_CC,
 	__local double* res,
 	int nc,
-	int tmpl,
-	int tmph,
 	int brtmpl,
 	int brtmph)
 {
 	int i, j, k;
 	double tmp = 0.0;
-	double dtmp;
 	int3 threadIdx, blockIdx;
 	threadIdx.x = get_local_id(0);
 	blockIdx.x = get_group_id(0);
@@ -49,32 +46,9 @@ double conv(
 	{
 		tmp = res[0] + res[1];
 	}
-	//parallel reduction end
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
-	for (j = tmpl; j <= tmph; j++)
-	{
-		dtmp = 0;
-		if (j <= (*CUDA_CC).Ncoef)
-		{
-			for (i = 1; i <= (*CUDA_CC).Numfac; i++)
-			{
-				/* Darea[i] * Dg[i][j] == Area[i] * Dsph[i][j] (Area = Darea*g) */
-				dtmp += (*CUDA_LCC).Area[i] * (*CUDA_CC).Dsph[i][j] * (*CUDA_CC).Nor[i][nc];
-
-				//if (blockIdx.x == 0 && j == 8)
-				//	printf("[%d][%3d]  Darea[%4d]: %.7f, Dg[%4d]: %.7f, Nor[%3d][%3d]: %10.7f\n",
-				//		blockIdx.x, threadIdx.x, i, (*CUDA_CC).Darea[i], mm, (*CUDA_LCC).Dg[mm], i, nc, (*CUDA_CC).Nor[i][nc]);
-			}
-		}
-
-		(*CUDA_LCC).dyda[j] = dtmp;
-
-		//if (blockIdx.x == 0) // && threadIdx.x == 1)
-		//    printf("[mrqcof_curve1_last -> conv] [%d][%3d] jp - 1: %3d, j[%3d] dyda[%3d]: %10.7f\n",
-		//        blockIdx.x, threadIdx.x, nc, j, j, (*CUDA_LCC).dyda[j]);
-	}
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	/* the derivatives w.r.t. the shape coefficients are computed for all
+	   points at once in mrqcof_curve1_last */
 
 	return (tmp);
 }

@@ -440,6 +440,68 @@ cudaError_t copyValueFromSymbol(T* dst, T& symbol,  const char* symbol_name)
 //
 // Macro to simplify calling copyValueToSymbol with the symbol name
 #define CopyValueFromSymbol(value_ptr, symbol) copyValueFromSymbol(value_ptr, symbol, #symbol)
+
+/* Pipelined read of the CUDA_End counter in the iteration loops: each
+   iteration issues an asynchronous copy of the counter (into pinned memory,
+   so it really is asynchronous) and then waits for the PREVIOUS iteration's
+   copy. The next iteration is therefore always queued before the host waits,
+   instead of the GPU idling while the host reads the counter and enqueues the
+   next ~20 kernels. The loop runs one extra iteration at the end, which is a
+   no-op: every context then has isNiter == 0, so all kernels return early and
+   CudaCalculateIter1Begin counts nothing again. */
+struct EndReader
+{
+	int* host = nullptr;
+	cudaEvent_t ev[2] = {};
+	bool pending[2] = { false, false };
+	int slot = 0;
+
+	void init()
+	{
+		handleCudaError(cudaMallocHost(reinterpret_cast<void**>(&host), 2 * sizeof(int)), "cudaMallocHost", "EndReader");
+		for (int i = 0; i < 2; i++)
+			handleCudaError(cudaEventCreateWithFlags(&ev[i], cudaEventDisableTiming), "cudaEventCreate", "EndReader");
+	}
+
+	/* queue the copy of the counter as it stands after the kernels enqueued so far */
+	void issue()
+	{
+		handleCudaError(cudaMemcpyFromSymbolAsync(&host[slot], CUDA_End, sizeof(int), 0, cudaMemcpyDeviceToHost, 0), "cudaMemcpyFromSymbolAsync", "CUDA_End");
+		handleCudaError(cudaEventRecord(ev[slot], 0), "cudaEventRecord", "EndReader");
+		pending[slot] = true;
+		slot ^= 1;
+	}
+
+	/* wait for the previous issue(); false on the first iteration */
+	bool previous(int* value)
+	{
+		if (!pending[slot])
+			return false;
+		handleCudaError(cudaEventSynchronize(ev[slot]), "cudaEventSynchronize", "EndReader");
+		pending[slot] = false;
+		*value = host[slot];
+		return true;
+	}
+
+	void drain()
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			if (pending[i])
+				handleCudaError(cudaEventSynchronize(ev[i]), "cudaEventSynchronize", "EndReader");
+			pending[i] = false;
+		}
+	}
+
+	void release()
+	{
+		drain();
+		for (int i = 0; i < 2; i++)
+			cudaEventDestroy(ev[i]);
+		cudaFreeHost(host);
+		host = nullptr;
+	}
+};
 //**************************
 
 // Template function for copying a value to a device symbol
@@ -939,6 +1001,9 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 	res = static_cast<freq_result*>(malloc(CUDA_Grid_dim_precalc * sizeof(freq_result)));
 
+	EndReader endReader;
+	endReader.init();
+
 	for (n = 1; n <= max_test_periods; n += precalcFreqs)
 	{
 		CudaCalculatePrepare<<<CUDA_Grid_dim_precalc, 1>>>(n, max_test_periods, freq_start, freq_step);
@@ -947,13 +1012,21 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 
 		/* all N_POLES pole trials of this batch run concurrently as separate blocks */
 		{
-			//zero global End signal
+			/* contexts with n > n_max are invalid (see CudaCalculatePrepare) and never
+			   iterate: CUDA_End starts at their number instead of counting them
+			   with an atomic in CudaCalculatePreparePole */
+			{
+				int nFreqs = CUDA_Grid_dim_precalc / N_POLES;
+				int nValid = max_test_periods - n + 1;
+				if (nValid < 0) nValid = 0;
+				if (nValid > nFreqs) nValid = nFreqs;
+				int endStart = (nFreqs - nValid) * N_POLES;
+				CopyValueToSymbol(CUDA_End, &endStart);
+			}
 			theEnd = 0;
-			//cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd), 0, cudaMemcpyHostToDevice);
-			CopyValueToSymbol(CUDA_End, &theEnd);
 			//cudaGetSymbolAddress((void**)&endPtr, CUDA_End);
 			//
-			CudaCalculatePreparePole<<<CUDA_Grid_dim_precalc, 1>>>();
+			CudaCalculatePreparePole<<<CUDA_Grid_dim_precalc, 32>>>();
 			//
 #ifdef _DEBUG
 			printf(". ");
@@ -964,7 +1037,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 			while (!theEnd)
 			{
 				count++;
-				if (count > 51)
+				if (count > 52) /* n_iter_max + 1, plus the pipelined End check's extra no-op iteration */
 				{
 					std::cerr << "CUDA Precalc routine went out of bounds!" << std::endl;
 					CUDAGlobalsFree();
@@ -972,7 +1045,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 					exit(999);
 				}
 
-				CudaCalculateIter1Begin<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Begin<<<(CUDA_Grid_dim_precalc + 63) / 64, 64>>>(CUDA_Grid_dim_precalc);
 				//mrqcof
 				CudaCalculateIter1Mrqcof1Start<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < gl.Lcurves; iC++)
@@ -982,7 +1055,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 				}
 				CudaCalculateIter1Mrqcof1Curve1Last<<<CUDA_Grid_dim_precalc, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
 				CudaCalculateIter1Mrqcof1Curve2<<<CUDA_Grid_dim_precalc, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
-				CudaCalculateIter1Mrqcof1End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof1End<<<CUDA_Grid_dim_precalc, 32>>>();
 				//mrqcof
 				CudaCalculateIter1Mrqmin1End<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM, gaussShBytes>>>();
 				//mrqcof
@@ -994,22 +1067,23 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 				}
 				CudaCalculateIter1Mrqcof2Curve1Last<<<CUDA_Grid_dim_precalc, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
 				CudaCalculateIter1Mrqcof2Curve2<<<CUDA_Grid_dim_precalc, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
-				CudaCalculateIter1Mrqcof2End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqcof2End<<<CUDA_Grid_dim_precalc, 32>>>();
 				//mrqcof
-				CudaCalculateIter1Mrqmin2End<<<CUDA_Grid_dim_precalc, 1>>>();
+				CudaCalculateIter1Mrqmin2End<<<CUDA_Grid_dim_precalc, 32>>>();
 				CudaCalculateIter2<<<CUDA_Grid_dim_precalc, CUDA_BLOCK_DIM>>>();
-				//err=cudaThreadSynchronize(); memcpy is synchro itself
-				cudaDeviceSynchronize();
-				//cudaMemcpy(&theEnd, endPtr, sizeof(theEnd), cudaMemcpyDeviceToHost);
-				//handleCudaError(cudaMemcpyFromSymbolAsync(&theEnd, CUDA_End, sizeof theEnd, 0, cudaMemcpyDeviceToHost), "cudaMemcpyFromSymbolAsync", "theEnd");
-				CopyValueFromSymbol(&theEnd, CUDA_End);
-				//CopyFromSymbol(&theEnd, CUDA_End, sizeof(int*));
-				theEnd = theEnd == CUDA_Grid_dim_precalc;
+				/* pipelined End check (see EndReader) */
+				endReader.issue();
+				{
+					int endVal;
+					if (endReader.previous(&endVal))
+						theEnd = endVal == CUDA_Grid_dim_precalc;
+				}
 				//break;//debug
 #if defined _DEBUG
 				PrintSpinner();
 #endif
 			}
+			endReader.drain();
 			CudaCalculateFinishPole<<<CUDA_Grid_dim_precalc, 1>>>();
 			//err = cudaThreadSynchronize();
 			cudaDeviceSynchronize();
@@ -1065,6 +1139,7 @@ int CUDAPrecalc(int cudadev, double freq_start, double freq_end, double freq_ste
 	 * }
 	 */
 
+	endReader.release();
 	cudaFree(pa);
 	cudaFree(pal);
 	cudaFree(pco);
@@ -1298,6 +1373,9 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 
 	res = static_cast<freq_result*>(malloc(CUDA_grid_dim * sizeof(freq_result)));
 
+	EndReader endReader;
+	endReader.init();
+
 	//int firstreport = 0;//beta debug
 	auto oldFractionDone = 0.0001;
 
@@ -1333,16 +1411,24 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 			printf("%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction2);
 			fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction2);
 #endif
-			//zero global End signal
+			/* contexts with n > n_max are invalid (see CudaCalculatePrepare) and never
+			   iterate: CUDA_End starts at their number instead of counting them
+			   with an atomic in CudaCalculatePreparePole */
+			{
+				int nFreqs = CUDA_grid_dim / N_POLES;
+				int nValid = n_max - n + 1;
+				if (nValid < 0) nValid = 0;
+				if (nValid > nFreqs) nValid = nFreqs;
+				int endStart = (nFreqs - nValid) * N_POLES;
+				CopyValueToSymbol(CUDA_End, &endStart);
+			}
 			theEnd = 0;
-			//cudaMemcpyToSymbol(CUDA_End, &theEnd, sizeof(theEnd));
-			CopyValueToSymbol(CUDA_End, &theEnd);
 			
-			CudaCalculatePreparePole<<<CUDA_grid_dim, 1>>>();
+			CudaCalculatePreparePole<<<CUDA_grid_dim, 32>>>();
 			//
 			while (!theEnd)
 			{
-				CudaCalculateIter1Begin<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Begin<<<(CUDA_grid_dim + 63) / 64, 64>>>(CUDA_grid_dim);
 				//mrqcof
 				CudaCalculateIter1Mrqcof1Start<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
 				for (iC = 1; iC < gl.Lcurves; iC++)
@@ -1352,7 +1438,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 				}
 				CudaCalculateIter1Mrqcof1Curve1Last<<<CUDA_grid_dim, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
 				CudaCalculateIter1Mrqcof1Curve2<<<CUDA_grid_dim, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
-				CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Mrqcof1End<<<CUDA_grid_dim, 32>>>();
 				//mrqcof
 				CudaCalculateIter1Mrqmin1End<<<CUDA_grid_dim, CUDA_BLOCK_DIM, gaussShBytes>>>();
 
@@ -1370,20 +1456,24 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 				}
 				CudaCalculateIter1Mrqcof2Curve1Last<<<CUDA_grid_dim, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
 				CudaCalculateIter1Mrqcof2Curve2<<<CUDA_grid_dim, 32>>>(gl.Inrel[gl.Lcurves], gl.Lpoints[gl.Lcurves]);
-				CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Mrqcof2End<<<CUDA_grid_dim, 32>>>();
 				//mrqcof
-				CudaCalculateIter1Mrqmin2End<<<CUDA_grid_dim, 1>>>();
+				CudaCalculateIter1Mrqmin2End<<<CUDA_grid_dim, 32>>>();
 				CudaCalculateIter2<<<CUDA_grid_dim, CUDA_BLOCK_DIM>>>();
-				//err=cudaThreadSynchronize(); memcpy is synchro itself
-				//err = cudaDeviceSynchronize();
-				//handleCudaError(cudaMemcpyFromSymbolAsync(&theEnd, CUDA_End, sizeof theEnd, 0, cudaMemcpyDeviceToHost), "cudaMemcpyFromSymbolAsync", "theEnd");
-				CopyValueFromSymbol(&theEnd, CUDA_End);
-				cudaDeviceSynchronize();
-				boinc_fraction_done(oldFractionDone + mid * ((double)theEnd / CUDA_grid_dim));
-				theEnd = theEnd == CUDA_grid_dim;
+				/* pipelined End check (see EndReader) */
+				endReader.issue();
+				{
+					int endVal;
+					if (endReader.previous(&endVal))
+					{
+						boinc_fraction_done(oldFractionDone + mid * ((double)endVal / CUDA_grid_dim));
+						theEnd = endVal == CUDA_grid_dim;
+					}
+				}
 
 				//break;//debug
 			}
+			endReader.drain();
 
 			CudaCalculateFinishPole<<<CUDA_grid_dim, 1>>>();
 			//err = cudaThreadSynchronize();
@@ -1449,6 +1539,7 @@ int CUDAStart(int cudadev, int n_start_from, double freq_start, double freq_end,
 
 	printf("\n");
 
+	endReader.release();
 	cudaFree(pa);
 	cudaFree(pal);
 	cudaFree(pco);

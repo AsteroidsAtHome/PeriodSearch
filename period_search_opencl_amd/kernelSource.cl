@@ -6,6 +6,7 @@
 #define MAX_N_OBS         20000             /* max number of data points */
 #define MAX_LC              200             /* max number of lightcurves */
 #define MAX_LINE_LENGTH    1000             /* max length of line in an input file */
+#define MAX_N_FPOINTS    500000             /* max number of frequency points */
 #define MAX_N_FAC          1000             /* max number of facets */
 #define MAX_N_ITER          100             /* maximum number of iterations */
 #define MAX_N_PAR           200             /* maximum number of parameters */
@@ -31,11 +32,7 @@
 #define DEG2RAD      (PI / 180)
 #define RAD2DEG      (180 / PI)
 
-#if defined INTEL
-#define BLOCK_DIM 64
-#else
 #define BLOCK_DIM 128
-#endif
 #pragma OPENCL FP_CONTRACT ON
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -47,11 +44,6 @@
 //struct __attribute__((packed)) freq_context
 //struct mfreq_context
 //struct __attribute__((aligned(8))) mfreq_context
-//#ifdef NVIDIA
-//struct mfreq_context
-//#else
-//typedef struct mfreq_context
-//#endif
 typedef struct mfreq_context
 {
 	//double* Area;
@@ -104,11 +96,6 @@ typedef struct mfreq_context
 
 //struct freq_context
 //typedef struct __attribute__((aligned(8))) freq_context
-//#ifdef NVIDIA
-//struct freq_context
-//#else
-//typedef struct freq_context
-//#endif
 struct freq_context
 {
 	double Phi_0;
@@ -178,16 +165,36 @@ struct freq_context
 
 //struct freq_result
 //struct __attribute__((aligned(8))) freq_result
-//#ifdef NVIDIA
-//struct freq_result
-//#else
-//typedef struct freq_result
-//#endif
 struct freq_result
 {
 	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;
 	int isReported, isInvalid, isNiter;
 };
+/* WORKAROUND(rusticl / aco): runtime f64 '/' returns results with ~3*2^-29
+   relative error (verified by [DIVTEST]); fma() and '*' are exact.
+   Markstein sequence: two Newton steps refine the reciprocal, the final
+   fused correction restores correct rounding.
+   NATIVE_DIV_OK=1 (set by the host after the startup probe) replaces the
+   helper with plain '/' on drivers whose division is correctly rounded;
+   both paths then produce identical bits, so determinism is preserved. */
+#ifndef NATIVE_DIV_OK
+#define NATIVE_DIV_OK 0
+#endif
+#if NATIVE_DIV_OK
+#define ddiv(a, b) ((a) / (b))
+#else
+inline double ddiv(double a, double b)
+{
+    double r = 1.0 / b;
+    double e = fma(-b, r, 1.0);
+    r = fma(r, e, r);
+    e = fma(-b, r, 1.0);
+    r = fma(r, e, r);
+    double q = a * r;
+    return fma(fma(-b, q, a), r, q);
+}
+#endif
+
 /*
     FROM stackoverflow: https://stackoverflow.com/questions/42856717/intrinsics-equivalent-to-the-cuda-type-casting-intrinsics-double2loint-doub
     You can express these operations via a union. This will not create extra overhead with modern compilers as long as optimization is on (nvcc -O3 ...).
@@ -415,9 +422,10 @@ void curv(
 		/* Dg is no longer materialized: Dg[i][k] == g * Dsph[i][k] folds into the
 		   facet weights through Area (= Darea * g) - see bright.cl and conv.cl */
 	}
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 }
+
+/* main-triangle elements per work-item: (DYT_STRIDE-1) rows at most */
+#define C2_EPT (((DYT_STRIDE - 1) * DYT_STRIDE / 2 + BLOCK_DIM - 1) / BLOCK_DIM)
 
 void mrqcof_curve2(
 	__global struct mfreq_context* CUDA_LCC,
@@ -428,6 +436,7 @@ void mrqcof_curve2(
 	__local double* s2wS,
 	__local double* dwsS,
 	__local double* dyS,
+	__local double* coefS,		/* 2 * CURVE2_K: per-point coef, coef1 */
 	int inrel,
 	int lpoints,
 	__global double* scr)
@@ -469,52 +478,19 @@ void mrqcof_curve2(
 	if (latmph > (*CUDA_CC).lastone) latmph = (*CUDA_CC).lastone;
 	latmpl++;
 
-	/*   if ((*CUDA_LCC).Lastcall != 1) always ==0
-		 {*/
-	if (inrel /*==1*/)
-	{
-		for (jp = tmpl; jp <= tmph; jp++)
-		{
-			lnp1++;
-			int ixx = (jp - 1) * DYT_STRIDE + 1;
-			/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
-			dytempG[ixx] = 0;
+	/* The relative-lightcurve renormalization (ytemp *= coef, dytemp column 1
+	   zeroed, dytemp[l] = coef * (dytemp[l] - coef1 * dave[l]) for l >= 2) used
+	   to be a separate in-place pass over the whole curve in global memory
+	   before the tiles re-read it. It is now applied while each tile is staged
+	   into local memory - same expressions, same values - which saves a full
+	   read + write of dytemp per curve (port of the HIP tree's fused I1
+	   renormalization). dytemp/ytemp are per-curve scratch: nothing reads the
+	   renormalized global copies afterwards. */
+	const int lnp1b = (*CUDA_LCC).np1;	/* point jp uses Sig[lnp1b + jp] */
+	const double ave = (*CUDA_LCC).ave;
+	__local double* coef1S = coefS + CURVE2_K;
 
-			//if (blockIdx.x == 0)
-			//	printf("[%d][%d] dytemp[%3d]: %10.7f\n", blockIdx.x, jp, ixx, dytempG[ixx]);
-
-			coef = (*CUDA_CC).Sig[lnp1] * lpoints / (*CUDA_LCC).ave;
-
-			//if (threadIdx.x == 0)
-			//	printf("[%d][%3d][%d] coef: %10.7f\n", blockIdx.x, threadIdx.x, jp, coef);
-
-			double yytmp = ytempG[jp];
-			coef1 = yytmp / (*CUDA_LCC).ave;
-
-			//if (blockIdx.x == 0 && threadIdx.x == 0)
-			//	printf("[Device | mrqcof_curve2_1] [%3d]  yytmp[%3d]: %10.7f, ave: %10.7f\n", threadIdx.x, jp, yytmp, (*CUDA_LCC).ave);
-
-			ytempG[jp] = coef * yytmp;
-
-			//if (blockIdx.x == 0)
-			//	printf("[Device][%d][%3d] ytemp[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, jp, ytempG[jp]);
-
-			ixx++;
-
-			//if (threadIdx.x == 0)
-			//	printf("[%3d] jp[%3d] dytemp[%3d]: %10.7f\n", blockIdx.x, jp, ixx, dytempG[ixx]);
-
-			for (l = 2; l <= (*CUDA_CC).ma; l++, ixx++)
-			{
-				dytempG[ixx] = coef * (dytempG[ixx] - coef1 * (*CUDA_LCC).dave[l]);
-
-				//if (blockIdx.x == 0 && threadIdx.x == 0)
-				//	printf("[Device | mrqcof_curve2_1] [%3d]  coef1: %10.7f, dave[%3d]: %10.7f, dytemp[%3d]: %10.7f\n",
-				//		threadIdx.x, coef1, l, (*CUDA_LCC).dave[l], ixx, dytempG[ixx]);
-			}
-		}
-	}
-
+	/* everyone has read np1 before work-item 0 advances it */
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 
 	if (threadIdx.x == 0)
@@ -538,27 +514,70 @@ void mrqcof_curve2(
 	   within a tile only the summation order over the K points changes.
 
 	   dydaT[p][l] is point jp0+p's staged derivative row (renormalization
-	   already applied by the in-place pass above), 1-based parameter l. */
+	   applied while staging for a relative curve), 1-based parameter l. */
 	int jp0, p, P;
 	double wp[CURVE2_K];
+
+	/* Main triangle (rows l = l0..lastone, columns m = l0..l) flattened over
+	   the work-group: work-item t owns elements t, t + BLOCK_DIM, ... for the
+	   whole curve and keeps their running alpha values in registers, adding
+	   each tile's contribution exactly as the in-memory
+	   alpha = alpha + acc update did (same values, same order), and writes
+	   them back once at the end. Before, rows were swept one at a time with
+	   only l of BLOCK_DIM work-items busy and every tile did a global
+	   read-modify-write of the whole triangle. The two original index
+	   variants, element for element:
+	     absolute (ia[1] != 0): l0 = 1, alpha[l][m], beta[l]
+	     relative (ia[1] == 0): l0 = 2, alpha[l-1][m-1], beta[l-1]
+	   (frozen size scale). The ia-gated tail rows keep their code. */
+	const int rel = !(*CUDA_CC).ia[1];
+	const int l0 = rel ? 2 : 1;
+	const int nrows = (*CUDA_CC).lastone - l0 + 1;
+	const int ntri = nrows > 0 ? nrows * (nrows + 1) / 2 : 0;
+	const int Mfit1 = (*CUDA_CC).Mfit1;
+	int triLM[C2_EPT];		/* l * 64 + m of each owned element */
+	double triA[C2_EPT];	/* its running alpha value */
+	#pragma unroll
+	for (int t = 0; t < C2_EPT; t++)
+	{
+		int e = threadIdx.x + t * BLOCK_DIM;
+		triLM[t] = 0;
+		triA[t] = 0;
+		if (e < ntri)
+		{
+			/* row r of the triangle holds r + 1 elements */
+			int r = (int)((sqrt(8.0f * (float)e + 1.0f) - 1.0f) * 0.5f);
+			while ((r + 1) * (r + 2) / 2 <= e) r++;
+			while (r * (r + 1) / 2 > e) r--;
+			int lr = l0 + r, mr = l0 + (e - r * (r + 1) / 2);
+			triLM[t] = lr * 64 + mr;
+			triA[t] = alpha[(lr - rel) * Mfit1 + (mr - rel)];
+		}
+	}
+	const int browL = l0 + threadIdx.x;	/* beta row owned by this work-item */
+	const int ownB = browL <= (*CUDA_CC).lastone;
+	double betaR = ownB ? beta[browL - rel] : 0;
 
 	for (jp0 = 1; jp0 <= lpoints; jp0 += CURVE2_K)
 	{
 		P = lpoints - jp0 + 1;
 		if (P > CURVE2_K) P = CURVE2_K;
 
-		/* stage the tile: consecutive work-items copy consecutive addresses */
-		for (m = threadIdx.x; m < P * DYT_STRIDE; m += BLOCK_DIM)
-		{
-			((__local double*)&dydaT[0][0])[m] = dytempG[(jp0 - 1) * DYT_STRIDE + m];
-		}
-
-		/* per-point scalars (ymod comes from the renormalized ytemp) */
+		/* per-point scalars; for a relative curve also the renormalization
+		   factors, with the expressions of the former in-place pass */
 		if (threadIdx.x < P)
 		{
 			jp = jp0 + threadIdx.x;
 			ymod = ytempG[jp];
-			sig2i = 1 / ((*CUDA_CC).Sig[lnp2 + jp] * (*CUDA_CC).Sig[lnp2 + jp]);
+			if (inrel)
+			{
+				coef = ddiv((*CUDA_CC).Sig[lnp1b + jp] * lpoints, ave);
+				coef1 = ddiv(ymod, ave);
+				coefS[threadIdx.x] = coef;
+				coef1S[threadIdx.x] = coef1;
+				ymod = coef * ymod;
+			}
+			sig2i = ddiv(1.0, ((*CUDA_CC).Sig[lnp2 + jp] * (*CUDA_CC).Sig[lnp2 + jp]));
 			wght = (*CUDA_CC).Weight[lnp2 + jp];
 			dy = (*CUDA_CC).Brightness[lnp2 + jp] - ymod;
 			double sig2iwght = sig2i * wght;
@@ -568,147 +587,90 @@ void mrqcof_curve2(
 		}
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		if ((*CUDA_CC).ia[1]) //not relative
+		/* stage the tile (consecutive work-items copy consecutive addresses),
+		   renormalizing on the way for a relative curve */
+		for (m = threadIdx.x; m < P * DYT_STRIDE; m += BLOCK_DIM)
 		{
-			j = 0;
-			for (l = 1; l <= (*CUDA_CC).lastone; l++)
+			double v = dytempG[(jp0 - 1) * DYT_STRIDE + m];
+			if (inrel)
+			{
+				p = m / DYT_STRIDE;
+				l = m % DYT_STRIDE;
+				if (l == 1)
+					v = 0;	/* size-scale derivative is explicitly zero */
+				else if (l >= 2 && l <= (*CUDA_CC).ma)
+					v = coefS[p] * (v - coef1S[p] * (*CUDA_LCC).dave[l]);
+			}
+			((__local double*)&dydaT[0][0])[m] = v;
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		/* main triangle: register-resident elements */
+		#pragma unroll
+		for (int t = 0; t < C2_EPT; t++)
+		{
+			if (threadIdx.x + t * BLOCK_DIM < ntri)
+			{
+				int lr = triLM[t] / 64, mr = triLM[t] % 64;
+				double acc = 0;
+				for (int pp = 0; pp < P; pp++)
+				{
+					double w = dydaT[pp][lr] * s2wS[pp];
+					acc += w * dydaT[pp][mr];
+				}
+				triA[t] = triA[t] + acc;
+			}
+		}
+		if (ownB)
+		{
+			double bacc = 0;
+			for (int pp = 0; pp < P; pp++)
+				bacc += dwsS[pp] * dydaT[pp][browL];
+			betaR = betaR + bacc;
+		}
+
+		/* ia-gated tail rows l = lastone+1..lastma: unchanged */
+		j = nrows > 0 ? nrows : 0;
+		l = (*CUDA_CC).lastone + 1;
+		if (l < l0) l = l0;
+		for (; l <= (*CUDA_CC).lastma; l++)
+		{
+			if ((*CUDA_CC).ia[l])
 			{
 				j++;
 				for (p = 0; p < P; p++)
 					wp[p] = dydaT[p][l] * s2wS[p];
 
-				//precalc thread boundaries (same per-row partition as before)
-				tmph = l / BLOCK_DIM;
-				if (l % BLOCK_DIM) tmph++;
-				tmpl = threadIdx.x * tmph;
-				tmph = tmpl + tmph;
-				if (tmph > l) tmph = l;
-				tmpl++;
-				for (m = tmpl; m <= tmph; m++)
+				tmpl = latmpl;
+				if (rel && tmpl == 1) tmpl++;	//m==1
+				for (m = tmpl; m <= latmph; m++)
 				{
 					double acc = 0;
 					for (p = 0; p < P; p++)
 						acc += wp[p] * dydaT[p][m];
-					alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + acc;
+					alpha[j * Mfit1 + m - rel] = alpha[j * Mfit1 + m - rel] + acc;
 				} /* m */
 				if (threadIdx.x == 0)
 				{
+					k = (*CUDA_CC).lastone - rel;
+					for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
+					{
+						if ((*CUDA_CC).ia[m])
+						{
+							k++;
+							double acc = 0;
+							for (p = 0; p < P; p++)
+								acc += wp[p] * dydaT[p][m];
+							alpha[j * Mfit1 + k] = alpha[j * Mfit1 + k] + acc;
+						}
+					} /* m */
 					double bacc = 0;
 					for (p = 0; p < P; p++)
 						bacc += dwsS[p] * dydaT[p][l];
 					beta[j] = beta[j] + bacc;
 				}
-			} /* l */
-			for (; l <= (*CUDA_CC).lastma; l++)
-			{
-				if ((*CUDA_CC).ia[l])
-				{
-					j++;
-					for (p = 0; p < P; p++)
-						wp[p] = dydaT[p][l] * s2wS[p];
-
-					for (m = latmpl; m <= latmph; m++)
-					{
-						double acc = 0;
-						for (p = 0; p < P; p++)
-							acc += wp[p] * dydaT[p][m];
-						alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + acc;
-					} /* m */
-					if (threadIdx.x == 0)
-					{
-						k = (*CUDA_CC).lastone;
-						for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
-						{
-							if ((*CUDA_CC).ia[m])
-							{
-								k++;
-								double acc = 0;
-								for (p = 0; p < P; p++)
-									acc += wp[p] * dydaT[p][m];
-								alpha[j * (*CUDA_CC).Mfit1 + k] = alpha[j * (*CUDA_CC).Mfit1 + k] + acc;
-							}
-						} /* m */
-						double bacc = 0;
-						for (p = 0; p < P; p++)
-							bacc += dwsS[p] * dydaT[p][l];
-						beta[j] = beta[j] + bacc;
-					}
-				}
-			} /* l */
-		}
-		else //relative ia[1]==0
-		{
-			j = 0;
-			for (l = 2; l <= (*CUDA_CC).lastone; l++)
-			{
-				j++;
-				for (p = 0; p < P; p++)
-					wp[p] = dydaT[p][l] * s2wS[p];
-
-				//precalc thread boundaries
-				tmph = l / BLOCK_DIM;
-				if (l % BLOCK_DIM) tmph++;
-				tmpl = threadIdx.x * tmph;
-				tmph = tmpl + tmph;
-				if (tmph > l) tmph = l;
-				tmpl++;
-				//m==1: the frozen size-scale parameter is skipped
-				if (tmpl == 1) tmpl++;
-				for (m = tmpl; m <= tmph; m++)
-				{
-					double acc = 0;
-					for (p = 0; p < P; p++)
-						acc += wp[p] * dydaT[p][m];
-					alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + acc;
-				} /* m */
-				if (threadIdx.x == 0)
-				{
-					double bacc = 0;
-					for (p = 0; p < P; p++)
-						bacc += dwsS[p] * dydaT[p][l];
-					beta[j] = beta[j] + bacc;
-				}
-			} /* l */
-			for (; l <= (*CUDA_CC).lastma; l++)
-			{
-				if ((*CUDA_CC).ia[l])
-				{
-					j++;
-					for (p = 0; p < P; p++)
-						wp[p] = dydaT[p][l] * s2wS[p];
-
-					tmpl = latmpl;
-					//m==1
-					if (tmpl == 1) tmpl++;
-					for (m = tmpl; m <= latmph; m++)
-					{
-						double acc = 0;
-						for (p = 0; p < P; p++)
-							acc += wp[p] * dydaT[p][m];
-						alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + acc;
-					} /* m */
-					if (threadIdx.x == 0)
-					{
-						k = (*CUDA_CC).lastone - 1;
-						for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
-						{
-							if ((*CUDA_CC).ia[m])
-							{
-								k++;
-								double acc = 0;
-								for (p = 0; p < P; p++)
-									acc += wp[p] * dydaT[p][m];
-								alpha[j * (*CUDA_CC).Mfit1 + k] = alpha[j * (*CUDA_CC).Mfit1 + k] + acc;
-							}
-						} /* m */
-						double bacc = 0;
-						for (p = 0; p < P; p++)
-							bacc += dwsS[p] * dydaT[p][l];
-						beta[j] = beta[j] + bacc;
-					}
-				}
-			} /* l */
-		}
+			}
+		} /* l */
 
 		/* chi-square: same per-point terms in the same ascending order */
 		for (p = 0; p < P; p++)
@@ -719,6 +681,18 @@ void mrqcof_curve2(
 		/* everyone must finish reading dydaT before the next tile overwrites it */
 		barrier(CLK_LOCAL_MEM_FENCE);
 	} /* jp0 */
+
+	#pragma unroll
+	for (int t = 0; t < C2_EPT; t++)
+	{
+		if (threadIdx.x + t * BLOCK_DIM < ntri)
+		{
+			int lr = triLM[t] / 64, mr = triLM[t] % 64;
+			alpha[(lr - rel) * Mfit1 + (mr - rel)] = triA[t];
+		}
+	}
+	if (ownB)
+		beta[browL - rel] = betaR;
 
 	lnp2 += lpoints;
 
@@ -815,7 +789,7 @@ void matrix_neo(
 		//	printf("[neo] alpha[%3d]: %.7f, cg[%3d]: %10.7f\n", jp, alpha, q, (*CUDA_LCC).cg[q]);
 
 		/* Exp-lin model (const.term=1.) */
-		double f = exp(-alpha / cg[(*CUDA_CC).Ncoef0 + 2]);	//f is temp here
+		double f = exp(-ddiv(alpha, cg[(*CUDA_CC).Ncoef0 + 2]));	//f is temp here
 
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
 		//	printf("[neo] [%2d][%3d] jp[%3d] f: %10.7f, cg[%3d] %10.7f, alpha %10.7f\n",
@@ -823,7 +797,7 @@ void matrix_neo(
 
 		jp_ScaleG[jp] = 1 + cg[(*CUDA_CC).Ncoef0 + 1] * f + (cg[(*CUDA_CC).Ncoef0 + 3] * alpha);
 		jp_dphp_1G[jp] = f;
-		jp_dphp_2G[jp] = cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha / (cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
+		jp_dphp_2G[jp] = ddiv(cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha, cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
 		jp_dphp_3G[jp] = alpha;
 
 		//if (blockIdx.x == 0)
@@ -845,131 +819,123 @@ void matrix_neo(
 
 		//	/* rotation matrix, Z axis, angle f */
 
-		tmat = cf * (*CUDA_LCC).Blmat[1][1] + sf * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
+		tmat = cf * (*CUDA_LCC).Blmat[1][1] + sf * (*CUDA_LCC).Blmat[2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = cf * (*CUDA_LCC).Blmat[1][2] + sf * (*CUDA_LCC).Blmat[2][2] + 0 * (*CUDA_LCC).Blmat[3][2];
+		tmat = cf * (*CUDA_LCC).Blmat[1][2] + sf * (*CUDA_LCC).Blmat[2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = cf * (*CUDA_LCC).Blmat[1][3] + sf * (*CUDA_LCC).Blmat[2][3] + 0 * (*CUDA_LCC).Blmat[3][3];
+		tmat = cf * (*CUDA_LCC).Blmat[1][3] + sf * (*CUDA_LCC).Blmat[2][3];
 		e_1G[jp] = pom + tmat * ee_3;
 		e0_1G[jp] = pom0 + tmat * ee0_3;
 
 		//if (blockIdx.x == 0)
 		//	printf("[%3d] jp[%3d] %10.7f, %10.7f\n", threadIdx.x, jp, e_1G[jp], e0_1G[jp]);
 
-		tmat = (-sf) * (*CUDA_LCC).Blmat[1][1] + cf * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
+		tmat = (-sf) * (*CUDA_LCC).Blmat[1][1] + cf * (*CUDA_LCC).Blmat[2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = (-sf) * (*CUDA_LCC).Blmat[1][2] + cf * (*CUDA_LCC).Blmat[2][2] + 0 * (*CUDA_LCC).Blmat[3][2];
+		tmat = (-sf) * (*CUDA_LCC).Blmat[1][2] + cf * (*CUDA_LCC).Blmat[2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = (-sf) * (*CUDA_LCC).Blmat[1][3] + cf * (*CUDA_LCC).Blmat[2][3] + 0 * (*CUDA_LCC).Blmat[3][3];
+		tmat = (-sf) * (*CUDA_LCC).Blmat[1][3] + cf * (*CUDA_LCC).Blmat[2][3];
 		e_2G[jp] = pom + tmat * ee_3;
 		e0_2G[jp] = pom0 + tmat * ee0_3;
 
-		tmat = 0 * (*CUDA_LCC).Blmat[1][1] + 0 * (*CUDA_LCC).Blmat[2][1] + 1 * (*CUDA_LCC).Blmat[3][1];
+		tmat = (*CUDA_LCC).Blmat[3][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = 0 * (*CUDA_LCC).Blmat[1][2] + 0 * (*CUDA_LCC).Blmat[2][2] + 1 * (*CUDA_LCC).Blmat[3][2];
+		tmat = (*CUDA_LCC).Blmat[3][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = 0 * (*CUDA_LCC).Blmat[1][3] + 0 * (*CUDA_LCC).Blmat[2][3] + 1 * (*CUDA_LCC).Blmat[3][3];
+		tmat = (*CUDA_LCC).Blmat[3][3];
 		e_3G[jp] = pom + tmat * ee_3;
 		e0_3G[jp] = pom0 + tmat * ee0_3;
 
-		tmat = cf * (*CUDA_LCC).Dblm[1][1][1] + sf * (*CUDA_LCC).Dblm[1][2][1] + 0 * (*CUDA_LCC).Dblm[1][3][1];
+		tmat = cf * (*CUDA_LCC).Dblm[1][1][1] + sf * (*CUDA_LCC).Dblm[1][2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = cf * (*CUDA_LCC).Dblm[1][1][2] + sf * (*CUDA_LCC).Dblm[1][2][2] + 0 * (*CUDA_LCC).Dblm[1][3][2];
+		tmat = cf * (*CUDA_LCC).Dblm[1][1][2] + sf * (*CUDA_LCC).Dblm[1][2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = cf * (*CUDA_LCC).Dblm[1][1][3] + sf * (*CUDA_LCC).Dblm[1][2][3] + 0 * (*CUDA_LCC).Dblm[1][3][3];
+		tmat = cf * (*CUDA_LCC).Dblm[1][1][3] + sf * (*CUDA_LCC).Dblm[1][2][3];
 		deG[(jp) * 16 + (1) * 4 + (1)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (1) * 4 + (1)] = pom0 + tmat * ee0_3;
 
-		tmat = cf * (*CUDA_LCC).Dblm[2][1][1] + sf * (*CUDA_LCC).Dblm[2][2][1] + 0 * (*CUDA_LCC).Dblm[2][3][1];
+		tmat = cf * (*CUDA_LCC).Dblm[2][1][1] + sf * (*CUDA_LCC).Dblm[2][2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = cf * (*CUDA_LCC).Dblm[2][1][2] + sf * (*CUDA_LCC).Dblm[2][2][2] + 0 * (*CUDA_LCC).Dblm[2][3][2];
+		tmat = cf * (*CUDA_LCC).Dblm[2][1][2] + sf * (*CUDA_LCC).Dblm[2][2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = cf * (*CUDA_LCC).Dblm[2][1][3] + sf * (*CUDA_LCC).Dblm[2][2][3] + 0 * (*CUDA_LCC).Dblm[2][3][3];
+		tmat = cf * (*CUDA_LCC).Dblm[2][1][3] + sf * (*CUDA_LCC).Dblm[2][2][3];
 		deG[(jp) * 16 + (1) * 4 + (2)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (1) * 4 + (2)] = pom0 + tmat * ee0_3;
 
-		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][1] + (t * cf) * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
+		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][1] + (t * cf) * (*CUDA_LCC).Blmat[2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][2] + (t * cf) * (*CUDA_LCC).Blmat[2][2] + 0 * (*CUDA_LCC).Blmat[3][2];
+		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][2] + (t * cf) * (*CUDA_LCC).Blmat[2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][3] + (t * cf) * (*CUDA_LCC).Blmat[2][3] + 0 * (*CUDA_LCC).Blmat[3][3];
+		tmat = (-t * sf) * (*CUDA_LCC).Blmat[1][3] + (t * cf) * (*CUDA_LCC).Blmat[2][3];
 		deG[(jp) * 16 + (1) * 4 + (3)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (1) * 4 + (3)] = pom0 + tmat * ee0_3;
 
-		tmat = -sf * (*CUDA_LCC).Dblm[1][1][1] + cf * (*CUDA_LCC).Dblm[1][2][1] + 0 * (*CUDA_LCC).Dblm[1][3][1];
+		tmat = -sf * (*CUDA_LCC).Dblm[1][1][1] + cf * (*CUDA_LCC).Dblm[1][2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = -sf * (*CUDA_LCC).Dblm[1][1][2] + cf * (*CUDA_LCC).Dblm[1][2][2] + 0 * (*CUDA_LCC).Dblm[1][3][2];
+		tmat = -sf * (*CUDA_LCC).Dblm[1][1][2] + cf * (*CUDA_LCC).Dblm[1][2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = -sf * (*CUDA_LCC).Dblm[1][1][3] + cf * (*CUDA_LCC).Dblm[1][2][3] + 0 * (*CUDA_LCC).Dblm[1][3][3];
+		tmat = -sf * (*CUDA_LCC).Dblm[1][1][3] + cf * (*CUDA_LCC).Dblm[1][2][3];
 		deG[(jp) * 16 + (2) * 4 + (1)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (2) * 4 + (1)] = pom0 + tmat * ee0_3;
 
-		tmat = -sf * (*CUDA_LCC).Dblm[2][1][1] + cf * (*CUDA_LCC).Dblm[2][2][1] + 0 * (*CUDA_LCC).Dblm[2][3][1];
+		tmat = -sf * (*CUDA_LCC).Dblm[2][1][1] + cf * (*CUDA_LCC).Dblm[2][2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = -sf * (*CUDA_LCC).Dblm[2][1][2] + cf * (*CUDA_LCC).Dblm[2][2][2] + 0 * (*CUDA_LCC).Dblm[2][3][2];
+		tmat = -sf * (*CUDA_LCC).Dblm[2][1][2] + cf * (*CUDA_LCC).Dblm[2][2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = -sf * (*CUDA_LCC).Dblm[2][1][3] + cf * (*CUDA_LCC).Dblm[2][2][3] + 0 * (*CUDA_LCC).Dblm[2][3][3];
+		tmat = -sf * (*CUDA_LCC).Dblm[2][1][3] + cf * (*CUDA_LCC).Dblm[2][2][3];
 		deG[(jp) * 16 + (2) * 4 + (2)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (2) * 4 + (2)] = pom0 + tmat * ee0_3;
 
-		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][1] + (-t * sf) * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
+		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][1] + (-t * sf) * (*CUDA_LCC).Blmat[2][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][2] + (-t * sf) * (*CUDA_LCC).Blmat[2][2] + 0 * (*CUDA_LCC).Blmat[3][2];
+		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][2] + (-t * sf) * (*CUDA_LCC).Blmat[2][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][3] + (-t * sf) * (*CUDA_LCC).Blmat[2][3] + 0 * (*CUDA_LCC).Blmat[3][3];
+		tmat = (-t * cf) * (*CUDA_LCC).Blmat[1][3] + (-t * sf) * (*CUDA_LCC).Blmat[2][3];
 		deG[(jp) * 16 + (2) * 4 + (3)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (2) * 4 + (3)] = pom0 + tmat * ee0_3;
 
-		tmat = 0 * (*CUDA_LCC).Dblm[1][1][1] + 0 * (*CUDA_LCC).Dblm[1][2][1] + 1 * (*CUDA_LCC).Dblm[1][3][1];
+		tmat = (*CUDA_LCC).Dblm[1][3][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = 0 * (*CUDA_LCC).Dblm[1][1][2] + 0 * (*CUDA_LCC).Dblm[1][2][2] + 1 * (*CUDA_LCC).Dblm[1][3][2];
+		tmat = (*CUDA_LCC).Dblm[1][3][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = 0 * (*CUDA_LCC).Dblm[1][1][3] + 0 * (*CUDA_LCC).Dblm[1][2][3] + 1 * (*CUDA_LCC).Dblm[1][3][3];
+		tmat = (*CUDA_LCC).Dblm[1][3][3];
 		deG[(jp) * 16 + (3) * 4 + (1)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (3) * 4 + (1)] = pom0 + tmat * ee0_3;
 
-		tmat = 0 * (*CUDA_LCC).Dblm[2][1][1] + 0 * (*CUDA_LCC).Dblm[2][2][1] + 1 * (*CUDA_LCC).Dblm[2][3][1];
+		tmat = (*CUDA_LCC).Dblm[2][3][1];
 		pom = tmat * ee_1;
 		pom0 = tmat * ee0_1;
-		tmat = 0 * (*CUDA_LCC).Dblm[2][1][2] + 0 * (*CUDA_LCC).Dblm[2][2][2] + 1 * (*CUDA_LCC).Dblm[2][3][2];
+		tmat = (*CUDA_LCC).Dblm[2][3][2];
 		pom += tmat * ee_2;
 		pom0 += tmat * ee0_2;
-		tmat = 0 * (*CUDA_LCC).Dblm[2][1][3] + 0 * (*CUDA_LCC).Dblm[2][2][3] + 1 * (*CUDA_LCC).Dblm[2][3][3];
+		tmat = (*CUDA_LCC).Dblm[2][3][3];
 		deG[(jp) * 16 + (3) * 4 + (2)] = pom + tmat * ee_3;
 		de0G[(jp) * 16 + (3) * 4 + (2)] = pom0 + tmat * ee0_3;
 
-		tmat = 0 * (*CUDA_LCC).Blmat[1][1] + 0 * (*CUDA_LCC).Blmat[2][1] + 0 * (*CUDA_LCC).Blmat[3][1];
-		pom = tmat * ee_1;
-		pom0 = tmat * ee0_1;
-		tmat = 0 * (*CUDA_LCC).Blmat[1][2] + 0 * (*CUDA_LCC).Blmat[2][2] + 0 * (*CUDA_LCC).Blmat[3][2];
-		pom += tmat * ee_2;
-		pom0 += tmat * ee0_2;
-		tmat = 0 * (*CUDA_LCC).Blmat[1][3] + 0 * (*CUDA_LCC).Blmat[2][3] + 0 * (*CUDA_LCC).Blmat[3][3];
-		deG[(jp) * 16 + (3) * 4 + (3)] = pom + tmat * ee_3;
-		de0G[(jp) * 16 + (3) * 4 + (3)] = pom0 + tmat * ee0_3;
-	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);  //__syncthreads();
+		deG[(jp) * 16 + (3) * 4 + (3)] = 0;
+		de0G[(jp) * 16 + (3) * 4 + (3)] = 0;
+	}
 }
 
 void bright(
@@ -1049,30 +1015,45 @@ void bright(
 	tmp4 = 0;
 	tmp5 = 0;
 
-	j = 1;
-	for (i = 1; i <= (*CUDA_CC).Numfac; i++, j++)
+	/* Two passes: the cheap visibility test first builds this work-item's
+	   list of visible facets, then the division-heavy terms run over that
+	   list. In a single pass a wavefront executed the heavy block for every
+	   facet that ANY of its lanes could see, i.e. for nearly all facets;
+	   now it runs max(incl_count) times per wavefront. lmu/lmu0 are
+	   recomputed with the same expressions and the sums still run over the
+	   visible facets in ascending order. */
+	for (i = 1; i <= (*CUDA_CC).Numfac; i++)
 	{
 		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
 		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
-
 		if ((lmu > TINY) && (lmu0 > TINY))
 		{
+			incl[incl_count] = i;
+			incl_count++;
+		}
+	}
+
+	for (int c = 0; c < incl_count; c++)
+	{
+		i = incl[c];
+		j = i;
+		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
+		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
+		{
 			dnom = lmu + lmu0;
-			s = lmu * lmu0 * (cl + cls / dnom);
+			s = lmu * lmu0 * (cl + ddiv(cls, dnom));
 			ar = (*CUDA_LCC).Area[j];
 			br += ar * s;
 
-			incl[incl_count] = i;
 			/* Darea[i] * s * Dg[i][k] == Darea[i] * s * g * Dsph[i][k]
 			   == (Area[i] * s) * Dsph[i][k]: fold g into the weight and
 			   gather from the one read-only, facet-major Dsph shared by
 			   all work-groups instead of the per-context Dg matrix */
-			dbr[incl_count] = ar * s;
-			incl_count++;
+			dbr[c] = ar * s;
 
-			double lmu0_dnom = lmu0 / dnom;
+			double lmu0_dnom = ddiv(lmu0, dnom);
 			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-			double lmu_dnom = lmu / dnom;
+			double lmu_dnom = ddiv(lmu, dnom);
 			dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
 
 
@@ -1087,7 +1068,7 @@ void bright(
 			tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
 
 			tmp4 += lmu * lmu0 * ar;
-			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
+			tmp5 += ar * ddiv(lmu * lmu0, lmu + lmu0);
 		}
 	}
 
@@ -1118,43 +1099,42 @@ void bright(
 
 	ncoef0 -= 3;
 	int iStart;
-	int d, d1, dr;
+	int d;
 
 	iStart = Inrel + 1;
 	d = (jp - 1) * DYT_STRIDE + iStart;
 
-	d1 = d + 1;
-	dr = 2;
 
-	/* Derivatives of brightness w.r.t. g-coeffs */
+	/* Derivatives of brightness w.r.t. g-coeffs: BRIGHT_GB columns per pass
+	   over the visible-facet list (was 2); each column is still
+	   dbr[0] * Dsph[..] followed by the fma chain over the visible facets
+	   in ascending order. Up to BRIGHT_GB - 1 columns past ncoef0 are read
+	   (inside the Dsph row) but not stored. */
+#define BRIGHT_GB 16
 	if (incl_count)
 	{
-		for (i = iStart; i <= ncoef0; i += 2, d += dr, d1 += dr)
+		for (i = iStart; i <= ncoef0; i += BRIGHT_GB)
 		{
-			double tmp = 0, tmp1 = 0;
-			double l_dbr = dbr[0];
-			int l_incl = incl[0];
-			tmp = l_dbr * (*CUDA_CC).Dsph[l_incl][i];
-			if ((i + 1) <= ncoef0)
+			double t[BRIGHT_GB];
 			{
-				tmp1 = l_dbr * (*CUDA_CC).Dsph[l_incl][i + 1];
+				double l_dbr = dbr[0];
+				__global double* row = (*CUDA_CC).Dsph[incl[0]] + i;
+				for (int b = 0; b < BRIGHT_GB; b++)
+					t[b] = l_dbr * row[b];
 			}
 
 			for (j = 1; j < incl_count; j++)
 			{
 				double l_dbr = dbr[j];
-				int l_incl = incl[j];
-				tmp += l_dbr * (*CUDA_CC).Dsph[l_incl][i];
-				if ((i + 1) <= ncoef0)
-				{
-					tmp1 += l_dbr * (*CUDA_CC).Dsph[l_incl][i + 1];
-				}
+				__global double* row = (*CUDA_CC).Dsph[incl[j]] + i;
+				for (int b = 0; b < BRIGHT_GB; b++)
+					t[b] += l_dbr * row[b];
 			}
 
-			dytempG[d] = Scale * tmp;
-			if ((i + 1) <= ncoef0)
+			for (int b = 0; b < BRIGHT_GB; b++)
 			{
-				dytempG[d1] = Scale * tmp1;
+				if (i + b <= ncoef0)
+					dytempG[(jp - 1) * DYT_STRIDE + i + b] = Scale * t[b];
 			}
 		}
 	}
@@ -1176,14 +1156,11 @@ double conv(
 	__global struct freq_context* CUDA_CC,
 	__local double* res,
 	int nc,
-	int tmpl,
-	int tmph,
 	int brtmpl,
 	int brtmph)
 {
 	int i, j, k;
 	double tmp = 0.0;
-	double dtmp;
 	int3 threadIdx, blockIdx;
 	threadIdx.x = get_local_id(0);
 	blockIdx.x = get_group_id(0);
@@ -1217,32 +1194,9 @@ double conv(
 	{
 		tmp = res[0] + res[1];
 	}
-	//parallel reduction end
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
-	for (j = tmpl; j <= tmph; j++)
-	{
-		dtmp = 0;
-		if (j <= (*CUDA_CC).Ncoef)
-		{
-			for (i = 1; i <= (*CUDA_CC).Numfac; i++)
-			{
-				/* Darea[i] * Dg[i][j] == Area[i] * Dsph[i][j] (Area = Darea*g) */
-				dtmp += (*CUDA_LCC).Area[i] * (*CUDA_CC).Dsph[i][j] * (*CUDA_CC).Nor[i][nc];
-
-				//if (blockIdx.x == 0 && j == 8)
-				//	printf("[%d][%3d]  Darea[%4d]: %.7f, Dg[%4d]: %.7f, Nor[%3d][%3d]: %10.7f\n",
-				//		blockIdx.x, threadIdx.x, i, (*CUDA_CC).Darea[i], mm, (*CUDA_LCC).Dg[mm], i, nc, (*CUDA_CC).Nor[i][nc]);
-			}
-		}
-
-		(*CUDA_LCC).dyda[j] = dtmp;
-
-		//if (blockIdx.x == 0) // && threadIdx.x == 1)
-		//    printf("[mrqcof_curve1_last -> conv] [%d][%3d] jp - 1: %3d, j[%3d] dyda[%3d]: %10.7f\n",
-		//        blockIdx.x, threadIdx.x, nc, j, j, (*CUDA_LCC).dyda[j]);
-	}
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	/* the derivatives w.r.t. the shape coefficients are computed for all
+	   points at once in mrqcof_curve1_last */
 
 	return (tmp);
 }
@@ -1337,7 +1291,6 @@ void mrqcof_start(
 		beta[j] = 0;
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads(); //pro jistotu
 
 	//int q = (*CUDA_CC).Ncoef0 + 2;
 	//if (blockIdx.x == 0)
@@ -1391,7 +1344,13 @@ void mrqcof_curve1(
 	if (brtmph > Lpoints) brtmph = Lpoints;
 	brtmpl++;
 
-	for (jp = brtmpl; jp <= brtmph; jp++)
+	/* points are dealt out round-robin (jp = t+1, t+1+BLOCK_DIM, ...) rather than
+	   in contiguous blocks of ceil(Lpoints/BLOCK_DIM): every point is
+	   independent, and this packs the last partial round into as few
+	   wavefronts as possible (156 points: 5 wave32 rounds instead of 6). The
+	   ytemp partial sums below keep the contiguous blocks, so ave is summed
+	   in the same order as before. */
+	for (jp = threadIdx.x + 1; jp <= Lpoints; jp += BLOCK_DIM)
 	{
 			/*  ---  BRIGHT  ---  */
 		bright(CUDA_LCC, CUDA_CC, cg, jp, Lpoints1, Inrel, scr);
@@ -1514,11 +1473,41 @@ void mrqcof_curve1_last(
 	//if (threadIdx.x == 0)
 	//	printf("conv>>> [%d] \n", blockIdx.x);
 
+	/* convexity derivatives dyda[l] = sum_i Area[i] * Dsph[i][l] * Nor[i][nc]
+	   of every point (nc = jp-1) in ONE pass over the facets - it used to be
+	   one pass per point inside conv(). Area/Dsph are read once for all
+	   points and the per-point sums become independent chains; each sum keeps
+	   its facet order and operand rounding, and dave[l] still accumulates the
+	   points in ascending order (each l belongs to one work-item). */
+	for (l = tmpl; l <= tmph; l++)
+	{
+		for (int jb = 0; jb < Lpoints; jb += 3)
+		{
+			double d[3] = { 0, 0, 0 };
+			if (l <= (*CUDA_CC).Ncoef)
+			{
+				for (int i = 1; i <= (*CUDA_CC).Numfac; i++)
+				{
+					/* Darea[i] * Dg[i][l] == Area[i] * Dsph[i][l] (Area = Darea*g) */
+					double ad = (*CUDA_LCC).Area[i] * (*CUDA_CC).Dsph[i][l];
+					for (int q = 0; q < 3; q++)
+						d[q] += ad * (*CUDA_CC).Nor[i][jb + q];
+				}
+			}
+			for (int q = 0; q < 3 && jb + q < Lpoints; q++)
+			{
+				dytempG[(jb + q) * DYT_STRIDE + l] = d[q];
+				if (Inrel == 1)
+					(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + d[q];
+			}
+		}
+	}
+
 	for (jp = 1; jp <= Lpoints; jp++)
 	{
 		lnp++;
 		// *--- CONV() ---* //
-		ymod = conv(CUDA_LCC, CUDA_CC, res, jp - 1, tmpl, tmph, brtmpl, brtmph);
+		ymod = conv(CUDA_LCC, CUDA_CC, res, jp - 1, brtmpl, brtmph);
 
 		if (threadIdx.x == 0)
 		{
@@ -1526,13 +1515,6 @@ void mrqcof_curve1_last(
 
 			if (Inrel == 1)
 				lave = lave + ymod;
-		}
-		for (l = tmpl; l <= tmph; l++)
-		{
-			dytempG[(jp - 1) * DYT_STRIDE + l] = (*CUDA_LCC).dyda[l];
-
-			if (Inrel == 1)
-				(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dyda[l];
 		}
 		/* save lightcurves */
 		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
@@ -1558,9 +1540,12 @@ double mrqcof_end(
 	threadIdx.x = get_local_id(0);
 	blockIdx.x = get_group_id(0);
 
+	/* mirror the lower triangle; each row is split over the work-group
+	   (reads are contiguous, source and destination never overlap) */
+	int lsize = get_local_size(0);
 	for (int j = 2; j <= (*CUDA_CC).Mfit; j++)
 	{
-		for (k = 1; k <= j - 1; k++)
+		for (k = 1 + threadIdx.x; k <= j - 1; k += lsize)
 		{
 			alpha[k * (*CUDA_CC).Mfit1 + j] = alpha[j * (*CUDA_CC).Mfit1 + k];
 			//if (blockIdx.x ==0 && threadIdx.x == 0)
@@ -1647,7 +1632,7 @@ int gauss_errc(
 
 	for (i = 1; i <= n; i++)
 	{
-		big = 0;
+		big = -1.0;
 		irow = 0;
 		licol = 0;
 		for (j = brtmpl; j <= brtmph; j++)
@@ -1717,32 +1702,28 @@ int gauss_errc(
 
 			if (covL[covarIdx] == 0.0)
 			{
-				/* singular pivot: report the (partial) step like the old code
-				   did, then bail with error 2 */
-				for (j = 1; j <= n; j++)
-				{
-					(*CUDA_LCC).da[j] = daL[j];
-				}
-				j = 0;
 				for (int l2 = 1; l2 <= (*CUDA_CC).ma; l2++)
 				{
-					if ((*CUDA_CC).ia[l2])
-					{
-						j++;
-						(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2] + (*CUDA_LCC).da[j];
-					}
+					(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2];
 				}
 
-				return(2);
+				icolBC[0] = -1;
 			}
+			else
+			{
+				pivBC[0] = ddiv(1.0, covL[covarIdx]);
+				covL[covarIdx] = 1.0;
 
-			pivBC[0] = 1.0 / covL[covarIdx];
-			covL[covarIdx] = 1.0;
-
-			daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+				daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+			}
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+
+		if (icolBC[0] < 0)
+		{
+			return(2);
+		}
 
 		for (l = brtmpl; l <= brtmph; l++)
 		{
@@ -1837,9 +1818,6 @@ int mrqmin_1_end(
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 	}
-	// >>> Iter1Mrqmin1EndPre1 END
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	// The damped matrix is staged straight from alpha into local memory by
 	// gauss_errc; covar is not touched at all (it is rezeroed by
@@ -1867,9 +1845,6 @@ int mrqmin_1_end(
 			}
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-	// <<< Iter1Mrqmin1EndPost END
-
 	return err_code;
 }
 
@@ -1886,27 +1861,35 @@ void mrqmin_2_end(
 	blockIdx.x = get_group_id(0);
 	threadIdx.x = get_local_id(0);
 
+	/* the copies are split over the work-group, the scalar updates are done
+	   by work-item 0. The branch stays uniform: the only write to Chisq /
+	   Ochisq (else branch) sets Chisq = Ochisq, which keeps the test false. */
+	int lsize = get_local_size(0);
+
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / (*CUDA_CC).Alamda_incr;
+		if (threadIdx.x == 0)
+			(*CUDA_LCC).Alamda = ddiv((*CUDA_LCC).Alamda, (*CUDA_CC).Alamda_incr);
 		for (j = 1; j <= (*CUDA_CC).Mfit; j++)
 		{
-			for (k = 1; k <= (*CUDA_CC).Mfit; k++)
+			for (k = 1 + threadIdx.x; k <= (*CUDA_CC).Mfit; k += lsize)
 			{
 				alphaG[j * (*CUDA_CC).Mfit1 + k] = covarG[j * (*CUDA_CC).Mfit1 + k];
 
 				//if (blockIdx.x == 0)
 				//	printf("alpha[%3d]: %10.7f\n", alphaG[j * (*CUDA_CC).Mfit1 + k]);
 			}
-
+		}
+		for (j = 1 + threadIdx.x; j <= (*CUDA_CC).Mfit; j += lsize)
+		{
 			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
 		}
-		for (l = 1; l <= (*CUDA_CC).ma; l++)
+		for (l = 1 + threadIdx.x; l <= (*CUDA_CC).ma; l += lsize)
 		{
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
 		}
 	}
-	else
+	else if (threadIdx.x == 0)
 	{
 		(*CUDA_LCC).Alamda = (*CUDA_CC).Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;
@@ -1914,22 +1897,6 @@ void mrqmin_2_end(
 
 
 }
-kernel void k(){}
-kernel void ClCheckEnd(
-    __global int* CUDA_End,
-    int theEnd)
-{
-    int3 blockIdx;
-    blockIdx.x = get_group_id(0);
-
-    if (blockIdx.x == 0)
-        *CUDA_End = theEnd;
-
-    //if (blockIdx.x == 0)
-        //printf("CheckEnd CUDA_End: %2d\n", *CUDA_End);
-
-}
-
 __kernel void ClCalculatePrepare(
     __global struct mfreq_context* CUDA_mCC,
     __global struct freq_result* CUDA_FR,
@@ -1985,7 +1952,6 @@ __kernel void ClCalculatePrepare(
 
     //printf("n: %4d, CUDA_CC[%3d].freq: %10.7f, CUDA_FR[%3d].la_best: %10.7f, isInvalid: %4d \n", n, x, (*CUDA_LCC).freq, x, (*CUDA_LFR).la_best, (*CUDA_LCC).isInvalid);
 
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
     //if (blockIdx.x == 0)
         //printf("Prepare CUDA_End: %2d\n", *CUDA_End);
 }
@@ -2009,31 +1975,29 @@ __kernel void ClCalculatePreparePole(
     __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
     __global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
 
-    //int t = *CUDA_End;
+    /* launched with BLOCK_DIM work-items per group: the per-group loops are
+       strided over the group, the scalar setup is done by work-item 0 */
+    const int lsize = get_local_size(0);
+
+    /* CUDA_CC2 is no longer used: it only received a Brightness copy for a
+       host-side debug check that has been removed (kept so the kernel
+       argument indices stay unchanged) */
+
     //*CUDA_End = 13;
     //printf("[%d] PreparePole t: %d, CUDA_End: %d\n", x, t, *CUDA_End);
 
 
+    /* invalid contexts (n > n_max) are not counted here: the host knows how
+       many there are and starts CUDA_End at that count; isReported is already
+       0 for every context (host initialises CUDA_FR before each batch) */
     if ((*CUDA_LCC).isInvalid)
-    {
-        //atomic_add(CUDA_End, 1);
-        atomic_inc(CUDA_End);
-        //printf("prepare pole %d ", (*CUDA_End));
-
-        (*CUDA_FR).isReported = 0; //signal not to read result
-
-        //printf("[%d] isReported: %d \n", blockIdx.x, (*CUDA_FR).isReported);
-
         return;
-    }
 
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("[Device] PreparePole > ma: %d\n", (*CUDA_CC).ma);
 
-    double period = 1.0 / (*CUDA_LCC).freq;
-
     //* starts from the initial ellipsoid */
-    for (int i = 1; i <= (*CUDA_CC).Ncoef; i++)
+    for (int i = 1 + threadIdx.x; i <= (*CUDA_CC).Ncoef; i += lsize)
     {
         (*CUDA_LCC).cg[i] = CUDA_cg_first[i];
         //if(blockIdx.x == 0)
@@ -2042,6 +2006,22 @@ __kernel void ClCalculatePreparePole(
     //printf("Idx: %d | m: %d | Ncoef: %d\n", x, m, (*CUDA_CC).Ncoef);
     //printf("cg[%d]: %.7f\n", x, CUDA_CC[x].cg[CUDA_CC[x].Ncoef + 1]);
     //printf("Idx: %d | beta_pole[%d]: %.7f\n", x, m, CUDA_CC[x].beta_pole[m]);
+
+    for (int i = 1 + threadIdx.x; i <= (*CUDA_CC).Nphpar; i += lsize)
+    {
+        (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3 + i] = (*CUDA_CC).par[i];
+        //              ia[Ncoef+3+i] = ia_par[i]; moved to global
+        //if (blockIdx.x == 0)
+        //	printf("cg[%3d]: %10.7f\n", (*CUDA_CC).Ncoef + 3 + i, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3 + i]);
+
+    }
+
+    /* the remaining cg entries and the scalar state: work-item 0 only (the
+       indices are disjoint from the strided loops above) */
+    if (threadIdx.x != 0)
+        return;
+
+    double period = ddiv(1.0, (*CUDA_LCC).freq);
 
     /* which of the initial poles this group runs (see ClCalculatePrepare) */
     const int m = blockIdx.x % N_POLES + 1;
@@ -2065,21 +2045,12 @@ __kernel void ClCalculatePreparePole(
     //printf("cg[%d]: %.7f | cg[%d]: %.7f\n", (*CUDA_CC).Ncoef + 1, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 1], (*CUDA_CC).Ncoef + 2, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2]);
 
     /* Use omega instead of period */
-    (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3] = 24.0 * 2.0 * PI / period;
+    (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3] = ddiv(24.0 * 2.0 * PI, period);
 
     //if (threadIdx.x == 0)
     //{
     //	printf("[%3d] cg[%3d]: %10.7f, period: %10.7f\n", blockIdx.x, (*CUDA_CC).Ncoef + 3, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3], period);
     //}
-
-    for (int i = 1; i <= (*CUDA_CC).Nphpar; i++)
-    {
-        (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3 + i] = (*CUDA_CC).par[i];
-        //              ia[Ncoef+3+i] = ia_par[i]; moved to global
-        //if (blockIdx.x == 0)
-        //	printf("cg[%3d]: %10.7f\n", (*CUDA_CC).Ncoef + 3 + i, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3 + i]);
-
-    }
 
     /* Lommel-Seeliger part */
     (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3 + (*CUDA_CC).Nphpar + 2] = 1;
@@ -2110,17 +2081,6 @@ __kernel void ClCalculatePreparePole(
     (*CUDA_LCC).dev_new = 0;
     //	(*CUDA_LCC).Lastcall=0; always ==0
     (*CUDA_LFR).isReported = 0;
-
-    if (blockIdx.x == 0)
-    {
-        for (int i = 0; i < MAX_N_OBS + 1; i++)
-        {
-            //printf("[%d] %g", blockIdx.x, (*CUDA_CC).Brightness[i]);
-            (*CUDA_CC2).Brightness[i] = (*CUDA_CC).Brightness[i];
-        }
-    }
-
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Begin(
@@ -2130,18 +2090,18 @@ __kernel void ClCalculateIter1Begin(
     int CUDA_n_iter_min,
     int CUDA_n_iter_max,
     double CUDA_iter_diff_max,
-    double CUDA_Alamda_start)
+    double CUDA_Alamda_start,
+    int n_contexts)
 {
-    int3 blockIdx, threadIdx;
-    blockIdx.x = get_group_id(0);
-    threadIdx.x = get_local_id(0);
-    int x = blockIdx.x;
+    int x = get_global_id(0);
+    if (x >= n_contexts)
+        return;
 
     //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
     //const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
 
-    __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-    __global struct freq_result* CUDA_LFR = &CUDA_FR[blockIdx.x];
+    __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[x];
+    __global struct freq_result* CUDA_LFR = &CUDA_FR[x];
 
     if ((*CUDA_LCC).isInvalid)
     {
@@ -2183,8 +2143,7 @@ __kernel void ClCalculateIter1Begin(
 
     //if (threadIdx.x == 1)
     //	printf("[begin] Alamda: %10.7f\n", (*CUDA_LCC).Alamda);
-    //barrier(CLK_GLOBAL_MEM_FENCE); // TEST
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
 }
 
 __kernel void ClCalculateIter1Mrqcof1Start(
@@ -2218,7 +2177,6 @@ __kernel void ClCalculateIter1Mrqcof1Start(
 
     // => mrqcof_start(CUDA_LCC, (*CUDA_LCC).cg, (*CUDA_LCC).alpha, (*CUDA_LCC).beta);
     mrqcof_start(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, scr + (*CUDA_CC).offAlpha, (*CUDA_LCC).beta);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Matrix(
@@ -2252,32 +2210,35 @@ __kernel void ClCalculateIter1Mrqcof1Matrix(
     }
 
     mrqcof_matrix(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
-__kernel void ClCalculateIter1Mrqcof1Curve1(
+/* mrqcof pass over one lightcurve, curve1 part. trial == 0: the current
+   parameters (cg), skipped when the previous trial was rejected (isAlamda
+   == 0); trial == 1: the trial parameters (atry). One kernel for both passes
+   gives mrqcof_curve1 (and its bright()) a single call site, which the
+   compiler then inlines - with two callers it could emit a real function
+   call, costing the kernel ~248 VGPRs (occupancy 5 instead of 12). */
+__kernel void ClCalculateIter1MrqcofCurve1(
     __global struct mfreq_context* CUDA_mCC,
     __global struct freq_context* CUDA_CC,
     const int inrel,
     const int lpoints,
-    __global double* scratch)
+    __global double* scratch,
+    const int trial)
 {
     __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
 
     int3 blockIdx, threadIdx;
     blockIdx.x = get_group_id(0);
     threadIdx.x = get_local_id(0);
-    int x = blockIdx.x;
 
-    //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
     __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-    //double* dytemp = &CUDA_Dytemp[blockIdx.x];
 
     if ((*CUDA_LCC).isInvalid) return;
 
     if (!(*CUDA_LCC).isNiter) return;
 
-    if (!(*CUDA_LCC).isAlamda) return;
+    if (!trial && !(*CUDA_LCC).isAlamda) return;
 
     __local int num;  // __shared__
     __local double tmave[BLOCK_DIM];
@@ -2287,14 +2248,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve1(
         num = 0;
     }
 
-    mrqcof_curve1(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, tmave, inrel, lpoints, num, scr);
-
-    //if (blockIdx.x == 0 && threadIdx.x == 0)
-    //	printf("[Mrqcof1Curve1] [%d][%3d] alpha[56]: %10.7f\n", blockIdx.x, threadIdx.x, (*CUDA_LCC).alpha[56]);
-
-    //if (blockIdx.x == 0)
-    //	printf("dytemp[8636]: %10.7f\n", dytemp[8636]);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+    mrqcof_curve1(CUDA_LCC, CUDA_CC, trial ? (*CUDA_LCC).atry : (*CUDA_LCC).cg, tmave, inrel, lpoints, num, scr);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Curve1Last(
@@ -2333,15 +2287,19 @@ __kernel void ClCalculateIter1Mrqcof1Curve1Last(
     //		printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
     //	//}
     //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
-__kernel void ClCalculateIter1Mrqcof1Curve2(
+/* mrqcof pass over one lightcurve, curve2 part (normal equations).
+   trial == 0: into alpha/beta, skipped when isAlamda == 0; trial == 1: into
+   covar/da. One kernel for both passes gives mrqcof_curve2 a single call
+   site (see ClCalculateIter1MrqcofCurve1). */
+__kernel void ClCalculateIter1MrqcofCurve2(
     __global struct mfreq_context* CUDA_mCC,
     __global struct freq_context* CUDA_CC,
     const int inrel,
     const int lpoints,
-    __global double* scratch)
+    __global double* scratch,
+    const int trial)
 {
     __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
 
@@ -2349,35 +2307,22 @@ __kernel void ClCalculateIter1Mrqcof1Curve2(
     blockIdx.x = get_group_id(0);
     threadIdx.x = get_local_id(0);
 
-    //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
     __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-
-    //if (blockIdx.x == 0)
-    //printf("[%3d] isInvalid: %3d, isNiter: %3d, isAlamda: %3d\n", threadIdx.x, (*CUDA_LCC).isInvalid, (*CUDA_LCC).isNiter, (*CUDA_LCC).isAlamda);
 
     if ((*CUDA_LCC).isInvalid) return;
 
     if (!(*CUDA_LCC).isNiter) return;
 
-    if (!(*CUDA_LCC).isAlamda) return;
+    if (!trial && !(*CUDA_LCC).isAlamda) return;
 
     /* OpenCL requires __local declarations at kernel scope */
     __local double dydaT[CURVE2_K][DYT_STRIDE];
-    __local double tileS[3 * CURVE2_K];
+    __local double tileS[5 * CURVE2_K];   /* s2w, dws, dy, coef, coef1 */
 
-    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha, (*CUDA_LCC).beta, dydaT, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
-
-    //if (blockIdx.x == 0 && threadIdx.x == 0)
-    //	printf("[Mrqcof1Curve2] [%d][%3d] alpha[56]: %10.7f\n", blockIdx.x, threadIdx.x, (*CUDA_LCC).alpha[56]);
-
-    //if (threadIdx.x == 0)
-    //{
-    //	int i = 56;
-    //	//for (int i = 1; i <= 60; i++) {
-    //	printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
-    //	//}
-    //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+    mrqcof_curve2(CUDA_LCC, CUDA_CC,
+        scr + (trial ? (*CUDA_CC).offCovar : (*CUDA_CC).offAlpha),
+        trial ? (*CUDA_LCC).da : (*CUDA_LCC).beta,
+        dydaT, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, tileS + 3 * CURVE2_K, inrel, lpoints, scr);
 }
 
 __kernel void ClCalculateIter1Mrqcof1End(
@@ -2404,7 +2349,9 @@ __kernel void ClCalculateIter1Mrqcof1End(
     //	printf("Mrqcof1End\n");
 
 
-    (*CUDA_LCC).Ochisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha);
+    double ochisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha);
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Ochisq = ochisq;
 
 
     ////if (threadIdx.x == 0)
@@ -2414,7 +2361,6 @@ __kernel void ClCalculateIter1Mrqcof1End(
     //	printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
     //	//}
     ////}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqmin1End(
@@ -2470,7 +2416,6 @@ __kernel void ClCalculateIter1Mrqmin1End(
     //if (blockIdx.x == 0) {
     //	printf("[%3d] sh_icol[%3d]: %3d\n", threadIdx.x, threadIdx.x, sh_icol[threadIdx.x]);
     //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Start(
@@ -2500,7 +2445,6 @@ __kernel void ClCalculateIter1Mrqcof2Start(
 
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("alpha[56]: %10.7f\n", (*CUDA_LCC).alpha[56]);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Matrix(
@@ -2535,76 +2479,6 @@ __kernel void ClCalculateIter1Mrqcof2Matrix(
 
     //mrqcof_matrix(CUDA_LCC, (*CUDA_LCC).atry, lpoints);
     mrqcof_matrix(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
-}
-
-__kernel void ClCalculateIter1Mrqcof2Curve1(
-    __global struct mfreq_context* CUDA_mCC,
-    __global struct freq_context* CUDA_CC,
-    const int inrel,
-    const int lpoints,
-    __global double* scratch)
-{
-    __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
-
-    int3 blockIdx, threadIdx;
-    blockIdx.x = get_group_id(0);
-    threadIdx.x = get_local_id(0);
-
-    //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-    __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-    //double* dytemp = &CUDA_Dytemp[blockIdx.x];
-
-    if ((*CUDA_LCC).isInvalid) return;
-
-    if (!(*CUDA_LCC).isNiter) return;
-
-    __local int num;  // __shared__
-    __local double tmave[BLOCK_DIM];
-
-    if (threadIdx.x == 0)
-    {
-        num = 0;
-    }
-
-    //if (blockIdx.x == 0 && threadIdx.x == 0)
-    //	printf("Mrqcof2Curve1\n");
-
-    //mrqcof_curve1(CUDA_LCC, (*CUDA_LCC).atry, (*CUDA_LCC).covar, (*CUDA_LCC).da, inrel, lpoints);
-    mrqcof_curve1(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, tmave, inrel, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
-}
-
-__kernel void ClCalculateIter1Mrqcof2Curve2(
-    __global struct mfreq_context* CUDA_mCC,
-    __global struct freq_context* CUDA_CC,
-    //__global double* CUDA_Dytemp,
-    const int inrel,
-    const int lpoints,
-    __global double* scratch)
-{
-    __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
-
-    int3 blockIdx, threadIdx;
-    blockIdx.x = get_group_id(0);
-    threadIdx.x = get_local_id(0);
-
-    //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-    __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
-
-    if ((*CUDA_LCC).isInvalid) return;
-
-    if (!(*CUDA_LCC).isNiter) return;
-
-    //if (blockIdx.x == 0 && threadIdx.x == 0)
-    //	printf("Mrqcof2Curve2\n");
-
-    /* OpenCL requires __local declarations at kernel scope */
-    __local double dydaT[CURVE2_K][DYT_STRIDE];
-    __local double tileS[3 * CURVE2_K];
-
-    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar, (*CUDA_LCC).da, dydaT, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Curve1Last(
@@ -2632,7 +2506,6 @@ __kernel void ClCalculateIter1Mrqcof2Curve1Last(
 
     //mrqcof_curve1_last(CUDA_LCC, CUDA_CC, dytemp, (*CUDA_LCC).cg, (*CUDA_LCC).alpha, (*CUDA_LCC).beta, res, inrel, lpoints);
     mrqcof_curve1_last(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, scr + (*CUDA_CC).offCovar, (*CUDA_LCC).da, res, inrel, lpoints, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2End(
@@ -2653,11 +2526,12 @@ __kernel void ClCalculateIter1Mrqcof2End(
 
     if (!(*CUDA_LCC).isNiter) return;
 
-    (*CUDA_LCC).Chisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar);
+    double chisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar);
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Chisq = chisq;
 
     //if (blockIdx.x == 0)
     //	printf("[%3d] Chisq: %10.7f\n", threadIdx.x, (*CUDA_LCC).Chisq);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqmin2End(
@@ -2684,12 +2558,12 @@ __kernel void ClCalculateIter1Mrqmin2End(
     //mrqmin_2_end(CUDA_LCC, CUDA_ia, CUDA_ma);
     mrqmin_2_end(CUDA_LCC, CUDA_CC, scr);
 
-    (*CUDA_LCC).Niter++;
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Niter++;
 
     //if (blockIdx.x == 0)
     //	printf("[%3d] Niter: %d\n", threadIdx.x, (*CUDA_LCC).Niter);
     //printf("|");
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter2(
@@ -2714,15 +2588,13 @@ __kernel void ClCalculateIter2(
 
     if ((*CUDA_LCC).isNiter)
     {
-        if ((*CUDA_LCC).Niter == 1 || (*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
+        /* evaluated once, before anyone updates Ochisq: work-item 0 used to
+           write Ochisq inside this branch while other wavefronts could still
+           be evaluating the condition, which made the branch - and the
+           barriers in it - divergent */
+        const int improved = (*CUDA_LCC).Niter == 1 || (*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq;
+        if (improved)
         {
-            if (threadIdx.x == 0)
-            {
-                (*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
-            }
-
-            barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-
             int brtmph = (*CUDA_CC).Numfac / BLOCK_DIM;
             if ((*CUDA_CC).Numfac % BLOCK_DIM) brtmph++;
             int brtmpl = threadIdx.x * brtmph;
@@ -2731,9 +2603,14 @@ __kernel void ClCalculateIter2(
             brtmpl++;
 
             curv(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, brtmpl, brtmph);
+            /* work-item 0 sums the Area of every facet; this also orders every
+               read of Ochisq above before the write below */
+            barrier(CLK_GLOBAL_MEM_FENCE);
 
             if (threadIdx.x == 0)
             {
+                (*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
+
                 for (i = 1; i <= 3; i++)
                 {
                     (*CUDA_LCC).chck[i] = 0;
@@ -2762,14 +2639,13 @@ __kernel void ClCalculateIter2(
             }
         }
 
-        barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
 
         if (threadIdx.x == 0)
         {
             //if (blockIdx.x == 0)
             //	printf("ndata - 3: %3d\n", (*CUDA_CC).ndata - 3);
 
-            (*CUDA_LCC).dev_new = sqrt((*CUDA_LCC).rchisq / ((*CUDA_CC).ndata - 3));
+            (*CUDA_LCC).dev_new = sqrt(ddiv((*CUDA_LCC).rchisq, (double)((*CUDA_CC).ndata - 3)));
 
             //if (blockIdx.x == 233)
             //{
@@ -2787,9 +2663,7 @@ __kernel void ClCalculateIter2(
             //		(*CUDA_LFR).Niter=(*CUDA_LCC).Niter;
         }
 
-        barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
     }
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateFinishPole(
@@ -2830,7 +2704,7 @@ __kernel void ClCalculateFinishPole(
     //	printf("[%d] sum: %12.8f, dark: %12.8f, totarea: %12.8f, dark_best: %12.8f\n", blockIdx.x, sum, dark, totarea, dark / totarea * 100);
 
     /* period solution */
-    const double period = 2 * PI / (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3];
+    const double period = ddiv(2 * PI, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3]);
 
     /* pole solution */
     const double la_tmp = RAD2DEG * (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2];
@@ -2848,7 +2722,7 @@ __kernel void ClCalculateFinishPole(
         (*CUDA_LFR).dev_best = (*CUDA_LCC).dev_new;
         (*CUDA_LFR).dev_best_x2 = (*CUDA_LCC).rchisq;
         (*CUDA_LFR).per_best = period;
-        (*CUDA_LFR).dark_best = dark / totarea * 100;
+        (*CUDA_LFR).dark_best = ddiv(dark, totarea) * 100;
         (*CUDA_LFR).la_best = la_tmp < 0 ? la_tmp + 360.0 : la_tmp;
         (*CUDA_LFR).be_best = be_tmp;
 
@@ -2876,5 +2750,4 @@ __kernel void ClCalculateFinishPole(
     (*CUDA_LFR).chck[1]=(*CUDA_LCC).chck[1];
     (*CUDA_LFR).chck[2]=(*CUDA_LCC).chck[2];
     (*CUDA_LFR).chck[3]=(*CUDA_LCC).chck[3];*/
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }

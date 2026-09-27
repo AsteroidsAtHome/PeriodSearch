@@ -4,7 +4,7 @@ __global__ void CudaCalculatePrepare(int n_start, int n_max, double freq_start, 
 
 __global__ void CudaCalculatePreparePole(void);
 
-__global__ void CudaCalculateIter1Begin(void);
+__global__ void CudaCalculateIter1Begin(int n_contexts);
 
 __global__ void CudaCalculateIter1Mrqmin1End(void);
 

@@ -38,7 +38,6 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 		}
 
 	}
-	__syncthreads();
 
 	/* the damped matrix is staged straight from alpha into shared memory by
 	   the solver; covar is not touched (it is rezeroed by mrqcof_start before
@@ -66,7 +65,7 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 				(*CUDA_LCC).atry[l] = (*CUDA_LCC).cg[l] + (*CUDA_LCC).da[j];
 			}
 	}
-	__syncthreads();
+
 
 	return err_code;
 }
@@ -75,19 +74,24 @@ __device__ void mrqmin_2_end(freq_context* CUDA_LCC, int ia[], int ma)
 {
 	int j, k, l;
 
+	/* the copies are split over the block's threads, the scalar updates are
+	   done by thread 0. The branch stays uniform: the only write to Chisq /
+	   Ochisq (else branch) sets Chisq = Ochisq, which keeps the test false. */
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / CUDA_Alamda_incr;
+		if (threadIdx.x == 0)
+			(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / CUDA_Alamda_incr;
 		for (j = 1; j <= CUDA_mfit; j++)
 		{
-			for (k = 1; k <= CUDA_mfit; k++)
+			for (k = 1 + threadIdx.x; k <= CUDA_mfit; k += blockDim.x)
 				(*CUDA_LCC).alpha[j * CUDA_mfit1 + k] = (*CUDA_LCC).covar[j * CUDA_mfit1 + k];
-			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
 		}
-		for (l = 1; l <= ma; l++)
+		for (j = 1 + threadIdx.x; j <= CUDA_mfit; j += blockDim.x)
+			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
+		for (l = 1 + threadIdx.x; l <= ma; l += blockDim.x)
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
 	}
-	else
+	else if (threadIdx.x == 0)
 	{
 		(*CUDA_LCC).Alamda = CUDA_Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;

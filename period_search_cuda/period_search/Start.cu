@@ -48,21 +48,36 @@ __global__ void CudaCalculatePreparePole(void)
 	/* which of the initial poles this block runs (see CudaCalculatePrepare) */
 	const auto m = static_cast<int>(blockIdx.x) % N_POLES + 1;
 
+	/* launched with one warp per block: the coefficient copies are split over
+	   the warp, the scalar setup is done by thread 0. Invalid contexts
+	   (n > n_max) are not counted here - the host starts CUDA_End at their
+	   number. */
 	if ((*CUDA_LCC).isInvalid)
 	{
-		atomicAdd(&CUDA_End, 1);
-		(*CUDA_LFR).isReported = 0; //signal not to read result
+		if (threadIdx.x == 0)
+			(*CUDA_LFR).isReported = 0; //signal not to read result
 
 		return;
 	}
 
-	const auto period = 1 / (*CUDA_LCC).freq;
-
 	/* starts from the initial ellipsoid */
-	for (auto i = 1; i <= CUDA_Ncoef; i++)
+	for (int i = 1 + threadIdx.x; i <= CUDA_Ncoef; i += blockDim.x)
 	{
 		(*CUDA_LCC).cg[i] = CUDA_cg_first[i];
 	}
+
+	for (int i = 1 + threadIdx.x; i <= CUDA_Nphpar; i += blockDim.x)
+	{
+		(*CUDA_LCC).cg[CUDA_Ncoef + 3 + i] = CUDA_par[i];
+		//              ia[Ncoef+3+i] = ia_par[i]; moved to global
+	}
+
+	/* the remaining cg entries and the scalar state: thread 0 only (indices
+	   disjoint from the loops above) */
+	if (threadIdx.x != 0)
+		return;
+
+	const auto period = 1 / (*CUDA_LCC).freq;
 
 	(*CUDA_LCC).cg[CUDA_Ncoef + 1] = CUDA_beta_pole[m];
 	(*CUDA_LCC).cg[CUDA_Ncoef + 2] = CUDA_lambda_pole[m];
@@ -76,12 +91,6 @@ __global__ void CudaCalculatePreparePole(void)
 
 	/* Use omega instead of period */
 	(*CUDA_LCC).cg[CUDA_Ncoef + 3] = 24 * 2 * PI / period;
-
-	for (auto i = 1; i <= CUDA_Nphpar; i++)
-	{
-		(*CUDA_LCC).cg[CUDA_Ncoef + 3 + i] = CUDA_par[i];
-		//              ia[Ncoef+3+i] = ia_par[i]; moved to global
-	}
 
 	/* Lommel-Seeliger part */
 	(*CUDA_LCC).cg[CUDA_Ncoef + 3 + CUDA_Nphpar + 2] = 1;
@@ -101,10 +110,15 @@ __global__ void CudaCalculatePreparePole(void)
 	(*CUDA_LFR).isReported = 0;
 }
 
-__global__ void CudaCalculateIter1Begin(void)
+__global__ void CudaCalculateIter1Begin(int n_contexts)
 {
-	const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
-	const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
+	/* scalar per-context bookkeeping: one context per thread (not per block),
+	   so a warp serves 32 contexts; the grid is padded, hence the bound */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= n_contexts)
+		return;
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
 
 	if ((*CUDA_LCC).isInvalid)
 	{
@@ -162,7 +176,8 @@ __global__ void CudaCalculateIter1Mrqmin2End(void)
 	if (!(*CUDA_LCC).isNiter) return;
 
 	mrqmin_2_end(CUDA_LCC, CUDA_ia, CUDA_ma);
-	(*CUDA_LCC).Niter++;
+	if (threadIdx.x == 0)
+		(*CUDA_LCC).Niter++;
 }
 
 __global__ void CudaCalculateIter1Mrqcof1Start(void)
@@ -227,7 +242,9 @@ __global__ void CudaCalculateIter1Mrqcof1End(void)
 
 	if (!(*CUDA_LCC).isAlamda) return;
 
-	(*CUDA_LCC).Ochisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).alpha);
+	const double ochisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).alpha);
+	if (threadIdx.x == 0)
+		(*CUDA_LCC).Ochisq = ochisq;
 
 }
 
@@ -283,7 +300,9 @@ __global__ void CudaCalculateIter1Mrqcof2End(void)
 
 	if (!(*CUDA_LCC).isNiter) return;
 
-	(*CUDA_LCC).Chisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).covar);
+	const double chisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).covar);
+	if (threadIdx.x == 0)
+		(*CUDA_LCC).Chisq = chisq;
 }
 
 __global__ void CudaCalculateIter2(void)
@@ -297,14 +316,13 @@ __global__ void CudaCalculateIter2(void)
 
 	if ((*CUDA_LCC).isNiter)
 	{
-		if ((*CUDA_LCC).Niter == 1 || (*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
+		/* evaluated once, before anyone updates Ochisq: thread 0 used to write
+		   Ochisq inside this branch while other warps could still be
+		   evaluating the condition, which made the branch - and the
+		   __syncthreads() in it - divergent */
+		const bool improved = (*CUDA_LCC).Niter == 1 || (*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq;
+		if (improved)
 		{
-			if (threadIdx.x == 0)
-			{
-				(*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
-			}
-			__syncthreads();
-
 			auto brtmph = CUDA_Numfac / CUDA_BLOCK_DIM;
 			if (CUDA_Numfac % CUDA_BLOCK_DIM) brtmph++;
 			int brtmpl = threadIdx.x * brtmph;
@@ -313,9 +331,14 @@ __global__ void CudaCalculateIter2(void)
 			brtmpl++;
 
 			curv(CUDA_LCC, (*CUDA_LCC).cg, brtmpl, brtmph);
+			/* thread 0 sums the Area of every facet; this also orders every
+			   read of Ochisq above before the write below */
+			__syncthreads();
 
 			if (threadIdx.x == 0)
 			{
+				(*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
+
 				for (auto i = 1; i <= 3; i++)
 				{
 					(*CUDA_LCC).chck[i] = 0;

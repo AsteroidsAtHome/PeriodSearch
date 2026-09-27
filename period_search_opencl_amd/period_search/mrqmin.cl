@@ -49,9 +49,6 @@ int mrqmin_1_end(
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 	}
-	// >>> Iter1Mrqmin1EndPre1 END
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	// The damped matrix is staged straight from alpha into local memory by
 	// gauss_errc; covar is not touched at all (it is rezeroed by
@@ -79,9 +76,6 @@ int mrqmin_1_end(
 			}
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-	// <<< Iter1Mrqmin1EndPost END
-
 	return err_code;
 }
 
@@ -98,27 +92,35 @@ void mrqmin_2_end(
 	blockIdx.x = get_group_id(0);
 	threadIdx.x = get_local_id(0);
 
+	/* the copies are split over the work-group, the scalar updates are done
+	   by work-item 0. The branch stays uniform: the only write to Chisq /
+	   Ochisq (else branch) sets Chisq = Ochisq, which keeps the test false. */
+	int lsize = get_local_size(0);
+
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = ddiv((*CUDA_LCC).Alamda, (*CUDA_CC).Alamda_incr);
+		if (threadIdx.x == 0)
+			(*CUDA_LCC).Alamda = ddiv((*CUDA_LCC).Alamda, (*CUDA_CC).Alamda_incr);
 		for (j = 1; j <= (*CUDA_CC).Mfit; j++)
 		{
-			for (k = 1; k <= (*CUDA_CC).Mfit; k++)
+			for (k = 1 + threadIdx.x; k <= (*CUDA_CC).Mfit; k += lsize)
 			{
 				alphaG[j * (*CUDA_CC).Mfit1 + k] = covarG[j * (*CUDA_CC).Mfit1 + k];
 
 				//if (blockIdx.x == 0)
 				//	printf("alpha[%3d]: %10.7f\n", alphaG[j * (*CUDA_CC).Mfit1 + k]);
 			}
-
+		}
+		for (j = 1 + threadIdx.x; j <= (*CUDA_CC).Mfit; j += lsize)
+		{
 			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
 		}
-		for (l = 1; l <= (*CUDA_CC).ma; l++)
+		for (l = 1 + threadIdx.x; l <= (*CUDA_CC).ma; l += lsize)
 		{
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
 		}
 	}
-	else
+	else if (threadIdx.x == 0)
 	{
 		(*CUDA_LCC).Alamda = (*CUDA_CC).Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;
