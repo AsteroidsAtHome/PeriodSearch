@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by pscuda118.rc
+// Used by pscuda120.rc
 //
 #define IDI_ICON1                       101
 #define IDR_ORIGIN1                     103
