@@ -60,4 +60,6 @@ void curv(
 		/* Dg is no longer materialized: Dg[i][k] == g * Dsph[i][k] folds into the
 		   facet weights through Area (= Darea * g) - see bright.cl and conv.cl */
 	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 }

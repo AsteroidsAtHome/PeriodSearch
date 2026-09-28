@@ -1,7 +1,4 @@
 
-/* main-triangle elements per work-item: (DYT_STRIDE-1) rows at most */
-#define C2_EPT (((DYT_STRIDE - 1) * DYT_STRIDE / 2 + BLOCK_DIM - 1) / BLOCK_DIM)
-
 void mrqcof_curve2(
 	__global struct mfreq_context* CUDA_LCC,
 	__global struct freq_context* CUDA_CC,
@@ -11,7 +8,6 @@ void mrqcof_curve2(
 	__local double* s2wS,
 	__local double* dwsS,
 	__local double* dyS,
-	__local double* coefS,		/* 2 * CURVE2_K: per-point coef, coef1 */
 	int inrel,
 	int lpoints,
 	__global double* scr)
@@ -53,19 +49,52 @@ void mrqcof_curve2(
 	if (latmph > (*CUDA_CC).lastone) latmph = (*CUDA_CC).lastone;
 	latmpl++;
 
-	/* The relative-lightcurve renormalization (ytemp *= coef, dytemp column 1
-	   zeroed, dytemp[l] = coef * (dytemp[l] - coef1 * dave[l]) for l >= 2) used
-	   to be a separate in-place pass over the whole curve in global memory
-	   before the tiles re-read it. It is now applied while each tile is staged
-	   into local memory - same expressions, same values - which saves a full
-	   read + write of dytemp per curve (port of the HIP tree's fused I1
-	   renormalization). dytemp/ytemp are per-curve scratch: nothing reads the
-	   renormalized global copies afterwards. */
-	const int lnp1b = (*CUDA_LCC).np1;	/* point jp uses Sig[lnp1b + jp] */
-	const double ave = (*CUDA_LCC).ave;
-	__local double* coef1S = coefS + CURVE2_K;
+	/*   if ((*CUDA_LCC).Lastcall != 1) always ==0
+		 {*/
+	if (inrel /*==1*/)
+	{
+		for (jp = tmpl; jp <= tmph; jp++)
+		{
+			lnp1++;
+			int ixx = (jp - 1) * DYT_STRIDE + 1;
+			/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
+			dytempG[ixx] = 0;
 
-	/* everyone has read np1 before work-item 0 advances it */
+			//if (blockIdx.x == 0)
+			//	printf("[%d][%d] dytemp[%3d]: %10.7f\n", blockIdx.x, jp, ixx, dytempG[ixx]);
+
+			coef = ddiv((*CUDA_CC).Sig[lnp1] * lpoints, (*CUDA_LCC).ave);
+
+			//if (threadIdx.x == 0)
+			//	printf("[%d][%3d][%d] coef: %10.7f\n", blockIdx.x, threadIdx.x, jp, coef);
+
+			double yytmp = ytempG[jp];
+			coef1 = ddiv(yytmp, (*CUDA_LCC).ave);
+
+			//if (blockIdx.x == 0 && threadIdx.x == 0)
+			//	printf("[Device | mrqcof_curve2_1] [%3d]  yytmp[%3d]: %10.7f, ave: %10.7f\n", threadIdx.x, jp, yytmp, (*CUDA_LCC).ave);
+
+			ytempG[jp] = coef * yytmp;
+
+			//if (blockIdx.x == 0)
+			//	printf("[Device][%d][%3d] ytemp[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, jp, ytempG[jp]);
+
+			ixx++;
+
+			//if (threadIdx.x == 0)
+			//	printf("[%3d] jp[%3d] dytemp[%3d]: %10.7f\n", blockIdx.x, jp, ixx, dytempG[ixx]);
+
+			for (l = 2; l <= (*CUDA_CC).ma; l++, ixx++)
+			{
+				dytempG[ixx] = coef * (dytempG[ixx] - coef1 * (*CUDA_LCC).dave[l]);
+
+				//if (blockIdx.x == 0 && threadIdx.x == 0)
+				//	printf("[Device | mrqcof_curve2_1] [%3d]  coef1: %10.7f, dave[%3d]: %10.7f, dytemp[%3d]: %10.7f\n",
+				//		threadIdx.x, coef1, l, (*CUDA_LCC).dave[l], ixx, dytempG[ixx]);
+			}
+		}
+	}
+
 	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); 	//__syncthreads();
 
 	if (threadIdx.x == 0)
@@ -89,69 +118,26 @@ void mrqcof_curve2(
 	   within a tile only the summation order over the K points changes.
 
 	   dydaT[p][l] is point jp0+p's staged derivative row (renormalization
-	   applied while staging for a relative curve), 1-based parameter l. */
+	   already applied by the in-place pass above), 1-based parameter l. */
 	int jp0, p, P;
 	double wp[CURVE2_K];
-
-	/* Main triangle (rows l = l0..lastone, columns m = l0..l) flattened over
-	   the work-group: work-item t owns elements t, t + BLOCK_DIM, ... for the
-	   whole curve and keeps their running alpha values in registers, adding
-	   each tile's contribution exactly as the in-memory
-	   alpha = alpha + acc update did (same values, same order), and writes
-	   them back once at the end. Before, rows were swept one at a time with
-	   only l of BLOCK_DIM work-items busy and every tile did a global
-	   read-modify-write of the whole triangle. The two original index
-	   variants, element for element:
-	     absolute (ia[1] != 0): l0 = 1, alpha[l][m], beta[l]
-	     relative (ia[1] == 0): l0 = 2, alpha[l-1][m-1], beta[l-1]
-	   (frozen size scale). The ia-gated tail rows keep their code. */
-	const int rel = !(*CUDA_CC).ia[1];
-	const int l0 = rel ? 2 : 1;
-	const int nrows = (*CUDA_CC).lastone - l0 + 1;
-	const int ntri = nrows > 0 ? nrows * (nrows + 1) / 2 : 0;
-	const int Mfit1 = (*CUDA_CC).Mfit1;
-	int triLM[C2_EPT];		/* l * 64 + m of each owned element */
-	double triA[C2_EPT];	/* its running alpha value */
-	#pragma unroll
-	for (int t = 0; t < C2_EPT; t++)
-	{
-		int e = threadIdx.x + t * BLOCK_DIM;
-		triLM[t] = 0;
-		triA[t] = 0;
-		if (e < ntri)
-		{
-			/* row r of the triangle holds r + 1 elements */
-			int r = (int)((sqrt(8.0f * (float)e + 1.0f) - 1.0f) * 0.5f);
-			while ((r + 1) * (r + 2) / 2 <= e) r++;
-			while (r * (r + 1) / 2 > e) r--;
-			int lr = l0 + r, mr = l0 + (e - r * (r + 1) / 2);
-			triLM[t] = lr * 64 + mr;
-			triA[t] = alpha[(lr - rel) * Mfit1 + (mr - rel)];
-		}
-	}
-	const int browL = l0 + threadIdx.x;	/* beta row owned by this work-item */
-	const int ownB = browL <= (*CUDA_CC).lastone;
-	double betaR = ownB ? beta[browL - rel] : 0;
 
 	for (jp0 = 1; jp0 <= lpoints; jp0 += CURVE2_K)
 	{
 		P = lpoints - jp0 + 1;
 		if (P > CURVE2_K) P = CURVE2_K;
 
-		/* per-point scalars; for a relative curve also the renormalization
-		   factors, with the expressions of the former in-place pass */
+		/* stage the tile: consecutive work-items copy consecutive addresses */
+		for (m = threadIdx.x; m < P * DYT_STRIDE; m += BLOCK_DIM)
+		{
+			((__local double*)&dydaT[0][0])[m] = dytempG[(jp0 - 1) * DYT_STRIDE + m];
+		}
+
+		/* per-point scalars (ymod comes from the renormalized ytemp) */
 		if (threadIdx.x < P)
 		{
 			jp = jp0 + threadIdx.x;
 			ymod = ytempG[jp];
-			if (inrel)
-			{
-				coef = ddiv((*CUDA_CC).Sig[lnp1b + jp] * lpoints, ave);
-				coef1 = ddiv(ymod, ave);
-				coefS[threadIdx.x] = coef;
-				coef1S[threadIdx.x] = coef1;
-				ymod = coef * ymod;
-			}
 			sig2i = ddiv(1.0, ((*CUDA_CC).Sig[lnp2 + jp] * (*CUDA_CC).Sig[lnp2 + jp]));
 			wght = (*CUDA_CC).Weight[lnp2 + jp];
 			dy = (*CUDA_CC).Brightness[lnp2 + jp] - ymod;
@@ -162,90 +148,147 @@ void mrqcof_curve2(
 		}
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		/* stage the tile (consecutive work-items copy consecutive addresses),
-		   renormalizing on the way for a relative curve */
-		for (m = threadIdx.x; m < P * DYT_STRIDE; m += BLOCK_DIM)
+		if ((*CUDA_CC).ia[1]) //not relative
 		{
-			double v = dytempG[(jp0 - 1) * DYT_STRIDE + m];
-			if (inrel)
-			{
-				p = m / DYT_STRIDE;
-				l = m % DYT_STRIDE;
-				if (l == 1)
-					v = 0;	/* size-scale derivative is explicitly zero */
-				else if (l >= 2 && l <= (*CUDA_CC).ma)
-					v = coefS[p] * (v - coef1S[p] * (*CUDA_LCC).dave[l]);
-			}
-			((__local double*)&dydaT[0][0])[m] = v;
-		}
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		/* main triangle: register-resident elements */
-		#pragma unroll
-		for (int t = 0; t < C2_EPT; t++)
-		{
-			if (threadIdx.x + t * BLOCK_DIM < ntri)
-			{
-				int lr = triLM[t] / 64, mr = triLM[t] % 64;
-				double acc = 0;
-				for (int pp = 0; pp < P; pp++)
-				{
-					double w = dydaT[pp][lr] * s2wS[pp];
-					acc += w * dydaT[pp][mr];
-				}
-				triA[t] = triA[t] + acc;
-			}
-		}
-		if (ownB)
-		{
-			double bacc = 0;
-			for (int pp = 0; pp < P; pp++)
-				bacc += dwsS[pp] * dydaT[pp][browL];
-			betaR = betaR + bacc;
-		}
-
-		/* ia-gated tail rows l = lastone+1..lastma: unchanged */
-		j = nrows > 0 ? nrows : 0;
-		l = (*CUDA_CC).lastone + 1;
-		if (l < l0) l = l0;
-		for (; l <= (*CUDA_CC).lastma; l++)
-		{
-			if ((*CUDA_CC).ia[l])
+			j = 0;
+			for (l = 1; l <= (*CUDA_CC).lastone; l++)
 			{
 				j++;
 				for (p = 0; p < P; p++)
 					wp[p] = dydaT[p][l] * s2wS[p];
 
-				tmpl = latmpl;
-				if (rel && tmpl == 1) tmpl++;	//m==1
-				for (m = tmpl; m <= latmph; m++)
+				//precalc thread boundaries (same per-row partition as before)
+				tmph = l / BLOCK_DIM;
+				if (l % BLOCK_DIM) tmph++;
+				tmpl = threadIdx.x * tmph;
+				tmph = tmpl + tmph;
+				if (tmph > l) tmph = l;
+				tmpl++;
+				for (m = tmpl; m <= tmph; m++)
 				{
 					double acc = 0;
 					for (p = 0; p < P; p++)
 						acc += wp[p] * dydaT[p][m];
-					alpha[j * Mfit1 + m - rel] = alpha[j * Mfit1 + m - rel] + acc;
+					alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + acc;
 				} /* m */
 				if (threadIdx.x == 0)
 				{
-					k = (*CUDA_CC).lastone - rel;
-					for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
-					{
-						if ((*CUDA_CC).ia[m])
-						{
-							k++;
-							double acc = 0;
-							for (p = 0; p < P; p++)
-								acc += wp[p] * dydaT[p][m];
-							alpha[j * Mfit1 + k] = alpha[j * Mfit1 + k] + acc;
-						}
-					} /* m */
 					double bacc = 0;
 					for (p = 0; p < P; p++)
 						bacc += dwsS[p] * dydaT[p][l];
 					beta[j] = beta[j] + bacc;
 				}
-			}
-		} /* l */
+			} /* l */
+			for (; l <= (*CUDA_CC).lastma; l++)
+			{
+				if ((*CUDA_CC).ia[l])
+				{
+					j++;
+					for (p = 0; p < P; p++)
+						wp[p] = dydaT[p][l] * s2wS[p];
+
+					for (m = latmpl; m <= latmph; m++)
+					{
+						double acc = 0;
+						for (p = 0; p < P; p++)
+							acc += wp[p] * dydaT[p][m];
+						alpha[j * (*CUDA_CC).Mfit1 + m] = alpha[j * (*CUDA_CC).Mfit1 + m] + acc;
+					} /* m */
+					if (threadIdx.x == 0)
+					{
+						k = (*CUDA_CC).lastone;
+						for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
+						{
+							if ((*CUDA_CC).ia[m])
+							{
+								k++;
+								double acc = 0;
+								for (p = 0; p < P; p++)
+									acc += wp[p] * dydaT[p][m];
+								alpha[j * (*CUDA_CC).Mfit1 + k] = alpha[j * (*CUDA_CC).Mfit1 + k] + acc;
+							}
+						} /* m */
+						double bacc = 0;
+						for (p = 0; p < P; p++)
+							bacc += dwsS[p] * dydaT[p][l];
+						beta[j] = beta[j] + bacc;
+					}
+				}
+			} /* l */
+		}
+		else //relative ia[1]==0
+		{
+			j = 0;
+			for (l = 2; l <= (*CUDA_CC).lastone; l++)
+			{
+				j++;
+				for (p = 0; p < P; p++)
+					wp[p] = dydaT[p][l] * s2wS[p];
+
+				//precalc thread boundaries
+				tmph = l / BLOCK_DIM;
+				if (l % BLOCK_DIM) tmph++;
+				tmpl = threadIdx.x * tmph;
+				tmph = tmpl + tmph;
+				if (tmph > l) tmph = l;
+				tmpl++;
+				//m==1: the frozen size-scale parameter is skipped
+				if (tmpl == 1) tmpl++;
+				for (m = tmpl; m <= tmph; m++)
+				{
+					double acc = 0;
+					for (p = 0; p < P; p++)
+						acc += wp[p] * dydaT[p][m];
+					alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + acc;
+				} /* m */
+				if (threadIdx.x == 0)
+				{
+					double bacc = 0;
+					for (p = 0; p < P; p++)
+						bacc += dwsS[p] * dydaT[p][l];
+					beta[j] = beta[j] + bacc;
+				}
+			} /* l */
+			for (; l <= (*CUDA_CC).lastma; l++)
+			{
+				if ((*CUDA_CC).ia[l])
+				{
+					j++;
+					for (p = 0; p < P; p++)
+						wp[p] = dydaT[p][l] * s2wS[p];
+
+					tmpl = latmpl;
+					//m==1
+					if (tmpl == 1) tmpl++;
+					for (m = tmpl; m <= latmph; m++)
+					{
+						double acc = 0;
+						for (p = 0; p < P; p++)
+							acc += wp[p] * dydaT[p][m];
+						alpha[j * (*CUDA_CC).Mfit1 + m - 1] = alpha[j * (*CUDA_CC).Mfit1 + m - 1] + acc;
+					} /* m */
+					if (threadIdx.x == 0)
+					{
+						k = (*CUDA_CC).lastone - 1;
+						for (m = (*CUDA_CC).lastone + 1; m <= l; m++)
+						{
+							if ((*CUDA_CC).ia[m])
+							{
+								k++;
+								double acc = 0;
+								for (p = 0; p < P; p++)
+									acc += wp[p] * dydaT[p][m];
+								alpha[j * (*CUDA_CC).Mfit1 + k] = alpha[j * (*CUDA_CC).Mfit1 + k] + acc;
+							}
+						} /* m */
+						double bacc = 0;
+						for (p = 0; p < P; p++)
+							bacc += dwsS[p] * dydaT[p][l];
+						beta[j] = beta[j] + bacc;
+					}
+				}
+			} /* l */
+		}
 
 		/* chi-square: same per-point terms in the same ascending order */
 		for (p = 0; p < P; p++)
@@ -256,18 +299,6 @@ void mrqcof_curve2(
 		/* everyone must finish reading dydaT before the next tile overwrites it */
 		barrier(CLK_LOCAL_MEM_FENCE);
 	} /* jp0 */
-
-	#pragma unroll
-	for (int t = 0; t < C2_EPT; t++)
-	{
-		if (threadIdx.x + t * BLOCK_DIM < ntri)
-		{
-			int lr = triLM[t] / 64, mr = triLM[t] % 64;
-			alpha[(lr - rel) * Mfit1 + (mr - rel)] = triA[t];
-		}
-	}
-	if (ownB)
-		beta[browL - rel] = betaR;
 
 	lnp2 += lpoints;
 

@@ -1,5 +1,4 @@
-﻿
-#if !defined _WIN32
+﻿#if !defined _WIN32
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120 /* clEnqueueFillBuffer needs 1.2 */
 #endif
@@ -90,10 +89,6 @@ cl_kernel kernelCalculatePreparePole;
 cl_kernel kernelCalculateIter1Begin;
 cl_kernel kernelCalculateIter1Mrqcof1Start;
 cl_kernel kernelCalculateIter1Mrqcof1Matrix;
-/* 'trial' argument of the merged Mrqcof curve kernels: 0 = pass over the
-   current parameters (cg -> alpha/beta), 1 = trial parameters (atry ->
-   covar/da) */
-static const cl_int curvePassCurrent = 0, curvePassTrial = 1;
 cl_kernel kernelCalculateIter1Mrqcof1Curve1;
 cl_kernel kernelCalculateIter1Mrqcof1Curve2;
 cl_kernel kernelCalculateIter1Mrqcof1Curve1Last;
@@ -457,7 +452,7 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
     auto SMXBlock = 32;
     //CUDA_grid_dim = msCount * SMXBlock; //  24 * 32
     //CUDA_grid_dim = 8 * 32 = 256; 6 * 32 = 192
-    CUDA_grid_dim = 2 * msCount * SMXBlock; // e.g. 256 on an RX 550
+    CUDA_grid_dim = 2 * msCount * SMXBlock; // 256 (RX 550), 384 (1050Ti), 1536 (Nvidia GTX1660Ti), 768 (Intel Graphics HD)
     std::cerr << "Resident blocks per multiprocessor: " << SMXBlock << endl;
     std::cerr << "Grid dim: " << CUDA_grid_dim << " = 2 * " << msCount << " * " << SMXBlock << endl;
     std::cerr << "Block dim: " << BLOCK_DIM << endl;
@@ -774,15 +769,15 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
         kernelCalculateIter1Begin = clCreateKernel(program, string("ClCalculateIter1Begin").c_str(), &kerr);
         kernelCalculateIter1Mrqcof1Start = clCreateKernel(program, string("ClCalculateIter1Mrqcof1Start").c_str(), &kerr);
         kernelCalculateIter1Mrqcof1Matrix = clCreateKernel(program, string("ClCalculateIter1Mrqcof1Matrix").c_str(), &kerr);
-        kernelCalculateIter1Mrqcof1Curve1 = clCreateKernel(program, string("ClCalculateIter1MrqcofCurve1").c_str(), &kerr);
-        kernelCalculateIter1Mrqcof1Curve2 = clCreateKernel(program, string("ClCalculateIter1MrqcofCurve2").c_str(), &kerr);
+        kernelCalculateIter1Mrqcof1Curve1 = clCreateKernel(program, string("ClCalculateIter1Mrqcof1Curve1").c_str(), &kerr);
+        kernelCalculateIter1Mrqcof1Curve2 = clCreateKernel(program, string("ClCalculateIter1Mrqcof1Curve2").c_str(), &kerr);
         kernelCalculateIter1Mrqcof1Curve1Last = clCreateKernel(program, string("ClCalculateIter1Mrqcof1Curve1Last").c_str(), &kerr);
         kernelCalculateIter1Mrqcof1End = clCreateKernel(program, string("ClCalculateIter1Mrqcof1End").c_str(), &kerr);
         kernelCalculateIter1Mrqmin1End = clCreateKernel(program, string("ClCalculateIter1Mrqmin1End").c_str(), &kerr);
         kernelCalculateIter1Mrqcof2Start = clCreateKernel(program, string("ClCalculateIter1Mrqcof2Start").c_str(), &kerr);
         kernelCalculateIter1Mrqcof2Matrix = clCreateKernel(program, string("ClCalculateIter1Mrqcof2Matrix").c_str(), &kerr);
-        kernelCalculateIter1Mrqcof2Curve1 = clCreateKernel(program, string("ClCalculateIter1MrqcofCurve1").c_str(), &kerr);
-        kernelCalculateIter1Mrqcof2Curve2 = clCreateKernel(program, string("ClCalculateIter1MrqcofCurve2").c_str(), &kerr);
+        kernelCalculateIter1Mrqcof2Curve1 = clCreateKernel(program, string("ClCalculateIter1Mrqcof2Curve1").c_str(), &kerr);
+        kernelCalculateIter1Mrqcof2Curve2 = clCreateKernel(program, string("ClCalculateIter1Mrqcof2Curve2").c_str(), &kerr);
         kernelCalculateIter1Mrqcof2Curve1Last = clCreateKernel(program, string("ClCalculateIter1Mrqcof2Curve1Last").c_str(), &kerr);
         kernelCalculateIter1Mrqcof2End = clCreateKernel(program, "ClCalculateIter1Mrqcof2End", &kerr);
         kernelCalculateIter1Mrqmin2End = clCreateKernel(program, "ClCalculateIter1Mrqmin2End", &kerr);
@@ -1287,8 +1282,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     err = clSetKernelArg(kernelCalculateIter1Begin, 4, sizeof(int), &n_iter_max);
     err = clSetKernelArg(kernelCalculateIter1Begin, 5, sizeof(double), &iter_diff_max);
     err = clSetKernelArg(kernelCalculateIter1Begin, 6, sizeof(double), &((*Fa).Alamda_start));
-    cl_int nContexts = (cl_int)CUDA_grid_dim_precalc;
-    err = clSetKernelArg(kernelCalculateIter1Begin, 7, sizeof(cl_int), &nContexts);
 
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 1, sizeof(cl_mem), &CUDA_CC);
@@ -1327,19 +1320,15 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Matrix, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1, 5, sizeof(cl_int), &curvePassCurrent);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1Last, 4, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve2, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve2, 5, sizeof(cl_int), &curvePassCurrent);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqmin1End, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Start, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Matrix, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1, 5, sizeof(cl_int), &curvePassTrial);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1Last, 4, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve2, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve2, 5, sizeof(cl_int), &curvePassTrial);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqmin2End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
 
@@ -1380,10 +1369,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     /* Sets local_work_size to BLOCK_DIM = 128 */
     size_t local = BLOCK_DIM;
     size_t sLocal = 1;
-    /* one context per work-item for the scalar per-context kernels, global
-       size padded to ctxLocal (the kernel bounds-checks) */
-    size_t ctxLocal = 64;
-    size_t ctxGlobal = ((size_t)nContexts + ctxLocal - 1) / ctxLocal * ctxLocal;
 
     for (n = 1; n <= max_test_periods; n += (int)precalcFreqs)
     {
@@ -1404,9 +1389,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             ((freq_result*)pfr)[m].dev_best_x2 = 0.0;
         }
 
-        /* non-blocking: the in-order queue orders it before the kernels and the
-           host does not touch pfr again until the blocking result read */
-        clEnqueueWriteBuffer(queue, CUDA_FR, CL_FALSE, 0, frSize, pfr, 0, NULL, NULL);
+        clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
         err = clSetKernelArg(kernelCalculatePrepare, 6, sizeof(n), &n);
         err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
         if (getError(err)) return err;
@@ -1415,24 +1398,41 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         /* all N_POLES pole trials of this batch run concurrently as separate
            work-groups */
         {
-            /* contexts with n > n_max are invalid (see ClCalculatePrepare) and never
-               iterate: start the End counter at their number instead of counting
-               them with an atomic in ClCalculatePreparePole */
-            cl_int nFreqs = (cl_int)(CUDA_grid_dim_precalc / N_POLES);
-            cl_int nValid = max_test_periods - n + 1;
-            if (nValid < 0) nValid = 0;
-            if (nValid > nFreqs) nValid = nFreqs;
-            cl_int endStart = (nFreqs - nValid) * N_POLES;
-            theEnd = 0;
-            /* non-blocking: endStart lives until the End reads below have been waited on */
-            err = clEnqueueWriteBuffer(queue, CUDA_End, CL_FALSE, 0, sizeof(endStart), &endStart, 0, NULL, NULL);
-            cl_int endRead[2] = { 0, 0 };
-            cl_event endEvent[2] = { NULL, NULL };
-            int endSlot = 0;
-            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+            theEnd = 0; //zero global End signal
+            err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
 
+            //void* pFb = clEnqueueMapBuffer(queue, CUDA_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
+            //clFlush(queue);
+            clEnqueueReadBuffer(queue, CUDA_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
+            int error = 0;
+            for (int j = 0; j < MAX_N_OBS + 1; j++) {
+                if ((*(freq_context*)pFb).Brightness[j] != (*Fa).Brightness[j]) {
+                    error++;
+                }
+            }
+
+            clEnqueueReadBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
+            //pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_READ, 0, pccSize, 0, NULL, NULL, &err);
+            //clFlush(queue);
+            int errCnt = 0;
+            for (int j = 0; j < CUDA_grid_dim_precalc; j++)
+            {
+                for (int i = 1; i <= n_coef; i++)
+                {
+                    auto CUDA_LCC = ((mfreq_context*)pcc)[j];
+                    if (CUDA_LCC.cg[i] != cg_first[i])
+                    {
+                        errCnt++;
+                    }
+                    //if(blockIdx.x == 0)
+                    //	printf("cg[%3d]: %10.7f\n", i, CUDA_cg_first[i]);
+                }
+            }
+            //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
+            clEnqueueUnmapMemObject(queue, CUDA_CC2, pFb, 0, NULL, NULL);
             clFlush(queue);
 #ifdef _DEBUG
             // printf(".");
@@ -1443,7 +1443,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             while (!theEnd)
             {
                 count++;
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1482,7 +1482,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1526,11 +1526,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1538,33 +1538,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue); // ***
 
-                /* pipelined End check: read this iteration's counter without blocking
-                   and act on the previous iteration's value, so the next iteration is
-                   already queued while the host waits. The one extra iteration this
-                   runs at the end is a no-op (every context has isNiter == 0, so all
-                   kernels return early and Iter1Begin does not count anything again) */
-                err = clEnqueueReadBuffer(queue, CUDA_End, CL_FALSE, 0, sizeof(cl_int), &endRead[endSlot], 0, NULL, &endEvent[endSlot]);
-                if (getError(err)) return err;
-                clFlush(queue);
-                endSlot ^= 1;
-                if (endEvent[endSlot])
-                {
-                    clWaitForEvents(1, &endEvent[endSlot]);
-                    clReleaseEvent(endEvent[endSlot]);
-                    endEvent[endSlot] = NULL;
-                    theEnd = endRead[endSlot] == CUDA_grid_dim_precalc;
-                }
-            }
+                err = clEnqueueReadBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
-            /* wait for the outstanding End read before endRead / endStart go out of scope */
-            for (int e = 0; e < 2; e++)
-            {
-                if (endEvent[e])
-                {
-                    clWaitForEvents(1, &endEvent[e]);
-                    clReleaseEvent(endEvent[e]);
-                    endEvent[e] = NULL;
-                }
+                // printf("[%d][%d][%d] %d\n", n, m, count, theEnd);
+                theEnd = theEnd == CUDA_grid_dim_precalc;
             }
 
             err = EnqueueNDRangeKernel(queue, kernelCalculateFinishPole, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
@@ -1835,7 +1812,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #endif
 
 
-
     for (m = 0; m < CUDA_grid_dim; m++)
     {
         //std::fill_n(pcc[m].Area, MAX_N_FAC + 1, 0.0);
@@ -1944,7 +1920,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     cl_mem CUDA_FR = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, frSize, pfr, &err);
 #endif // WIN
 
-
         //pfr = queue.enqueueMapBuffer(CUDA_FR, CL_NON_BLOCKING, CL_MAP_READ | CL_MAP_WRITE, 0, frSize, NULL, NULL, err);
         //queue.flush();
 
@@ -1973,8 +1948,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clSetKernelArg(kernelCalculateIter1Begin, 4, sizeof(int), &n_iter_max);
     err = clSetKernelArg(kernelCalculateIter1Begin, 5, sizeof(double), &iter_diff_max);
     err = clSetKernelArg(kernelCalculateIter1Begin, 6, sizeof(double), &((*Fa).Alamda_start));
-    cl_int nContexts = (cl_int)CUDA_grid_dim;
-    err = clSetKernelArg(kernelCalculateIter1Begin, 7, sizeof(cl_int), &nContexts);
 
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 0, sizeof(cl_mem), &CUDA_MCC2);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 1, sizeof(cl_mem), &CUDA_CC);
@@ -2013,19 +1986,15 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Start, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Matrix, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1, 5, sizeof(cl_int), &curvePassCurrent);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve1Last, 4, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve2, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof1Curve2, 5, sizeof(cl_int), &curvePassCurrent);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof1End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqmin1End, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Start, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Matrix, 3, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1, 5, sizeof(cl_int), &curvePassTrial);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve1Last, 4, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve2, 4, sizeof(cl_mem), &CUDA_SCRATCH);
-    err = clSetKernelArg(kernelCalculateIter1Mrqcof2Curve2, 5, sizeof(cl_int), &curvePassTrial);
     err = clSetKernelArg(kernelCalculateIter1Mrqcof2End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
     err = clSetKernelArg(kernelCalculateIter1Mrqmin2End, 2, sizeof(cl_mem), &CUDA_SCRATCH);
 
@@ -2069,10 +2038,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     int count = 0;
     size_t local = BLOCK_DIM;
     size_t sLocal = 1;
-    /* one context per work-item for the scalar per-context kernels, global
-       size padded to ctxLocal (the kernel bounds-checks) */
-    size_t ctxLocal = 64;
-    size_t ctxGlobal = ((size_t)nContexts + ctxLocal - 1) / ctxLocal * ctxLocal;
 
     // freq_result* fres;
 
@@ -2096,9 +2061,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
         // queue.enqueueUnmapMemObject(CUDA_FR, pfr);
         // queue.flush();
-        /* non-blocking: the in-order queue orders it before the kernels and the
-           host does not touch pfr again until the blocking result read */
-        clEnqueueWriteBuffer(queue, CUDA_FR, CL_FALSE, 0, frSize, pfr, 0, NULL, NULL);
+        clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
         err = clSetKernelArg(kernelCalculatePrepare, 6, sizeof(n), &n);
         err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
         if (getError(err)) return err;
@@ -2119,21 +2082,9 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.4f%%\n", now->tm_hour, now->tm_min, now->tm_sec, fraction2);
 #endif
 
-            /* contexts with n > n_max are invalid (see ClCalculatePrepare) and never
-               iterate: start the End counter at their number instead of counting
-               them with an atomic in ClCalculatePreparePole */
-            cl_int nFreqs = (cl_int)(CUDA_grid_dim / N_POLES);
-            cl_int nValid = n_max - n + 1;
-            if (nValid < 0) nValid = 0;
-            if (nValid > nFreqs) nValid = nFreqs;
-            cl_int endStart = (nFreqs - nValid) * N_POLES;
-            theEnd = 0;
-            /* non-blocking: endStart lives until the End reads below have been waited on */
-            err = clEnqueueWriteBuffer(queue, CUDA_End, CL_FALSE, 0, sizeof(endStart), &endStart, 0, NULL, NULL);
-            cl_int endRead[2] = { 0, 0 };
-            cl_event endEvent[2] = { NULL, NULL };
-            int endSlot = 0;
-            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+            theEnd = 0;  //zero global End signal
+            err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
 
@@ -2142,7 +2093,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             while (!theEnd)
             {
                 count++;
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2184,7 +2135,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 //clFinish(queue);
 
                 // //mrqcof
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2228,12 +2179,12 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
                 //mrqcof
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2241,34 +2192,10 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 if (getError(err)) return err;
                 //clFinish(queue); // ***
 
-                /* pipelined End check: read this iteration's counter without blocking
-                   and act on the previous iteration's value, so the next iteration is
-                   already queued while the host waits. The one extra iteration this
-                   runs at the end is a no-op (every context has isNiter == 0, so all
-                   kernels return early and Iter1Begin does not count anything again) */
-                err = clEnqueueReadBuffer(queue, CUDA_End, CL_FALSE, 0, sizeof(cl_int), &endRead[endSlot], 0, NULL, &endEvent[endSlot]);
-                if (getError(err)) return err;
-                clFlush(queue);
-                endSlot ^= 1;
-                if (endEvent[endSlot])
-                {
-                    clWaitForEvents(1, &endEvent[endSlot]);
-                    clReleaseEvent(endEvent[endSlot]);
-                    endEvent[endSlot] = NULL;
-                    boinc_fraction_done(oldFractionDone + mid * ((double)endRead[endSlot] / CUDA_grid_dim));
-                    theEnd = endRead[endSlot] == CUDA_grid_dim;
-                }
-            }
+                err = clEnqueueReadBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
-            /* wait for the outstanding End read before endRead / endStart go out of scope */
-            for (int e = 0; e < 2; e++)
-            {
-                if (endEvent[e])
-                {
-                    clWaitForEvents(1, &endEvent[e]);
-                    clReleaseEvent(endEvent[e]);
-                    endEvent[e] = NULL;
-                }
+                boinc_fraction_done(oldFractionDone + mid * ((double)theEnd / CUDA_grid_dim));
+                theEnd = theEnd == CUDA_grid_dim;
             }
 
             printf("."); fflush(stdout);

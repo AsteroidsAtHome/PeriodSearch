@@ -433,16 +433,10 @@
     <None Include="period_search\curv.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="period_search\dave.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="period_search\gauss_errc.cl" />
     <None Include="period_search\mrqcof.cl" />
     <None Include="period_search\mrqmin.cl" />
     <None Include="period_search\period_search_in">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>
