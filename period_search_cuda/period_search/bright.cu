@@ -61,11 +61,6 @@ __device__ void __forceinline__ bright_point_geometry(int lnp,
 	double ee0_3 = CUDA_ee0[lnp * 3 + 2];
 	double t = CUDA_tim[lnp];
 
-	/* ee and ee0 are unit vectors: their dot is mathematically in [-1,1],
-	   but opposition geometry brings it within ~1e-7 of 1.0 and an
-	   out-of-range rounding would poison every frequency with NaN */
-	double alpha = acos(fmin(1.0, fmax(-1.0, ee_1 * ee0_1 + ee_2 * ee0_2 + ee_3 * ee0_3)));
-
         /* ee and ee0 are unit vectors, so the dot product is mathematically in
            [-1, 1] - but for observations near opposition (solar phase ~ 0) it
            lands within ~1e-7 of 1.0, and a different (equally legal) FMA
@@ -74,7 +69,7 @@ __device__ void __forceinline__ bright_point_geometry(int lnp,
            point poisons the chi-square of every trial frequency. fmin/fmax
            pass in-range values through unchanged, so results on healthy
            inputs are bit-identical. */
-        alpha = acos(fmin(1.0, fmax(-1.0, ee_1 * ee0_1 + ee_2 * ee0_2 + ee_3 * ee0_3)));
+        double alpha = acos(fmin(1.0, fmax(-1.0, ee_1 * ee0_1 + ee_2 * ee0_2 + ee_3 * ee0_3)));
 	/* Exp-lin model (const.term=1.) */
 	double f = exp(-alpha / inv[2]);
 	po[22] = 1 + inv[1] * f + inv[3] * alpha;   /* Scale */
@@ -171,7 +166,7 @@ __device__ void bright_curve1_warp(freq_context* __restrict__ CUDA_LCC,
 	int Inrel, int Lpoints)
 {
 	const int tid = threadIdx.x;
-	brightshare* __restrict__ shw = &mrq_share_block()->b;
+	brightshare* __restrict__ shw = bright_share_block();
 	double* __restrict__ wcA = shw->wcA;
 	double* __restrict__ wcB = shw->wcB;
 	int* __restrict__ fc = shw->fc;

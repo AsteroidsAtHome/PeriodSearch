@@ -38,6 +38,8 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 		}
 
 	}
+	/* no __syncthreads() here: the solver does not touch atry, and its own
+	   syncs order this copy before thread 0 rewrites atry below */
 
 	/* the damped matrix is staged straight from alpha into shared memory by
 	   the solver; covar is not touched (it is rezeroed by mrqcof_start before
@@ -65,37 +67,39 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 				(*CUDA_LCC).atry[l] = (*CUDA_LCC).cg[l] + (*CUDA_LCC).da[j];
 			}
 	}
-
+	/* no trailing __syncthreads(): this is the last statement of
+	   CudaCalculateIter1Mrqmin1End, the kernel boundary orders it */
 
 	return err_code;
 }
 
 __device__ void mrqmin_2_end(freq_context* CUDA_LCC, int ia[], int ma)
 {
-	int j, k, l;
+	/* the threads of the block (any block size) split the copies; the scalar
+	   updates are done by thread 0 only. Its Chisq = Ochisq in the else branch
+	   cannot send a late reader down the other branch (Chisq < Ochisq stays
+	   false), and every copied value is the same as in the serial loop. */
+	const int tid = threadIdx.x;
+	const int mfit = CUDA_mfit, mfit1 = CUDA_mfit1;
 
-	/* the copies are split over the block's threads, the scalar updates are
-	   done by thread 0. The branch stays uniform: the only write to Chisq /
-	   Ochisq (else branch) sets Chisq = Ochisq, which keeps the test false. */
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		if (threadIdx.x == 0)
+		if (tid == 0)
 			(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / CUDA_Alamda_incr;
-		for (j = 1; j <= CUDA_mfit; j++)
+		for (int e = tid; e < mfit * mfit; e += blockDim.x)
 		{
-			for (k = 1 + threadIdx.x; k <= CUDA_mfit; k += blockDim.x)
-				(*CUDA_LCC).alpha[j * CUDA_mfit1 + k] = (*CUDA_LCC).covar[j * CUDA_mfit1 + k];
+			const int j = e / mfit + 1;
+			const int k = e - (j - 1) * mfit + 1;
+			(*CUDA_LCC).alpha[j * mfit1 + k] = (*CUDA_LCC).covar[j * mfit1 + k];
 		}
-		for (j = 1 + threadIdx.x; j <= CUDA_mfit; j += blockDim.x)
+		for (int j = tid + 1; j <= mfit; j += blockDim.x)
 			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
-		for (l = 1 + threadIdx.x; l <= ma; l += blockDim.x)
+		for (int l = tid + 1; l <= ma; l += blockDim.x)
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
 	}
-	else if (threadIdx.x == 0)
+	else if (tid == 0)
 	{
 		(*CUDA_LCC).Alamda = CUDA_Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;
 	}
-
-	return;
 }

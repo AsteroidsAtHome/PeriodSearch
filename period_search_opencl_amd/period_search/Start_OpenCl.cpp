@@ -25,6 +25,11 @@ typedef unsigned int uint;
 #include <CL/cl.h>
 #include "opencl_helper.h"
 
+/* work-group size of the per-context kernels (one work-item per context) */
+#ifndef CTX_LOCAL
+#define CTX_LOCAL 64
+#endif
+
 // https://stackoverflow.com/questions/18056677/opencl-double-precision-different-from-cpu-double-precision
 
 // TODO:
@@ -1179,14 +1184,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     clEnqueueWriteBuffer(queue, CUDA_CC, CL_BLOCKING, 0, faSize, Fa, 0, NULL, NULL);
 #endif
 
-    // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, err);
-#if !defined _WIN32
-    auto pFb = (freq_context*)aligned_alloc(128, faSize);
-    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, pFb, &err);
-#else
-    auto pFb = (freq_context*)_aligned_malloc(faSize, 128);
-    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, faSize, pFb, &err);
-#endif
 
     //cl_int* end = (cl_int*)malloc(sizeof(cl_int));
     //*end = -90;
@@ -1271,7 +1268,6 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     err = clSetKernelArg(kernelCalculatePreparePole, 2, sizeof(cl_mem), &CUDA_FR);
     err = clSetKernelArg(kernelCalculatePreparePole, 3, sizeof(cl_mem), &cgFirst);
     err = clSetKernelArg(kernelCalculatePreparePole, 4, sizeof(cl_mem), &CUDA_End);
-    err = clSetKernelArg(kernelCalculatePreparePole, 5, sizeof(cl_mem), &CUDA_CC2);
     //kernelCalculatePreparePole.setArg(5, sizeof(double), &lcoef);
     // NOTE: 7th arg 'm' is set a little further as 'm' is an iterator counter
 
@@ -1368,7 +1364,20 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
     /* Sets local_work_size to BLOCK_DIM = 128 */
     size_t local = BLOCK_DIM;
-    size_t sLocal = 1;
+    /* the per-context scalar kernels (Prepare, PreparePole, Iter1Begin,
+       FinishPole) run one work-item per context in
+       work-groups of CTX_LOCAL, instead of one work-group with a single
+       work-item per context (a wavefront with one active lane) */
+    const cl_int nContexts = (cl_int)CUDA_grid_dim_precalc;
+    {
+        const cl_kernel ctxKernels[] = { kernelCalculatePrepare, kernelCalculatePreparePole, kernelCalculateIter1Begin,
+            kernelCalculateFinishPole };
+        const cl_uint ctxArg[] = { 7, 5, 7, 3 };
+        for (int kk = 0; kk < 4; kk++)
+            err = clSetKernelArg(ctxKernels[kk], ctxArg[kk], sizeof(cl_int), &nContexts);
+    }
+    size_t ctxLocal = CTX_LOCAL;
+    size_t ctxGlobal = ((size_t)nContexts + ctxLocal - 1) / ctxLocal * ctxLocal;
 
     for (n = 1; n <= max_test_periods; n += (int)precalcFreqs)
     {
@@ -1391,7 +1400,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
 
         clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
         err = clSetKernelArg(kernelCalculatePrepare, 6, sizeof(n), &n);
-        err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+        err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
         if (getError(err)) return err;
         //clFinish(queue);
 
@@ -1400,39 +1409,10 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
         {
             theEnd = 0; //zero global End signal
             err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
 
-            //void* pFb = clEnqueueMapBuffer(queue, CUDA_CC2, CL_BLOCKING, CL_MAP_READ, 0, faSize, 0, NULL, NULL, &err);
-            //clFlush(queue);
-            clEnqueueReadBuffer(queue, CUDA_CC2, CL_BLOCKING, 0, faSize, pFb, 0, NULL, NULL);
-            int error = 0;
-            for (int j = 0; j < MAX_N_OBS + 1; j++) {
-                if ((*(freq_context*)pFb).Brightness[j] != (*Fa).Brightness[j]) {
-                    error++;
-                }
-            }
-
-            clEnqueueReadBuffer(queue, CUDA_MCC2, CL_BLOCKING, 0, pccSize, pcc, 0, NULL, NULL);
-            //pcc = clEnqueueMapBuffer(queue, CUDA_MCC2, CL_BLOCKING, CL_MAP_READ, 0, pccSize, 0, NULL, NULL, &err);
-            //clFlush(queue);
-            int errCnt = 0;
-            for (int j = 0; j < CUDA_grid_dim_precalc; j++)
-            {
-                for (int i = 1; i <= n_coef; i++)
-                {
-                    auto CUDA_LCC = ((mfreq_context*)pcc)[j];
-                    if (CUDA_LCC.cg[i] != cg_first[i])
-                    {
-                        errCnt++;
-                    }
-                    //if(blockIdx.x == 0)
-                    //	printf("cg[%3d]: %10.7f\n", i, CUDA_cg_first[i]);
-                }
-            }
-            //clEnqueueUnmapMemObject(queue, CUDA_MCC2, pcc, 0, NULL, NULL);
-            clEnqueueUnmapMemObject(queue, CUDA_CC2, pFb, 0, NULL, NULL);
             clFlush(queue);
 #ifdef _DEBUG
             // printf(".");
@@ -1443,7 +1423,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
             while (!theEnd)
             {
                 count++;
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1482,7 +1462,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1526,11 +1506,11 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -1544,7 +1524,7 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
                 theEnd = theEnd == CUDA_grid_dim_precalc;
             }
 
-            err = EnqueueNDRangeKernel(queue, kernelCalculateFinishPole, 1, NULL, &CUDA_grid_dim_precalc, &sLocal, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculateFinishPole, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
         }
@@ -1611,19 +1591,16 @@ cl_int ClPrecalc(cl_double freq_start, cl_double freq_end, cl_double freq_step, 
     clReleaseMemObject(CUDA_SCRATCH);
     clReleaseMemObject(CUDA_MCC2);
     clReleaseMemObject(CUDA_CC);
-    clReleaseMemObject(CUDA_CC2);
     clReleaseMemObject(CUDA_End);
     clReleaseMemObject(CUDA_FR);
     clReleaseMemObject(cgFirst);
 
 #if !defined _WIN32
     free(pcc);
-    free(pFb);
     free(pfr);
 #else // WIN
     //_aligned_free(pfr);  // res does not need to be freed as it's just a pointer to *pfr.
     _aligned_free(pcc);
-    _aligned_free(pFb);
     _aligned_free(pfr);
     //delete[] pfr;
     //_aligned_free(memPcc);
@@ -1892,15 +1869,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     cl_mem CUDA_End = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(theEnd), &theEnd, &err);
     err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
 
-#if !defined _WIN32
-    // freq_context* Fb;
-    // auto CUDA_CC2 = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(freq_context), Fb, err);
-    auto memFb = (freq_context*)aligned_alloc(128, faSize);
-    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
-#else
-    auto memFb = (freq_context*)_aligned_malloc(faSize, 128);
-    cl_mem CUDA_CC2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, faSize, memFb, &err);
-#endif
 
 #if !defined _WIN32
     // cl_uint frSize = CUDA_grid_dim * sizeof(freq_result);
@@ -1937,7 +1905,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     err = clSetKernelArg(kernelCalculatePreparePole, 2, sizeof(cl_mem), &CUDA_FR);
     err = clSetKernelArg(kernelCalculatePreparePole, 3, sizeof(cl_mem), &cgFirst);
     err = clSetKernelArg(kernelCalculatePreparePole, 4, sizeof(cl_mem), &CUDA_End);
-    err = clSetKernelArg(kernelCalculatePreparePole, 5, sizeof(cl_mem), &CUDA_CC2);
     //kernelCalculatePreparePole.setArg(5, sizeof(double), &lcoef);
     // NOTE: 7th arg 'm' is set a little further as 'm' is an iterator counter
 
@@ -2037,7 +2004,20 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     auto oldFractionDone = 0.0001;
     int count = 0;
     size_t local = BLOCK_DIM;
-    size_t sLocal = 1;
+    /* the per-context scalar kernels (Prepare, PreparePole, Iter1Begin,
+       FinishPole) run one work-item per context in
+       work-groups of CTX_LOCAL, instead of one work-group with a single
+       work-item per context (a wavefront with one active lane) */
+    const cl_int nContexts = (cl_int)CUDA_grid_dim;
+    {
+        const cl_kernel ctxKernels[] = { kernelCalculatePrepare, kernelCalculatePreparePole, kernelCalculateIter1Begin,
+            kernelCalculateFinishPole };
+        const cl_uint ctxArg[] = { 7, 5, 7, 3 };
+        for (int kk = 0; kk < 4; kk++)
+            err = clSetKernelArg(ctxKernels[kk], ctxArg[kk], sizeof(cl_int), &nContexts);
+    }
+    size_t ctxLocal = CTX_LOCAL;
+    size_t ctxGlobal = ((size_t)nContexts + ctxLocal - 1) / ctxLocal * ctxLocal;
 
     // freq_result* fres;
 
@@ -2063,7 +2043,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
         // queue.flush();
         clEnqueueWriteBuffer(queue, CUDA_FR, CL_BLOCKING, 0, frSize, pfr, 0, NULL, NULL);
         err = clSetKernelArg(kernelCalculatePrepare, 6, sizeof(n), &n);
-        err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+        err = EnqueueNDRangeKernel(queue, kernelCalculatePrepare, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
         if (getError(err)) return err;
         //clFinish(queue);
 
@@ -2084,7 +2064,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 
             theEnd = 0;  //zero global End signal
             err = clEnqueueWriteBuffer(queue, CUDA_End, CL_BLOCKING, 0, sizeof(theEnd), &theEnd, 0, NULL, NULL);
-            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculatePreparePole, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
 
@@ -2093,7 +2073,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             while (!theEnd)
             {
                 count++;
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Begin, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2135,7 +2115,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 //clFinish(queue);
 
                 // //mrqcof
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof1End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2179,12 +2159,12 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
                 if (getError(err)) return err;
                 //clFinish(queue);
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqcof2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
                 //mrqcof
 
-                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+                err = EnqueueNDRangeKernel(queue, kernelCalculateIter1Mrqmin2End, 1, NULL, &totalWorkItems, &local, 0, NULL, NULL);
                 if (getError(err)) return err;
                 //clFinish(queue);
 
@@ -2199,7 +2179,7 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
             }
 
             printf("."); fflush(stdout);
-            err = EnqueueNDRangeKernel(queue, kernelCalculateFinishPole, 1, NULL, &CUDA_grid_dim, &sLocal, 0, NULL, NULL);
+            err = EnqueueNDRangeKernel(queue, kernelCalculateFinishPole, 1, NULL, &ctxGlobal, &ctxLocal, 0, NULL, NULL);
             if (getError(err)) return err;
             //clFinish(queue);
         }
@@ -2273,7 +2253,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
     clReleaseMemObject(CUDA_SCRATCH);
     clReleaseMemObject(CUDA_MCC2);
     clReleaseMemObject(CUDA_CC);
-    clReleaseMemObject(CUDA_CC2);
     clReleaseMemObject(CUDA_End);
     clReleaseMemObject(CUDA_FR);
     clReleaseMemObject(cgFirst);
@@ -2287,7 +2266,6 @@ int ClStart(int n_start_from, double freq_start, double freq_end, double freq_st
 #else // WIN
     //_aligned_free(pfr); // res does not need to be freed as it's just a pointer to *pfr.
     _aligned_free(memFa);
-    _aligned_free(memFb);
     delete[] pfr;
     //_aligned_free(memPcc);
     delete[] pcc;

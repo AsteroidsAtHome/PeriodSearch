@@ -58,17 +58,30 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
          alpha[j*(CUDA_mfit1)+k]=0;
       beta[j]=0;
    }
+
+   /* no trailing __syncthreads(): this is the last statement of
+      CudaCalculateIter1Mrqcof1Start/2Start, the kernel boundary orders it */
 }
 
 __device__ double mrqcof_end(freq_context *CUDA_LCC,double *alpha)
 {
-   int j,k;
+   /* mirror the lower triangle into the upper one, alpha[k][j] = alpha[j][k]
+      for k < j, split over the threads of the block (any block size): reads
+      (row > col) and writes (row < col) never overlap, so every entry gets
+      exactly the value it got from the serial loop */
+   const int mfit = CUDA_mfit, mfit1 = CUDA_mfit1;
+   const int total = mfit * (mfit - 1) / 2;
 
-   /* mirror the lower triangle; each row is split over the block's threads
-      (source and destination never overlap) */
-   for (j = 2; j <= CUDA_mfit; j++)
-      for (k = 1 + threadIdx.x; k <= j-1; k += blockDim.x)
-         alpha[k*(CUDA_mfit1)+j] = alpha[j*(CUDA_mfit1)+k];
+   /* pair e -> row j = 2.., column k = 1..j-1 (row-major lower triangle) */
+   int j = 2, k = threadIdx.x + 1;
+   while (k > j - 1) { k -= j - 1; j++; }
+   for (int e = threadIdx.x; e < total; e += blockDim.x)
+   {
+      alpha[k*(mfit1)+j] = alpha[j*(mfit1)+k];
+
+      k += blockDim.x;
+      while (k > j - 1) { k -= j - 1; j++; }
+   }
 
    return (*CUDA_LCC).trial_chisq;
 }
@@ -96,7 +109,8 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	   are zero, as in the old conv()). One warp per block; the Dg fold
 	   applies here too: Dg[i][l]*Darea[i]*Nor = Dsph[i][l]*(Area[i]*Nor). */
 	const int tid = threadIdx.x;
-	brightshare* __restrict__ shw = &mrq_share_block()->b;
+	brightshare* __restrict__ shw = bright_share_block();
+	double* __restrict__ ww = shw->wcA;
 
 	const int ma = CUDA_ma, nco = CUDA_Ncoef, nf = CUDA_Numfac;
 	double* __restrict__ dytemp = (*CUDA_LCC).dytemp;
@@ -108,70 +122,77 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 	const int c1 = 1 + tid, c2 = 33 + tid;
 	double dave1 = 0, dave2 = 0;
 
-	/* the points (the 3 convexity pseudo-points) are processed together, up to
-	   three per pass over the facets - it used to be one pass per point. Each
-	   CUDA_Dsph row element is loaded once for all of them and the per-point
-	   sums are independent chains; every sum keeps its facet order, and
-	   dave/lave still accumulate the points in ascending order. */
-	double* __restrict__ ww3 = &shw->geo[0][0];   /* 3 x 32 staged weights */
+	/* All (at most 3: point jp uses column jp-1 of Nor) points share each facet
+	   pass, so every Dsph row is read once instead of once per point. Each
+	   point's weight, ym sum and a1/a2 sums are formed exactly as in the old
+	   one-point-per-pass loop (same products, same ascending order, same
+	   shuffle reduction), and the per-point outputs below are written in jp
+	   order, so the results are bit-identical. */
+	double* __restrict__ ww1 = shw->wcB;
+	double* __restrict__ ww2 = &shw->geo[0][0];   /* >= 32 doubles, unused here */
+	double ym0 = 0, ym1 = 0, ym2 = 0;
+	double a10 = 0, a11 = 0, a12 = 0, a20 = 0, a21 = 0, a22 = 0;
+
 #pragma unroll 1
-	for (int jb = 1; jb <= Lpoints; jb += 3)
+	for (int f0 = 1; f0 <= nf; f0 += 32)
 	{
-		const int npts = (Lpoints - jb + 1 < 3) ? (Lpoints - jb + 1) : 3;
-		double ym[3] = { 0, 0, 0 }, a1[3] = { 0, 0, 0 }, a2[3] = { 0, 0, 0 };
-#pragma unroll 1
-		for (int f0 = 1; f0 <= nf; f0 += 32)
+		const int i = f0 + tid;
+		double w0 = 0.0, w1 = 0.0, w2 = 0.0;
+		if (i <= nf)
 		{
-			const int i = f0 + tid;
-#pragma unroll
-			for (int q = 0; q < 3; q++)
-			{
-				double w = 0.0;
-				if (i <= nf && q < npts)
-				{
-					w = areap[i] * CUDA_Nor[i][jb + q - 1];
-					ym[q] += w;
-				}
-				ww3[q * 32 + tid] = w;
-			}
-			__syncwarp();
-			int kend = nf - f0 + 1;
-			if (kend > 32) kend = 32;
+			w0 = areap[i] * CUDA_Nor[i][0];
+			ym0 += w0;
+			w1 = areap[i] * CUDA_Nor[i][1];
+			ym1 += w1;
+			w2 = areap[i] * CUDA_Nor[i][2];
+			ym2 += w2;
+		}
+		ww[tid] = w0;
+		ww1[tid] = w1;
+		ww2[tid] = w2;
+		__syncwarp();
+		int kend = nf - f0 + 1;
+		if (kend > 32) kend = 32;
 #pragma unroll 4
-			for (int k = 0; k < kend; k++)
-			{
-				double const* __restrict__ row = CUDA_Dsph[f0 + k];
-				double r1 = row[c1], r2 = row[c2];
-#pragma unroll
-				for (int q = 0; q < 3; q++)
-				{
-					double w2 = ww3[q * 32 + k];
-					a1[q] += w2 * r1;
-					a2[q] += w2 * r2;
-				}
-			}
-			__syncwarp();
-		}
-
-		for (int q = 0; q < npts; q++)
+		for (int k = 0; k < kend; k++)
 		{
-			const int jp = jb + q;
-			lnp++;
-#pragma unroll
-			for (int off = 16; off > 0; off >>= 1)
-				ym[q] += __shfl_xor_sync(0xffffffff, ym[q], off);
-
-			double v1 = (c1 <= nco) ? a1[q] : 0.0;
-			double v2 = (c2 <= nco) ? a2[q] : 0.0;
-			double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
-			if (c1 <= ma) { row[c1] = v1; dave1 += v1; }
-			if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
-			if (tid == 0) ytemp[jp] = ym[q];
-			if (Inrel == 1) lave += ym[q];
+			double const* __restrict__ row = CUDA_Dsph[f0 + k];
+			const double r1 = row[c1], r2 = row[c2];
+			const double v0 = ww[k], v1 = ww1[k], v2 = ww2[k];
+			a10 += v0 * r1;
+			a20 += v0 * r2;
+			a11 += v1 * r1;
+			a21 += v1 * r2;
+			a12 += v2 * r1;
+			a22 += v2 * r2;
 		}
-		/* ww3 is re-written by the next pass */
 		__syncwarp();
 	}
+#pragma unroll
+	for (int off = 16; off > 0; off >>= 1)
+	{
+		ym0 += __shfl_xor_sync(0xffffffff, ym0, off);
+		ym1 += __shfl_xor_sync(0xffffffff, ym1, off);
+		ym2 += __shfl_xor_sync(0xffffffff, ym2, off);
+	}
+
+#pragma unroll 1
+	for (int jp = 1; jp <= Lpoints; jp++)
+	{
+		lnp++;
+		const double ym = (jp == 1) ? ym0 : (jp == 2) ? ym1 : ym2;
+		const double a1 = (jp == 1) ? a10 : (jp == 2) ? a11 : a12;
+		const double a2 = (jp == 1) ? a20 : (jp == 2) ? a21 : a22;
+
+		double v1 = (c1 <= nco) ? a1 : 0.0;
+		double v2 = (c2 <= nco) ? a2 : 0.0;
+		double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
+		if (c1 <= ma) { row[c1] = v1; dave1 += v1; }
+		if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
+		if (tid == 0) ytemp[jp] = ym;
+		if (Inrel == 1) lave += ym;
+	}
+	__syncwarp();
 
 	if (Inrel == 1)
 	{
