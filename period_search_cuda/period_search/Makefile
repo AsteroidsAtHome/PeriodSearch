@@ -79,7 +79,7 @@ clean:
 distclean:
 	/bin/rm -f $(BUILD_DIR)/* libstdc++.a libcuda.so
 
-install: $(BUILD_DIR)/period_search_BOINC_cuda11800_v10222_Release
+install: $(BUILD_DIR)/period_search_BOINC_cuda12900_v10222_Release
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
