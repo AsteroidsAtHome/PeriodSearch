@@ -5,6 +5,9 @@
 #include <vector>
 #include "arrayHelpers.hpp"
 
+// look-ahead (in visible facets) of the Dg row prefetch in bright()
+constexpr int DG_PREFETCH_ROWS = 8;
+
 /**
  * The Strategy interface declares operations common to all supported versions
  * of some algorithm.

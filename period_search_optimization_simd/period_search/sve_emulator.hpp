@@ -64,6 +64,11 @@ static inline svfloat64_t svld1_f64(svbool_t t, double const *x) {
     return r;
 }
 
+// load of the vnum-th vector after x
+static inline svfloat64_t svld1_vnum_f64(svbool_t t, double const *x, int64_t vnum) {
+    return svld1_f64(t, x + vnum * svcntd());
+}
+
 static inline void svst1_f64(svbool_t t, double *x, svfloat64_t y) {
     for (int i = 0; i < svcntd(); ++i) {
         if (t.x[8 * i])
@@ -186,6 +191,60 @@ static inline bool svptest_any(svbool_t t, svbool_t a) {
             return true;
     }
     return false;
+}
+
+struct svint64_t {
+    int64_t x[svcntd()];
+};
+
+// number of active lanes of a (under t)
+static inline uint64_t svcntp_b64(svbool_t t, svbool_t a) {
+    uint64_t n = 0;
+    for (int i = 0; i < svcntd(); ++i)
+        n += t.x[8 * i] && a.x[8 * i];
+    return n;
+}
+
+// base, base + step, base + 2 * step, ...
+static inline svint64_t svindex_s64(int64_t base, int64_t step) {
+    svint64_t r;
+    for (int i = 0; i < svcntd(); ++i)
+        r.x[i] = base + i * step;
+    return r;
+}
+
+// the active lanes packed to the bottom, the rest zero
+static inline svfloat64_t svcompact_f64(svbool_t t, svfloat64_t a) {
+    svfloat64_t r{};
+    int n = 0;
+    for (int i = 0; i < svcntd(); ++i)
+        if (t.x[8 * i])
+            r.x[n++] = a.x[i];
+    return r;
+}
+
+static inline svint64_t svcompact_s64(svbool_t t, svint64_t a) {
+    svint64_t r{};
+    int n = 0;
+    for (int i = 0; i < svcntd(); ++i)
+        if (t.x[8 * i])
+            r.x[n++] = a.x[i];
+    return r;
+}
+
+static inline void svst1_s64(svbool_t t, int64_t *x, svint64_t y) {
+    for (int i = 0; i < svcntd(); ++i) {
+        if (t.x[8 * i])
+            x[i] = y.x[i];
+    }
+}
+
+// a / b in the active lanes, a in the inactive ones
+static inline svfloat64_t svdiv_f64_m(svbool_t t, svfloat64_t a, svfloat64_t b) {
+    svfloat64_t r;
+    for (int i = 0; i < svcntd(); ++i)
+        r.x[i] = t.x[8 * i] ? a.x[i] / b.x[i] : a.x[i];
+    return r;
 }
 
 /*
