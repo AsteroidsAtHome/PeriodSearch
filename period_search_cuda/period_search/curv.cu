@@ -37,6 +37,4 @@ __device__ void curv(freq_context *CUDA_LCC,double cg[],int brtmpl,int brtmph)
       /* Dg is no longer materialized: Dg[i][k] == g * CUDA_Dsph[i][k] is
 	 folded into the facet weights via Area (= Darea * g) - see bright.cu */
    }
-   /* no __syncthreads() here: only CudaCalculateIter2 reads other threads'
-      Area[] afterwards, and it synchronizes itself */
 }

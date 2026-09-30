@@ -46,6 +46,8 @@ __device__ __device_builtin__ double __hiloint2double(int hi, int lo);
 
 //NOTE: MUST BE 128 or 64
 #define CUDA_BLOCK_DIM 128
+/* block size of the per-context kernels (one thread per context) */
+#define CTX_LOCAL 64
 
 //NOTE: https://devtalk.nvidia.com/default/topic/517801/-34-texture-is-not-a-template-34-error-mvs-2010/
 
@@ -61,6 +63,7 @@ __device__ extern double CUDA_cl, CUDA_Alamda_start, CUDA_Alamda_incr;
 __device__ extern int CUDA_n_iter_max, CUDA_n_iter_min, CUDA_ndata;
 __device__ extern double CUDA_iter_diff_max;
 __constant__ extern double CUDA_Nor[MAX_N_FAC + 1][3];
+__device__ extern double CUDA_NorG[MAX_N_FAC + 1][3]; /* global copy of CUDA_Nor for divergent (per-thread facet) reads */
 __constant__ extern double CUDA_conw_r;
 __constant__ extern int CUDA_Lmax, CUDA_Mmax;
 __device__ extern double CUDA_Fc[MAX_N_FAC + 1][MAX_LM + 1];
@@ -154,32 +157,34 @@ __device__ extern freq_result *CUDA_FR;
 #define DYT_STRIDE 64
 #define CURVE2_K 8
 #define GEOM_PT_SIZE 26
-#define GEO_BATCH 16
 
 #ifdef __CUDACC__
 struct brightshare
 {
-	double wcA[32];                     /* compacted facet weights, point A */
-	double wcB[32];                     /* compacted facet weights, point B */
-	int    fc[32];                      /* compacted facet indices */
-	double geo[GEO_BATCH][GEOM_PT_SIZE];/* per-point geometry */
-	double inv[11];                     /* per-curve invariants */
+	double wcA[32];                     /* facet weights (mrqcof_curve1_last) */
+	double inv[11];                     /* per-curve invariants (bright_curve1) */
 };
 
 struct curve2share
 {
 	double T[CURVE2_K][DYT_STRIDE];     /* staged dyda tile, rows 1..ma */
-	double W[CURVE2_K][DYT_STRIDE];     /* W[p][l] = T[p][l] * sig2i*wght of point p */
+	double W[CURVE2_K][DYT_STRIDE];     /* T[p][l] * s2w[p] */
+	double s2w[CURVE2_K];
 	double dws[CURVE2_K];
+	double dy[CURVE2_K];
 };
 
-/* bright (Curve1/Curve1Last kernels) and curve2 (Curve2 kernels) run in
-   separate kernels, so each gets its own staging: a union would size the
-   bright kernels' shared memory by the larger curve2 tile and cut their
-   occupancy for nothing */
-__device__ __forceinline__ brightshare* bright_share_block()
+/* bright and curve2 run in separate kernels, so each gets its own static
+   shared block: a kernel only reserves the staging it actually uses (a union
+   would make the small Curve1/Curve1Last blocks reserve Curve2's tiles) */
+struct mrqshare
 {
-	__shared__ brightshare s;
+	brightshare b;
+};
+
+__device__ __forceinline__ mrqshare* mrq_share_block()
+{
+	__shared__ mrqshare s;
 	return &s;
 }
 

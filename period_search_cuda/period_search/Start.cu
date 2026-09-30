@@ -9,18 +9,20 @@
 //#include "../../../../../../../Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt/math.h"
 #include <cstdio>
 
-__global__ void CudaCalculatePrepare(int n_start, int n_max, double freq_start, double freq_step, int nContexts)
+__global__ void CudaCalculatePrepare(int n_start, int n_max, double freq_start, double freq_step, const int nContexts)
 {
-	/* one thread per context (was one block of a single thread per context);
-	   the grid is rounded up to whole blocks */
-	const int ctx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (ctx >= nContexts) return;
-	/* one block per (frequency, pole) pair: N_POLES consecutive blocks share
-	   the same trial frequency and each of them will run one of the initial
-	   poles, all concurrently (the poles used to be a serial host-side loop) */
-	const auto n = n_start + ctx / N_POLES;
-	const auto CUDA_LCC = &CUDA_CC[ctx];
-	const auto CUDA_LFR = &CUDA_FR[ctx];
+	/* one thread per context, CTX_LOCAL contexts per block (was one block
+	   of a single thread per context: a warp with one active lane) */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= nContexts) return;
+
+	/* one context per (frequency, pole) pair: N_POLES consecutive contexts
+	   share the same trial frequency and each of them will run one of the
+	   initial poles, all concurrently (the poles used to be a serial
+	   host-side loop) */
+	const auto n = n_start + x / N_POLES;
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
 
 	//zero context
 	//	CUDA_CC is zeroed itself as global memory but need to reset between freq TODO
@@ -44,17 +46,18 @@ __global__ void CudaCalculatePrepare(int n_start, int n_max, double freq_start, 
 	(*CUDA_LFR).dev_best = 1e40;
 }
 
-__global__ void CudaCalculatePreparePole(int nContexts)
+__global__ void CudaCalculatePreparePole(const int nContexts)
 {
-	/* one thread per context (was one block of a single thread per context);
-	   the grid is rounded up to whole blocks */
-	const int ctx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (ctx >= nContexts) return;
-	const auto CUDA_LCC = &CUDA_CC[ctx];
-	const auto CUDA_LFR = &CUDA_FR[ctx];
+	/* one thread per context, CTX_LOCAL contexts per block (was one block
+	   of a single thread per context: a warp with one active lane) */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= nContexts) return;
 
-	/* which of the initial poles this block runs (see CudaCalculatePrepare) */
-	const auto m = ctx % N_POLES + 1;
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
+
+	/* which of the initial poles this context runs (see CudaCalculatePrepare) */
+	const auto m = x % N_POLES + 1;
 
 	if ((*CUDA_LCC).isInvalid)
 	{
@@ -109,14 +112,15 @@ __global__ void CudaCalculatePreparePole(int nContexts)
 	(*CUDA_LFR).isReported = 0;
 }
 
-__global__ void CudaCalculateIter1Begin(int nContexts)
+__global__ void CudaCalculateIter1Begin(const int nContexts)
 {
-	/* one thread per context (was one block of a single thread per context);
-	   the grid is rounded up to whole blocks */
-	const int ctx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (ctx >= nContexts) return;
-	const auto CUDA_LCC = &CUDA_CC[ctx];
-	const auto CUDA_LFR = &CUDA_FR[ctx];
+	/* one thread per context, CTX_LOCAL contexts per block (was one block
+	   of a single thread per context: a warp with one active lane) */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= nContexts) return;
+
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
 
 	if ((*CUDA_LCC).isInvalid)
 	{
@@ -173,6 +177,7 @@ __global__ void CudaCalculateIter1Mrqmin2End(void)
 
 	if (!(*CUDA_LCC).isNiter) return;
 
+	/* one block of CUDA_BLOCK_DIM threads per context */
 	mrqmin_2_end(CUDA_LCC, CUDA_ia, CUDA_ma);
 	if (threadIdx.x == 0)
 		(*CUDA_LCC).Niter++;
@@ -240,6 +245,7 @@ __global__ void CudaCalculateIter1Mrqcof1End(void)
 
 	if (!(*CUDA_LCC).isAlamda) return;
 
+	/* one block of CUDA_BLOCK_DIM threads per context */
 	const double ochisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).alpha);
 	if (threadIdx.x == 0)
 		(*CUDA_LCC).Ochisq = ochisq;
@@ -298,6 +304,7 @@ __global__ void CudaCalculateIter1Mrqcof2End(void)
 
 	if (!(*CUDA_LCC).isNiter) return;
 
+	/* one block of CUDA_BLOCK_DIM threads per context */
 	const double chisq = mrqcof_end(CUDA_LCC, (*CUDA_LCC).covar);
 	if (threadIdx.x == 0)
 		(*CUDA_LCC).Chisq = chisq;
@@ -325,10 +332,9 @@ __global__ void CudaCalculateIter2(void)
 
 			curv(CUDA_LCC, (*CUDA_LCC).cg, brtmpl, brtmph);
 
-			/* thread 0 sums Area over all facets below. The sync also guarantees
-			   every thread has evaluated the Chisq < Ochisq condition above
-			   before Ochisq is updated - writing it before the old sync let a
-			   late thread see the new value and skip the block (and the sync). */
+			/* thread 0 sums Area over all facets below, and every thread
+			   must have evaluated the Chisq < Ochisq condition above before
+			   thread 0 updates Ochisq */
 			__syncthreads();
 
 			if (threadIdx.x == 0)
@@ -363,14 +369,15 @@ __global__ void CudaCalculateIter2(void)
 	}
 }
 
-__global__ void CudaCalculateFinishPole(int nContexts)
+__global__ void CudaCalculateFinishPole(const int nContexts)
 {
-	/* one thread per context (was one block of a single thread per context);
-	   the grid is rounded up to whole blocks */
-	const int ctx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (ctx >= nContexts) return;
-	const auto CUDA_LCC = &CUDA_CC[ctx];
-	const auto CUDA_LFR = &CUDA_FR[ctx];
+	/* one thread per context, CTX_LOCAL contexts per block (was one block
+	   of a single thread per context: a warp with one active lane) */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= nContexts) return;
+
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
@@ -407,14 +414,15 @@ __global__ void CudaCalculateFinishPole(int nContexts)
 	(*CUDA_LFR).chck[3]=(*CUDA_LCC).chck[3];*/
 }
 
-__global__ void CudaCalculateFinish(int nContexts)
+__global__ void CudaCalculateFinish(const int nContexts)
 {
-	/* one thread per context (was one block of a single thread per context);
-	   the grid is rounded up to whole blocks */
-	const int ctx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (ctx >= nContexts) return;
-	const auto CUDA_LCC = &CUDA_CC[ctx];
-	const auto CUDA_LFR = &CUDA_FR[ctx];
+	/* one thread per context, CTX_LOCAL contexts per block (was one block
+	   of a single thread per context: a warp with one active lane) */
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= nContexts) return;
+
+	const auto CUDA_LCC = &CUDA_CC[x];
+	const auto CUDA_LFR = &CUDA_FR[x];
 
 	if ((*CUDA_LCC).isInvalid) return;
 
