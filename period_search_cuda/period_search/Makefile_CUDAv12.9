@@ -1,27 +1,24 @@
-# Linux Makefile for CUDA 12.9.
-#
-# Differences from Makefile (CUDA 11.8):
-#  * compute_35/37/53/62/72 removed (dropped from CUDA 12.x).
-#  * sm_100 (Blackwell data-center) added natively.
-#  * sm_120 (GeForce RTX 50xx) is generated from compute_89 PTX ON PURPOSE:
-#    the native compute_120 pipeline of ptxas 12.9 miscompiles this
-#    application - intermittent NaN chi-squares appear from about the third
-#    Levenberg-Marquardt iteration onward, and every result line ends up as
-#    "-nan" (verified on a 5060 Ti with an instrumented build; SASS produced
-#    from compute_89 PTX is correct on the same GPU and workunit). The same
-#    breakage is reproduced by the driver JIT when it lowers compute_90 PTX
-#    for sm_120, which is why *older* releases of this app also produce
-#    invalid results on RTX 50xx cards.
-#  * compute_90 PTX is embedded as a JIT fallback for architectures newer
-#    than the ones listed here.
+# This should work on Linux.  Modify as needed for other platforms.
 
+# READ ME FIRST:
+#
+# To keep consistency of the repository and not be relying on hardcoded paths, please create symbolic links that will be outside the path under
+# versioning control and this way will not break anyone's environment setups.
+# From your /home/[YOUR_USERNAME] directory run: 
+#   ln -s /usr/local/cuda-12.9 cuda-12.9
+#   ln -s /[your_boinc_path] boinc_src 
+# or change those paths accordingly to your setup.
+#
+
+# DO-NOT-CHANGE!
 BOINC_DIR = ../../../boinc_src
 BOINC_API_DIR = $(BOINC_DIR)/api
 BOINC_LIB_DIR = $(BOINC_DIR)/lib
 PS_COMMON_DIR = ../../period_search_common
 PS_COMMON_LIB_DIR = $(PS_COMMON_DIR)/build
-CUDA_PATH = /usr/local/cuda-12.9
+CUDA_PATH = ../../../cuda-12.9
 BUILD_DIR = ./build
+# END DO-NOT-CHANGE
 
 CXXFLAGS = -O3 -s \
 	-I$(BOINC_DIR) \
@@ -33,22 +30,20 @@ CXXFLAGS = -O3 -s \
 	-L /usr/X11R6/lib \
 	-L.
 
-NVCCFLAGS = -O3 --extra-device-vectorization --ptxas-options=-v \
-	--generate-code arch=compute_50,code=sm_50 \
-	--generate-code arch=compute_52,code=sm_52 \
-	--generate-code arch=compute_60,code=sm_60 \
-	--generate-code arch=compute_61,code=sm_61 \
-	--generate-code arch=compute_70,code=sm_70 \
-	--generate-code arch=compute_75,code=sm_75 \
-	--generate-code arch=compute_80,code=sm_80 \
-	--generate-code arch=compute_86,code=sm_86 \
-	--generate-code arch=compute_87,code=sm_87 \
-	--generate-code arch=compute_89,code=sm_89 \
-	--generate-code arch=compute_90,code=sm_90 \
-	--generate-code arch=compute_100,code=sm_100 \
-	--generate-code arch=compute_89,code=sm_120 \
-	--generate-code arch=compute_90,code=compute_90 \
-	--maxrregcount=255 -rdc=true -Wno-deprecated-gpu-targets
+# There were two cases from the legacy code - first was using --maxrregcount=80 which is very inefficient on block occupancy.
+# After precise examination on results from NVIDIA Nsight Performance Analysis both are set to 32 now. This way we achieve 100% block occupancy (most of the time).
+# 28 APR 2020 - Temporarily '--maxrregcount' is set back to '80' for the NVCCFLAGS until further research proves it needs to be set back to '32' 
+
+# CUDA 5.5: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_20,code=sm_20 --generate-code arch=compute_20,code=sm_21 --generate-code arch=compute_30,code=sm_30 --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_35,code=compute_35 --maxrregcount=80 -rdc=true
+# CUDA 10.2 - CC: NVCCFLAGS = compute_30,sm_30;compute_35,sm_35;compute_37,sm_37;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75
+# CUDA 11.1 - CC: NVCCFLAGS = compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86
+# CUDA 11.8 - CC: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=80 -rdc=tru
+# CUDA 12.9 - CC:
+NVCC_ARCHS = 50 52 53 60 61 62 70 72 75 80 86 87 89 90 100 120
+NVCC_COMMON = -O3 --extra-device-vectorization --maxrregcount=255 -Wno-deprecated-gpu-targets
+NVCCFLAGS = $(NVCC_COMMON) -rdc=true $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=lto_$(a))
+NVCCLINKFLAGS = $(NVCC_COMMON) --ptxas-options=-v -dlto $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=sm_$(a))
+
 CC=g++
 CXX=g++
 OPTFLAGS=-O3 -s
@@ -94,7 +89,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/period_search_BOINC_cuda12900_v10222_Release: $(BUILD_DIR)/period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a \
-	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a
+	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a $(CUDA_PATH)/lib64/libcudadevrt.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(PS_COMMON_LIB_DIR)/libps_common.a \
 	$(CUDA_PATH)/lib64/libcudart_static.a \
@@ -116,7 +111,7 @@ $(BUILD_DIR)/%.o: %.cpp
 # Special rule for pscuda.device-link.o
 $(BUILD_DIR)/pscuda.device-link.o: $(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 	$(CUDA_PATH)/bin/nvcc -dlink -o $@ --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
-		$(NVCCFLAGS) \
+		$(NVCCLINKFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
 		$(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 

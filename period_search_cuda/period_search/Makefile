@@ -89,10 +89,11 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/period_search_BOINC_cuda11800_v10222_Release: $(BUILD_DIR)/period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a \
-	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a
+	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a $(CUDA_PATH)/lib64/libcudadevrt.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(PS_COMMON_LIB_DIR)/libps_common.a \
 	$(CUDA_PATH)/lib64/libcudart_static.a \
+	 $(CUDA_PATH)/lib64/libcudadevrt.a \
 	$(BOINC_API_DIR)/libboinc_api.a  libcuda.so libnvidia-ml.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
