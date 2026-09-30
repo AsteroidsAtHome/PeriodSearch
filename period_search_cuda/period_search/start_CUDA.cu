@@ -525,16 +525,16 @@ int CUDAPrepare(int cudadev, double* beta_pole, double* lambda_pole, double* par
 	  cudaDeviceGetAttribute(&peakClk, cudaDevAttrClockRate, cudadev);
 	  auto devicePeakClock = peakClk / 1024;*/
 
-		fprintf(stderr, "CUDA version: %d\n", cudaVersion);
-		fprintf(stderr, "CUDA Device number: %d\n", cudadev);
-		fprintf(stderr, "CUDA Device: %s %lluMB \n", deviceProp.name, totalGlobalMemory);
+		std::cerr << "CUDA version: " << cudaVersion << std::endl;
+		std::cerr << "CUDA Device number: " << cudadev << std::endl;
+		std::cerr << "CUDA Device: " << deviceProp.name << " " << totalGlobalMemory << "MB " << std::endl;
 #if !defined(DISABLE_NVML) && (defined(CUDA_VERSION) && (CUDA_VERSION >= 10020))
-		fprintf(stderr, "CUDA Device driver: %s\n", drv_version_str);
+		std::cerr << "CUDA Device driver: " << drv_version_str << std::endl;
 #endif
-		fprintf(stderr, "Compute capability: %d.%d\n", deviceProp.major, deviceProp.minor);
-		//fprintf(stderr, "Device peak clock: %d MHz\n", devicePeakClock);
-		fprintf(stderr, "Shared memory per Block | per SM: %llu | %llu\n", sharedMemoryBlock, sharedMemorySm);
-		fprintf(stderr, "Multiprocessors: %d\n", deviceProp.multiProcessorCount);
+		std::cerr << "Compute capability: " << deviceProp.major << "." << deviceProp.minor << std::endl;
+		//std::cerr << "Device peak clock: " << devicePeakClock << " MHz" << std::endl;
+		std::cerr << "Shared memory per Block | per SM: " << sharedMemoryBlock << " | " << sharedMemorySm << std::endl;
+		std::cerr << "Multiprocessors: " << deviceProp.multiProcessorCount << std::endl;
 
 	}
 
