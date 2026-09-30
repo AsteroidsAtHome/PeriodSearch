@@ -1,0 +1,122 @@
+name: Macos
+
+on: [push, pull_request]
+
+env:
+  BOINC_DIR: ./boinc
+  MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    name: >-
+      ${{ matrix.variant }} / ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              variant: 'arm64',
+              os: 'macos-14',
+              working-directory: './period_search_optimization_simd/period_search',
+              makefile: 'Makefile_arm64_mac_11',
+              ps_makefile: 'Makefile_arm',
+              cc: "/opt/homebrew/opt/llvm/bin"
+            }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare toolchain
+        run: |
+          brew update
+          brew install autoconf automake libtool gnu-sed llvm
+
+      - name: Print clang version
+        run: |
+          export PATH="${{ matrix.cc }}:$PATH"
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          clang -v
+          clang --version
+
+      - name: Prepare boinc libraries
+        run: |
+          export PATH="${{ matrix.cc }}:/opt/homebrew/opt/libtool/libexec/gnubin:/usr/local/opt/libtool/libexec/gnubin:$PATH"
+          export CC=clang
+          export CXX=clang++
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CFLAGS="-mmacosx-version-min=11.0"
+          export CXXFLAGS="-O3 -mmacosx-version-min=11.0"
+          export LDFLAGS="-mmacosx-version-min=11.0"
+
+          git clone --depth 1 https://github.com/BOINC/boinc.git
+          cd ./boinc
+
+          sh ./_autosetup
+
+          sh ./configure \
+            --disable-server \
+            --disable-client \
+            --disable-manager \
+            CFLAGS="$CFLAGS" \
+            CXXFLAGS="$CXXFLAGS" \
+            LDFLAGS="$LDFLAGS"
+
+          make -j
+
+      - name: Build ps_common library
+        run: |
+          export PATH="${{ matrix.cc }}:$PATH"
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CXX=clang++
+          export CXXFLAGS="-O3 -mmacosx-version-min=11.0"
+          export LDFLAGS="-mmacosx-version-min=11.0"
+
+          cd ./period_search_common
+
+          gsed -i 's/CXX\s*=.*$/CXX = clang++/' ${{ matrix.ps_makefile }}
+
+          make -f ${{ matrix.ps_makefile }} -j
+
+      - name: Run make
+        working-directory: ${{ matrix.working-directory }}
+        run: |
+          export PATH="${{ matrix.cc }}:$PATH"
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CC=clang
+          export CXX=clang++
+          export CFLAGS="-mmacosx-version-min=11.0"
+          export CXXFLAGS="-O3 -mmacosx-version-min=11.0"
+          export LDFLAGS="-mmacosx-version-min=11.0"
+
+          gsed -i 's/BOINC_DIR\s*=.*$/BOINC_DIR = ..\/..\/boinc/' ${{ matrix.makefile }}
+          gsed -i 's/CXX\s*=.*$/CXX = clang++/' ${{ matrix.makefile }}
+
+          make -f ${{ matrix.makefile }} -j
+
+      - name: Verify minimum macOS version
+        working-directory: ${{ matrix.working-directory }}
+        run: |
+          for binary in **/period_search_BOINC*; do
+            if [ -f "$binary" ] && [ -x "$binary" ]; then
+              echo "Checking: $binary"
+              otool -l "$binary" | grep -A3 LC_BUILD_VERSION || true
+              otool -l "$binary" | grep -A3 LC_VERSION_MIN_MACOSX || true
+            fi
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.variant }}_${{ matrix.os }}_macos11
+          retention-days: 1
+          path: |
+            ${{ matrix.working-directory }}/**/period_search_BOINC*
+            !${{ matrix.working-directory }}/**/period_search_BOINC.cpp
+            !${{ matrix.working-directory }}/**/period_search_BOINC.o

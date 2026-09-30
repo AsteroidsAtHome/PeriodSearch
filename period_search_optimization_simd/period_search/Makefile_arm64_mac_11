@@ -13,7 +13,7 @@ PS_COMMON_DIR = ../../period_search_common
 PS_COMMON_LIB_DIR = $(PS_COMMON_DIR)/build
 
 CXX = /Library/Developer/CommandLineTools/usr/bin/g++
-CXXFLAGS = -O3 -w -arch arm64 -target arm64-apple-macos11 -std=c++2a -s -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk -fvisibility=hidden -fvisibility-inlines-hidden \
+CXXFLAGS = -O3 -w -arch arm64 -target arm64-apple-macos11 -std=c++2a -s -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk -fvisibility=hidden -fvisibility-inlines-hidden \
     -DARM64 \
     -I$(BOINC_CONFIG_DIR) \
 	-I$(BOINC_DIR) \
@@ -24,7 +24,7 @@ CXXFLAGS = -O3 -w -arch arm64 -target arm64-apple-macos11 -std=c++2a -s -isysroo
     -L$(BOINC_BUILD_DIR) \
 	-L.
 
-LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk,-arch,arm64
+LDFLAGS = -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk,-arch,arm64
 
 # Define the target executable
 TARGET = $(BUILD_DIR)/period_search_BOINC_macos_10222_arm64_Release
