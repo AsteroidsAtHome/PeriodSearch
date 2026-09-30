@@ -49,6 +49,11 @@ NVCCFLAGS = -O3 --extra-device-vectorization  --ptxas-options=-v \
 	--generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_87,code=sm_87 --generate-code arch=compute_89,code=sm_89 \
 	--generate-code arch=compute_90,code=sm_90 --generate-code arch=compute_100,code=sm_100 --generate-code arch=compute_120,code=sm_120  --maxrregcount=255 -rdc=true -Wno-deprecated-gpu-targets 
 
+NVCC_ARCHS = 50 52 53 60 61 75 80 86 87 89 90 100 120
+NVCC_COMMON = -O3 --extra-device-vectorization --maxrregcount=255 -Wno-deprecated-gpu-targets
+NVCCFLAGS = $(NVCC_COMMON) -rdc=true $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=lto_$(a))
+NVCCLINKFLAGS = $(NVCC_COMMON) --ptxas-options=-v -dlto $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=sm_$(a))
+
 CC=g++
 CXX=g++
 OPTFLAGS=-O3 -s
@@ -117,7 +122,7 @@ $(BUILD_DIR)/%.o: %.cpp
 # Special rule for pscuda.device-link.o
 $(BUILD_DIR)/pscuda.device-link.o: $(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 	$(NVCC_PATH)/nvcc -dlink -o $@ --compiler-bindir=aarch64-linux-gnu-gcc $(OPTIMIZATION) \
-		$(NVCCFLAGS) \
+		$(NVCCLINKFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
 		$(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 
