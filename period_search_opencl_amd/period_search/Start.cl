@@ -1,18 +1,3 @@
-kernel void ClCheckEnd(
-    __global int* CUDA_End,
-    int theEnd)
-{
-    int3 blockIdx;
-    blockIdx.x = get_group_id(0);
-
-    if (blockIdx.x == 0)
-        *CUDA_End = theEnd;
-
-    //if (blockIdx.x == 0)
-        //printf("CheckEnd CUDA_End: %2d\n", *CUDA_End);
-
-}
-
 __kernel void ClCalculatePrepare(
     __global struct mfreq_context* CUDA_mCC,
     __global struct freq_result* CUDA_FR,
@@ -20,10 +5,14 @@ __kernel void ClCalculatePrepare(
     double freq_start,
     double freq_step,
     int n_max,
-    int n_start)
+    int n_start,
+    const int nContexts)
 {
     int3 blockIdx;
-    blockIdx.x = get_group_id(0);
+    blockIdx.x = get_global_id(0);
+    /* one work-item per context (was one work-group of a single work-item);
+       the global size is rounded up to the work-group size */
+    if (blockIdx.x >= nContexts) return;
     int x = blockIdx.x;
 
     __global struct mfreq_context* CUDA_LCC = &CUDA_mCC[blockIdx.x];
@@ -68,7 +57,6 @@ __kernel void ClCalculatePrepare(
 
     //printf("n: %4d, CUDA_CC[%3d].freq: %10.7f, CUDA_FR[%3d].la_best: %10.7f, isInvalid: %4d \n", n, x, (*CUDA_LCC).freq, x, (*CUDA_LFR).la_best, (*CUDA_LCC).isInvalid);
 
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
     //if (blockIdx.x == 0)
         //printf("Prepare CUDA_End: %2d\n", *CUDA_End);
 }
@@ -79,10 +67,13 @@ __kernel void ClCalculatePreparePole(
     __global struct freq_result* CUDA_FR,
     __global double* CUDA_cg_first,
     __global int* CUDA_End,
-    __global struct freq_context* CUDA_CC2)
+    const int nContexts)
 {
     int3 blockIdx, threadIdx;
-    blockIdx.x = get_group_id(0);
+    blockIdx.x = get_global_id(0);
+    /* one work-item per context (was one work-group of a single work-item);
+       the global size is rounded up to the work-group size */
+    if (blockIdx.x >= nContexts) return;
     threadIdx.x = get_local_id(0);
     int x = blockIdx.x;
 
@@ -113,7 +104,7 @@ __kernel void ClCalculatePreparePole(
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("[Device] PreparePole > ma: %d\n", (*CUDA_CC).ma);
 
-    double period = 1.0 / (*CUDA_LCC).freq;
+    double period = ddiv(1.0, (*CUDA_LCC).freq);
 
     //* starts from the initial ellipsoid */
     for (int i = 1; i <= (*CUDA_CC).Ncoef; i++)
@@ -148,7 +139,7 @@ __kernel void ClCalculatePreparePole(
     //printf("cg[%d]: %.7f | cg[%d]: %.7f\n", (*CUDA_CC).Ncoef + 1, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 1], (*CUDA_CC).Ncoef + 2, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2]);
 
     /* Use omega instead of period */
-    (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3] = 24.0 * 2.0 * PI / period;
+    (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3] = ddiv(24.0 * 2.0 * PI, period);
 
     //if (threadIdx.x == 0)
     //{
@@ -194,16 +185,6 @@ __kernel void ClCalculatePreparePole(
     //	(*CUDA_LCC).Lastcall=0; always ==0
     (*CUDA_LFR).isReported = 0;
 
-    if (blockIdx.x == 0)
-    {
-        for (int i = 0; i < MAX_N_OBS + 1; i++)
-        {
-            //printf("[%d] %g", blockIdx.x, (*CUDA_CC).Brightness[i]);
-            (*CUDA_CC2).Brightness[i] = (*CUDA_CC).Brightness[i];
-        }
-    }
-
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Begin(
@@ -213,10 +194,14 @@ __kernel void ClCalculateIter1Begin(
     int CUDA_n_iter_min,
     int CUDA_n_iter_max,
     double CUDA_iter_diff_max,
-    double CUDA_Alamda_start)
+    double CUDA_Alamda_start,
+    const int nContexts)
 {
     int3 blockIdx, threadIdx;
-    blockIdx.x = get_group_id(0);
+    blockIdx.x = get_global_id(0);
+    /* one work-item per context (was one work-group of a single work-item);
+       the global size is rounded up to the work-group size */
+    if (blockIdx.x >= nContexts) return;
     threadIdx.x = get_local_id(0);
     int x = blockIdx.x;
 
@@ -267,7 +252,6 @@ __kernel void ClCalculateIter1Begin(
     //if (threadIdx.x == 1)
     //	printf("[begin] Alamda: %10.7f\n", (*CUDA_LCC).Alamda);
     //barrier(CLK_GLOBAL_MEM_FENCE); // TEST
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Start(
@@ -301,7 +285,6 @@ __kernel void ClCalculateIter1Mrqcof1Start(
 
     // => mrqcof_start(CUDA_LCC, (*CUDA_LCC).cg, (*CUDA_LCC).alpha, (*CUDA_LCC).beta);
     mrqcof_start(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, scr + (*CUDA_CC).offAlpha, (*CUDA_LCC).beta);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Matrix(
@@ -335,7 +318,6 @@ __kernel void ClCalculateIter1Mrqcof1Matrix(
     }
 
     mrqcof_matrix(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Curve1(
@@ -377,7 +359,6 @@ __kernel void ClCalculateIter1Mrqcof1Curve1(
 
     //if (blockIdx.x == 0)
     //	printf("dytemp[8636]: %10.7f\n", dytemp[8636]);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Curve1Last(
@@ -403,7 +384,7 @@ __kernel void ClCalculateIter1Mrqcof1Curve1Last(
 
     if (!(*CUDA_LCC).isAlamda) return;
 
-    __local double res[BLOCK_DIM];
+    __local double res[CONV_POINTS * BLOCK_DIM];
 
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("Mrqcof1Curve1Last\n");
@@ -416,7 +397,6 @@ __kernel void ClCalculateIter1Mrqcof1Curve1Last(
     //		printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
     //	//}
     //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1Curve2(
@@ -446,9 +426,10 @@ __kernel void ClCalculateIter1Mrqcof1Curve2(
 
     /* OpenCL requires __local declarations at kernel scope */
     __local double dydaT[CURVE2_K][DYT_STRIDE];
+    __local double wpL[CURVE2_K][DYT_STRIDE];
     __local double tileS[3 * CURVE2_K];
 
-    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha, (*CUDA_LCC).beta, dydaT, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
+    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha, (*CUDA_LCC).beta, dydaT, wpL, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
 
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("[Mrqcof1Curve2] [%d][%3d] alpha[56]: %10.7f\n", blockIdx.x, threadIdx.x, (*CUDA_LCC).alpha[56]);
@@ -460,7 +441,6 @@ __kernel void ClCalculateIter1Mrqcof1Curve2(
     //	printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
     //	//}
     //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof1End(
@@ -468,6 +448,7 @@ __kernel void ClCalculateIter1Mrqcof1End(
     __global struct freq_context* CUDA_CC,
     __global double* scratch)
 {
+    /* one work-group of BLOCK_DIM work-items per context */
     __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
 
     int3 blockIdx, threadIdx;
@@ -487,7 +468,9 @@ __kernel void ClCalculateIter1Mrqcof1End(
     //	printf("Mrqcof1End\n");
 
 
-    (*CUDA_LCC).Ochisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha);
+    double ochisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offAlpha);
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Ochisq = ochisq;
 
 
     ////if (threadIdx.x == 0)
@@ -497,7 +480,6 @@ __kernel void ClCalculateIter1Mrqcof1End(
     //	printf("[%d] alpha[%2d]: %10.7f\n", blockIdx.x, i, (*CUDA_LCC).alpha[i]);
     //	//}
     ////}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqmin1End(
@@ -553,7 +535,6 @@ __kernel void ClCalculateIter1Mrqmin1End(
     //if (blockIdx.x == 0) {
     //	printf("[%3d] sh_icol[%3d]: %3d\n", threadIdx.x, threadIdx.x, sh_icol[threadIdx.x]);
     //}
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Start(
@@ -583,7 +564,6 @@ __kernel void ClCalculateIter1Mrqcof2Start(
 
     //if (blockIdx.x == 0 && threadIdx.x == 0)
     //	printf("alpha[56]: %10.7f\n", (*CUDA_LCC).alpha[56]);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Matrix(
@@ -618,7 +598,6 @@ __kernel void ClCalculateIter1Mrqcof2Matrix(
 
     //mrqcof_matrix(CUDA_LCC, (*CUDA_LCC).atry, lpoints);
     mrqcof_matrix(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Curve1(
@@ -655,7 +634,6 @@ __kernel void ClCalculateIter1Mrqcof2Curve1(
 
     //mrqcof_curve1(CUDA_LCC, (*CUDA_LCC).atry, (*CUDA_LCC).covar, (*CUDA_LCC).da, inrel, lpoints);
     mrqcof_curve1(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, tmave, inrel, lpoints, num, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Curve2(
@@ -684,10 +662,10 @@ __kernel void ClCalculateIter1Mrqcof2Curve2(
 
     /* OpenCL requires __local declarations at kernel scope */
     __local double dydaT[CURVE2_K][DYT_STRIDE];
+    __local double wpL[CURVE2_K][DYT_STRIDE];
     __local double tileS[3 * CURVE2_K];
 
-    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar, (*CUDA_LCC).da, dydaT, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+    mrqcof_curve2(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar, (*CUDA_LCC).da, dydaT, wpL, tileS, tileS + CURVE2_K, tileS + 2 * CURVE2_K, inrel, lpoints, scr);
 }
 
 __kernel void ClCalculateIter1Mrqcof2Curve1Last(
@@ -711,11 +689,10 @@ __kernel void ClCalculateIter1Mrqcof2Curve1Last(
 
     if (!(*CUDA_LCC).isNiter) return;
 
-    __local double res[BLOCK_DIM];
+    __local double res[CONV_POINTS * BLOCK_DIM];
 
     //mrqcof_curve1_last(CUDA_LCC, CUDA_CC, dytemp, (*CUDA_LCC).cg, (*CUDA_LCC).alpha, (*CUDA_LCC).beta, res, inrel, lpoints);
     mrqcof_curve1_last(CUDA_LCC, CUDA_CC, (*CUDA_LCC).atry, scr + (*CUDA_CC).offCovar, (*CUDA_LCC).da, res, inrel, lpoints, scr);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqcof2End(
@@ -723,6 +700,7 @@ __kernel void ClCalculateIter1Mrqcof2End(
     __global struct freq_context* CUDA_CC,
     __global double* scratch)
 {
+    /* one work-group of BLOCK_DIM work-items per context */
     __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
 
     int3 blockIdx, threadIdx;
@@ -736,11 +714,12 @@ __kernel void ClCalculateIter1Mrqcof2End(
 
     if (!(*CUDA_LCC).isNiter) return;
 
-    (*CUDA_LCC).Chisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar);
+    double chisq = mrqcof_end(CUDA_LCC, CUDA_CC, scr + (*CUDA_CC).offCovar);
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Chisq = chisq;
 
     //if (blockIdx.x == 0)
     //	printf("[%3d] Chisq: %10.7f\n", threadIdx.x, (*CUDA_LCC).Chisq);
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter1Mrqmin2End(
@@ -748,6 +727,7 @@ __kernel void ClCalculateIter1Mrqmin2End(
     __global struct freq_context* CUDA_CC,
     __global double* scratch)
 {
+    /* one work-group of BLOCK_DIM work-items per context */
     __global double* scr = scratch + get_group_id(0) * (ulong)(*CUDA_CC).scrStride;
 
     int3 blockIdx, threadIdx;
@@ -767,12 +747,12 @@ __kernel void ClCalculateIter1Mrqmin2End(
     //mrqmin_2_end(CUDA_LCC, CUDA_ia, CUDA_ma);
     mrqmin_2_end(CUDA_LCC, CUDA_CC, scr);
 
-    (*CUDA_LCC).Niter++;
+    if (threadIdx.x == 0)
+        (*CUDA_LCC).Niter++;
 
     //if (blockIdx.x == 0)
     //	printf("[%3d] Niter: %d\n", threadIdx.x, (*CUDA_LCC).Niter);
     //printf("|");
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateIter2(
@@ -799,13 +779,6 @@ __kernel void ClCalculateIter2(
     {
         if ((*CUDA_LCC).Niter == 1 || (*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
         {
-            if (threadIdx.x == 0)
-            {
-                (*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
-            }
-
-            barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-
             int brtmph = (*CUDA_CC).Numfac / BLOCK_DIM;
             if ((*CUDA_CC).Numfac % BLOCK_DIM) brtmph++;
             int brtmpl = threadIdx.x * brtmph;
@@ -815,8 +788,15 @@ __kernel void ClCalculateIter2(
 
             curv(CUDA_LCC, CUDA_CC, (*CUDA_LCC).cg, brtmpl, brtmph);
 
+            /* thread 0 sums Area over all facets below; the barrier also
+               guarantees every work-item has evaluated the Chisq < Ochisq
+               condition above before thread 0 updates Ochisq */
+            barrier(CLK_GLOBAL_MEM_FENCE);
+
             if (threadIdx.x == 0)
             {
+                (*CUDA_LCC).Ochisq = (*CUDA_LCC).Chisq;
+
                 for (i = 1; i <= 3; i++)
                 {
                     (*CUDA_LCC).chck[i] = 0;
@@ -845,14 +825,12 @@ __kernel void ClCalculateIter2(
             }
         }
 
-        barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
-
         if (threadIdx.x == 0)
         {
             //if (blockIdx.x == 0)
             //	printf("ndata - 3: %3d\n", (*CUDA_CC).ndata - 3);
 
-            (*CUDA_LCC).dev_new = sqrt((*CUDA_LCC).rchisq / ((*CUDA_CC).ndata - 3));
+            (*CUDA_LCC).dev_new = sqrt(ddiv((*CUDA_LCC).rchisq, (double)((*CUDA_CC).ndata - 3)));
 
             //if (blockIdx.x == 233)
             //{
@@ -869,20 +847,21 @@ __kernel void ClCalculateIter2(
             }
             //		(*CUDA_LFR).Niter=(*CUDA_LCC).Niter;
         }
-
-        barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // TEST
     }
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void ClCalculateFinishPole(
     __global struct mfreq_context* CUDA_mCC,
     __global struct freq_context* CUDA_CC,
-    __global struct freq_result* CUDA_FR)
+    __global struct freq_result* CUDA_FR,
+    const int nContexts)
 {
     int i;
     int3 blockIdx;
-    blockIdx.x = get_group_id(0);
+    blockIdx.x = get_global_id(0);
+    /* one work-item per context (was one work-group of a single work-item);
+       the global size is rounded up to the work-group size */
+    if (blockIdx.x >= nContexts) return;
 
     //const auto CUDA_LCC = &CUDA_CC[blockIdx.x];
     //const auto CUDA_LFR = &CUDA_FR[blockIdx.x];
@@ -913,7 +892,7 @@ __kernel void ClCalculateFinishPole(
     //	printf("[%d] sum: %12.8f, dark: %12.8f, totarea: %12.8f, dark_best: %12.8f\n", blockIdx.x, sum, dark, totarea, dark / totarea * 100);
 
     /* period solution */
-    const double period = 2 * PI / (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3];
+    const double period = ddiv(2 * PI, (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 3]);
 
     /* pole solution */
     const double la_tmp = RAD2DEG * (*CUDA_LCC).cg[(*CUDA_CC).Ncoef + 2];
@@ -931,7 +910,7 @@ __kernel void ClCalculateFinishPole(
         (*CUDA_LFR).dev_best = (*CUDA_LCC).dev_new;
         (*CUDA_LFR).dev_best_x2 = (*CUDA_LCC).rchisq;
         (*CUDA_LFR).per_best = period;
-        (*CUDA_LFR).dark_best = dark / totarea * 100;
+        (*CUDA_LFR).dark_best = ddiv(dark, totarea) * 100;
         (*CUDA_LFR).la_best = la_tmp < 0 ? la_tmp + 360.0 : la_tmp;
         (*CUDA_LFR).be_best = be_tmp;
 
@@ -959,5 +938,4 @@ __kernel void ClCalculateFinishPole(
     (*CUDA_LFR).chck[1]=(*CUDA_LCC).chck[1];
     (*CUDA_LFR).chck[2]=(*CUDA_LCC).chck[2];
     (*CUDA_LFR).chck[3]=(*CUDA_LCC).chck[3];*/
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }

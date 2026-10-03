@@ -89,6 +89,7 @@
 #include "CalcStrategyNone.hpp"
 #include "LcHelpers.hpp"
 #include "SIMDHelpers.h"
+#include "benchmark.hpp"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -249,6 +250,15 @@ int main(int argc, char** argv)
     //wiringPiSetupSys();
     //pinMode(LED, OUTPUT);
 
+    for (i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--benchmark") == 0)
+        {
+            free(str_temp);
+            return RunBenchmark();
+        }
+    }
+
     int retval = boinc_init();
     if (retval)
     {
@@ -362,45 +372,46 @@ int main(int argc, char** argv)
 #endif
 
     int err = 0;
+    char* line = nullptr;
 
     /* Period interval (hrs) fixed or free */
-    err = fscanf_s(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);	fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf %lf %lf %d", &per_start, &per_step_coef, &per_end, &ia_prd);	line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Epoch of zero time t0 */
-    err = fscanf_s(infile, "%lf", &jd_00);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &jd_00);                                 line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Initial fixed rotation angle fi0 */
-    err = fscanf_s(infile, "%lf", &Phi_0);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &Phi_0);                                 line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* The weight factor for conv. reg. */
-    err = fscanf_s(infile, "%lf", &conw);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &conw);                                 line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Degree and order of the Laplace series */
-    err = fscanf_s(infile, "%d %d", &Lmax, &Mmax);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%d %d", &Lmax, &Mmax);                        line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Number of triangulation rows per octant */
-    err = fscanf_s(infile, "%d", &nrows);                                 fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%d", &nrows);                                 line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Initial guesses for phase funct. params. */
-    err = fscanf_s(infile, "%lf %d", &par[1], &ia_par[1]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-    err = fscanf_s(infile, "%lf %d", &par[2], &ia_par[2]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
-    err = fscanf_s(infile, "%lf %d", &par[3], &ia_par[3]);                fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf %d", &par[1], &ia_par[1]);                line = fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf %d", &par[2], &ia_par[2]);                line = fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf %d", &par[3], &ia_par[3]);                line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Initial Lambert coeff. (L-S=1) */
-    err = fscanf_s(infile, "%lf %d", &cl, &ia_cl);                        fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf %d", &cl, &ia_cl);                        line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Maximum number of iterations (when > 1) or
        minimum difference in dev to stop (when < 1) */
-    err = fscanf_s(infile, "%lf", &stop_condition);                       fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &stop_condition);                       line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Minimum number of iterations when stop_condition < 1 */
-    err = fscanf_s(infile, "%d", &n_iter_min);                            fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%d", &n_iter_min);                            line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Multiplicative factor for Alamda */
-    err = fscanf_s(infile, "%lf", &Alamda_incr);                          fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &Alamda_incr);                          line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     /* Alamda initial value*/
-    err = fscanf_s(infile, "%lf", &Alamda_start);                         fgets(str_temp, MAX_LINE_LENGTH, infile);
+    err = fscanf_s(infile, "%lf", &Alamda_start);                         line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
     if (boinc_is_standalone())
     {
@@ -441,7 +452,7 @@ int main(int argc, char** argv)
     {
         double average = 0; /* average */
         err = fscanf_s(infile, "%d %d", &gl.Lpoints[i], &i_temp); /* points in this lightcurve */
-        fgets(str_temp, MAX_LINE_LENGTH, infile);
+        line = fgets(str_temp, MAX_LINE_LENGTH, infile);
 
         gl.Inrel[i] = 1 - i_temp;
         if (gl.Inrel[i] == 0)

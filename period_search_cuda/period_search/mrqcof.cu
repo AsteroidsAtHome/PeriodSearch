@@ -58,34 +58,42 @@ __device__ void mrqcof_start(freq_context *CUDA_LCC, double a[],
          alpha[j*(CUDA_mfit1)+k]=0;
       beta[j]=0;
    }
-
-   __syncthreads(); //pro jistotu
 }
 
 __device__ double mrqcof_end(freq_context *CUDA_LCC,double *alpha)
 {
-   int j,k;
+   /* mirror the lower triangle into the upper one: alpha[k][j] = alpha[j][k]
+      for k < j. The threads of the block split the (j, k) pairs; reads
+      (row > col) and writes (row < col) never overlap, so no ordering is
+      needed and every entry gets exactly the value it got before. */
+   const int total = CUDA_mfit * (CUDA_mfit - 1) / 2;
 
-   for (j = 2; j <= CUDA_mfit; j++)
-      for (k = 1; k <= j-1; k++)
-         alpha[k*(CUDA_mfit1)+j] = alpha[j*(CUDA_mfit1)+k];
+   /* pair e -> row j = 2.., column k = 1..j-1 (row-major lower triangle) */
+   int j = 2, k = threadIdx.x + 1;
+   while (k > j - 1) { k -= j - 1; j++; }
+   for (int e = threadIdx.x; e < total; e += CUDA_BLOCK_DIM)
+   {
+      alpha[k*(CUDA_mfit1)+j] = alpha[j*(CUDA_mfit1)+k];
+
+      k += CUDA_BLOCK_DIM;
+      while (k > j - 1) { k -= j - 1; j++; }
+   }
 
    return (*CUDA_LCC).trial_chisq;
 }
 
 __device__ void mrqcof_matrix(freq_context *CUDA_LCC, double a[], int Lpoints)
 {
-   /* geometry is computed inside bright_curve1_warp() since the 2026 rewrite */
+   /* geometry is computed inside bright_curve1() since the 2026 rewrite */
 }
 
 __device__ void mrqcof_curve1(freq_context *CUDA_LCC, double a[],
 	      double *alpha, double beta[],int Inrel,int Lpoints)
 {
-   /* warp-cooperative rewrite: geometry, brightness, derivatives, and the
-	  dave/ave sums are all produced by one warp in bright_curve1_warp()
-	  (see bright.cu). alpha/beta are untouched here - they are accumulated
-	  in MrqcofCurve2. */
-   bright_curve1_warp(CUDA_LCC, a, Inrel, Lpoints);
+   /* geometry, brightness, derivatives, and the dave/ave sums are all
+	  produced by bright_curve1() (see bright.cu), one thread per point.
+	  alpha/beta are untouched here - they are accumulated in MrqcofCurve2. */
+   bright_curve1(CUDA_LCC, a, Inrel, Lpoints);
 }
 
 __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
@@ -164,5 +172,4 @@ __device__ void mrqcof_curve1_last(freq_context *CUDA_LCC, double a[],
 		(*CUDA_LCC).np = lnp;
 		(*CUDA_LCC).ave = lave;
 	}
-	__syncwarp();
 }

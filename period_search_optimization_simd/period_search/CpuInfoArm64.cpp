@@ -7,11 +7,15 @@
 #include "globals.h"
 #include "CalcStrategyNone.hpp"
 #include "CalcStrategyAsimd.hpp"
+#include "CalcStrategySve.hpp"
 #include "SIMDHelpers.h"
 
 #if defined(__linux__) && (defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) || defined(_M_ARM64))
   #include <sys/auxv.h>
   #include <asm/hwcap.h>
+  #ifndef HWCAP_SVE			// missing on pre-4.15 kernel headers
+    #define HWCAP_SVE (1 << 22)
+  #endif
 #endif
 
 std::string GetCpuInfo()
@@ -71,6 +75,8 @@ void DetectArmv8CpuFeatures(long hwcaps)
 
 void GetSupportedSIMDs()
 {
+	CPUopt.hasASIMD = false;
+	CPUopt.hasSVE = false;
 	#if defined(_WIN32) // ARM win, snapdragon...
       CPUopt.hasASIMD = true;
 	#elif defined(__linux__)
@@ -80,20 +86,26 @@ void GetSupportedSIMDs()
 		// DetectArmv8CpuFeatures(hwcap);
 
         CPUopt.hasASIMD = hwcap & HWCAP_ASIMD;
+        CPUopt.hasSVE = (hwcap & HWCAP_SVE);
 	  #elif (defined(__arm__) || defined(_M_ARM))
 	    uint64_t hwcap = getauxval(AT_HWCAP);
         CPUopt.hasASIMD = hwcap & HWCAP_NEON;
 	  #endif
 	#elif defined(__APPLE__)
 	  CPUopt.hasASIMD = true; // M1
-	#else
-	  CPUopt.hasASIMD = false;
 	#endif
 }
 
 SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 {
 	SIMDEnum tempSimd = simd;
+	if (simd == SIMDEnum::OptSVE)
+	{
+		simd = CPUopt.hasSVE
+				   ? SIMDEnum::OptSVE
+				   : SIMDEnum::OptASIMD;
+	}
+
 	if (simd == SIMDEnum::OptASIMD)
 	{
 		simd = CPUopt.hasASIMD
@@ -111,6 +123,12 @@ SIMDEnum CheckSupportedSIMDs(SIMDEnum simd)
 
 SIMDEnum GetBestSupportedSIMD()
 {
+	//if (CPUopt.hasSVE) // slower than ASIMD, don't choose automatically
+	//{
+	//	std::cerr << "Using SVE SIMD optimizations." << std::endl;
+	//	return SIMDEnum::OptSVE;
+	//}
+	//else 
 	if (CPUopt.hasASIMD)
 	{
 		std::cerr << "Using ASIMD (NEON) SIMD optimizations." << std::endl;
@@ -127,6 +145,9 @@ void SetOptimizationStrategy(SIMDEnum useOptimization)
 {
 	switch (useOptimization)
 	{
+		case SIMDEnum::OptSVE:
+			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySve>(64));
+			break;
 		case SIMDEnum::OptASIMD:
 			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyAsimd>(64));
 			break;

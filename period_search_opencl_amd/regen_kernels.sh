@@ -7,7 +7,7 @@
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT/period_search"
-ORDER="constants.h GlobalsCL.h Intrinsics.cl swap.cl blmatrix.cl curv.cl Curv2.cl bright.cl conv.cl mrqcof.cl gauss_errc.cl mrqmin.cl test.cl Start.cl"
+ORDER="constants.h GlobalsCL.h Intrinsics.cl swap.cl blmatrix.cl curv.cl Curv2.cl bright.cl conv.cl mrqcof.cl gauss_errc.cl mrqmin.cl Start.cl"
 cat $ORDER > "$ROOT/kernelSource.cl"
 cd "$ROOT"
 python3 oclProgramFileToString.py kernelSource.cl period_search/kernels.cpp

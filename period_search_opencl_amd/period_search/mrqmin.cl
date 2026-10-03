@@ -51,8 +51,6 @@ int mrqmin_1_end(
 	}
 	// >>> Iter1Mrqmin1EndPre1 END
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-
 	// The damped matrix is staged straight from alpha into local memory by
 	// gauss_errc; covar is not touched at all (it is rezeroed by
 	// ClCalculateIter1Mrqcof2Start before mrqcof2 accumulates into it).
@@ -78,8 +76,6 @@ int mrqmin_1_end(
 				(*CUDA_LCC).atry[l] = (*CUDA_LCC).cg[l] + (*CUDA_LCC).da[j];
 			}
 	}
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	// <<< Iter1Mrqmin1EndPost END
 
 	return err_code;
@@ -93,36 +89,32 @@ void mrqmin_2_end(
 	__global double* alphaG = scr + (*CUDA_CC).offAlpha;
 	__global double* covarG = scr + (*CUDA_CC).offCovar;
 
-	int j, k, l;
-	int3 blockIdx, threadIdx;
-	blockIdx.x = get_group_id(0);
-	threadIdx.x = get_local_id(0);
+	const int lid = get_local_id(0);
+	const int mfit = (*CUDA_CC).Mfit;
+	const int mfit1 = (*CUDA_CC).Mfit1;
 
+	/* The work-items of the context split the copies; the scalar updates are
+	   done by work-item 0 only. Its Chisq = Ochisq in the else branch cannot
+	   send a late reader down the other branch (Chisq < Ochisq stays false). */
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / (*CUDA_CC).Alamda_incr;
-		for (j = 1; j <= (*CUDA_CC).Mfit; j++)
+		if (lid == 0)
+			(*CUDA_LCC).Alamda = ddiv((*CUDA_LCC).Alamda, (*CUDA_CC).Alamda_incr);
+
+		for (int e = lid; e < mfit * mfit; e += BLOCK_DIM)
 		{
-			for (k = 1; k <= (*CUDA_CC).Mfit; k++)
-			{
-				alphaG[j * (*CUDA_CC).Mfit1 + k] = covarG[j * (*CUDA_CC).Mfit1 + k];
-
-				//if (blockIdx.x == 0)
-				//	printf("alpha[%3d]: %10.7f\n", alphaG[j * (*CUDA_CC).Mfit1 + k]);
-			}
-
+			int j = e / mfit + 1;
+			int k = e - (j - 1) * mfit + 1;
+			alphaG[j * mfit1 + k] = covarG[j * mfit1 + k];
+		}
+		for (int j = lid + 1; j <= mfit; j += BLOCK_DIM)
 			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
-		}
-		for (l = 1; l <= (*CUDA_CC).ma; l++)
-		{
+		for (int l = lid + 1; l <= (*CUDA_CC).ma; l += BLOCK_DIM)
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
-		}
 	}
-	else
+	else if (lid == 0)
 	{
 		(*CUDA_LCC).Alamda = (*CUDA_CC).Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;
 	}
-
-
 }

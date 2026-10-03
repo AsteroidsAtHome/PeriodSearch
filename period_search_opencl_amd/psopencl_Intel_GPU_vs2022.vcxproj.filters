@@ -102,9 +102,6 @@
     <None Include="period_search\Curv2.cl">
       <Filter>Source Files CL</Filter>
     </None>
-    <None Include="period_search\dave.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
     <None Include="period_search\gauss_errc.cl">
       <Filter>Source Files CL</Filter>
     </None>
@@ -115,9 +112,6 @@
       <Filter>Source Files CL</Filter>
     </None>
     <None Include="period_search\mrqmin.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
       <Filter>Source Files CL</Filter>
     </None>
     <None Include="period_search\swap.cl">

@@ -71,11 +71,13 @@ int gauss_errc(
 		for (j = 1; j <= n; j++) ipivL[j] = 0;
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+	/* global fence: also orders mrqmin_1_end's atry = cg copy before the
+	   singular-pivot path below rewrites atry from thread 0 */
+	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 
 	for (i = 1; i <= n; i++)
 	{
-		big = 0;
+		big = -1.0;
 		irow = 0;
 		licol = 0;
 		for (j = brtmpl; j <= brtmph; j++)
@@ -97,7 +99,6 @@ int gauss_errc(
 					}
 					else if (ipivL[k] > 1)
 					{
-						barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
 						return(1);
 					}
 				}
@@ -145,32 +146,23 @@ int gauss_errc(
 
 			if (covL[covarIdx] == 0.0)
 			{
-				/* singular pivot: report the (partial) step like the old code
-				   did, then bail with error 2 */
-				for (j = 1; j <= n; j++)
-				{
-					(*CUDA_LCC).da[j] = daL[j];
-				}
-				j = 0;
-				for (int l2 = 1; l2 <= (*CUDA_CC).ma; l2++)
-				{
-					if ((*CUDA_CC).ia[l2])
-					{
-						j++;
-						(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2] + (*CUDA_LCC).da[j];
-					}
-				}
-
-				return(2);
+				icolBC[0] = -1;
 			}
+			else
+			{
+				pivBC[0] = ddiv(1.0, covL[covarIdx]);
+				covL[covarIdx] = 1.0;
 
-			pivBC[0] = 1.0 / covL[covarIdx];
-			covL[covarIdx] = 1.0;
-
-			daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+				daL[icolBC[0]] = daL[icolBC[0]] * pivBC[0];
+			}
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+
+		if (icolBC[0] < 0)
+		{
+			return(2);
+		}
 
 		for (l = brtmpl; l <= brtmph; l++)
 		{
@@ -199,8 +191,8 @@ int gauss_errc(
 				daL[ll] -= daL[icolBC[0]] * dum;
 			}
 		}
-
-		barrier(CLK_LOCAL_MEM_FENCE); //__syncthreads();
+		/* no barrier here: the next pivot search only reads the work-item's own
+		   rows, and the barrier after the sh* writes orders everything else */
 	}
 
 	/* only the step vector leaves the solver (the column unscramble of the

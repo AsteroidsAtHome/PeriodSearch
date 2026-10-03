@@ -82,7 +82,7 @@ void matrix_neo(
 		//	printf("[neo] alpha[%3d]: %.7f, cg[%3d]: %10.7f\n", jp, alpha, q, (*CUDA_LCC).cg[q]);
 
 		/* Exp-lin model (const.term=1.) */
-		double f = exp(-alpha / cg[(*CUDA_CC).Ncoef0 + 2]);	//f is temp here
+		double f = exp(-ddiv(alpha, cg[(*CUDA_CC).Ncoef0 + 2]));	//f is temp here
 
 		//if (blockIdx.x == 0 && threadIdx.x == 0)
 		//	printf("[neo] [%2d][%3d] jp[%3d] f: %10.7f, cg[%3d] %10.7f, alpha %10.7f\n",
@@ -90,7 +90,7 @@ void matrix_neo(
 
 		jp_ScaleG[jp] = 1 + cg[(*CUDA_CC).Ncoef0 + 1] * f + (cg[(*CUDA_CC).Ncoef0 + 3] * alpha);
 		jp_dphp_1G[jp] = f;
-		jp_dphp_2G[jp] = cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha / (cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
+		jp_dphp_2G[jp] = ddiv(cg[(*CUDA_CC).Ncoef0 + 1] * f * alpha, cg[(*CUDA_CC).Ncoef0 + 2] * cg[(*CUDA_CC).Ncoef0 + 2]);
 		jp_dphp_3G[jp] = alpha;
 
 		//if (blockIdx.x == 0)
@@ -229,8 +229,6 @@ void matrix_neo(
 		deG[(jp) * 16 + (3) * 4 + (3)] = 0;
 		de0G[(jp) * 16 + (3) * 4 + (3)] = 0;
 	}
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);  //__syncthreads();
 }
 
 void bright(
@@ -310,30 +308,45 @@ void bright(
 	tmp4 = 0;
 	tmp5 = 0;
 
-	j = 1;
-	for (i = 1; i <= (*CUDA_CC).Numfac; i++, j++)
+	/* Two passes: the cheap visibility test first builds this work-item's
+	   list of visible facets, then the division-heavy terms run over that
+	   list. In a single pass a wavefront executed the heavy block for every
+	   facet that ANY of its lanes could see, i.e. for nearly all facets;
+	   now it runs max(incl_count) times per wavefront. lmu/lmu0 are
+	   recomputed with the same expressions and the sums still run over the
+	   visible facets in ascending order. */
+	for (i = 1; i <= (*CUDA_CC).Numfac; i++)
 	{
 		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
 		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
-
 		if ((lmu > TINY) && (lmu0 > TINY))
 		{
+			incl[incl_count] = i;
+			incl_count++;
+		}
+	}
+
+	for (int c = 0; c < incl_count; c++)
+	{
+		i = incl[c];
+		j = i;
+		lmu = e_1 * (*CUDA_CC).Nor[i][0] + e_2 * (*CUDA_CC).Nor[i][1] + e_3 * (*CUDA_CC).Nor[i][2];
+		lmu0 = e0_1 * (*CUDA_CC).Nor[i][0] + e0_2 * (*CUDA_CC).Nor[i][1] + e0_3 * (*CUDA_CC).Nor[i][2];
+		{
 			dnom = lmu + lmu0;
-			s = lmu * lmu0 * (cl + cls / dnom);
+			s = lmu * lmu0 * (cl + ddiv(cls, dnom));
 			ar = (*CUDA_LCC).Area[j];
 			br += ar * s;
 
-			incl[incl_count] = i;
 			/* Darea[i] * s * Dg[i][k] == Darea[i] * s * g * Dsph[i][k]
 			   == (Area[i] * s) * Dsph[i][k]: fold g into the weight and
 			   gather from the one read-only, facet-major Dsph shared by
 			   all work-groups instead of the per-context Dg matrix */
-			dbr[incl_count] = ar * s;
-			incl_count++;
+			dbr[c] = ar * s;
 
-			double lmu0_dnom = lmu0 / dnom;
+			double lmu0_dnom = ddiv(lmu0, dnom);
 			dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-			double lmu_dnom = lmu / dnom;
+			double lmu_dnom = ddiv(lmu, dnom);
 			dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
 
 
@@ -348,7 +361,7 @@ void bright(
 			tmp3 += ar * (dsmu * sum3 + dsmu0 * sum30);
 
 			tmp4 += lmu * lmu0 * ar;
-			tmp5 += ar * lmu * lmu0 / (lmu + lmu0);
+			tmp5 += ar * ddiv(lmu * lmu0, lmu + lmu0);
 		}
 	}
 
@@ -379,44 +392,42 @@ void bright(
 
 	ncoef0 -= 3;
 	int iStart;
-	int d, d1, dr;
+	int d;
 
 	iStart = Inrel + 1;
 	d = (jp - 1) * DYT_STRIDE + iStart;
 
-	d1 = d + 1;
-	dr = 2;
 
-	/* Derivatives of brightness w.r.t. g-coeffs */
+	/* Derivatives of brightness w.r.t. g-coeffs: BRIGHT_GB columns per pass
+	   over the visible-facet list (was 2); each column is still
+	   dbr[0] * Dsph[..] followed by the fma chain over the visible facets
+	   in ascending order. Up to BRIGHT_GB - 1 columns past ncoef0 are read
+	   (inside the Dsph row) but not stored. */
+#define BRIGHT_GB 16
 	if (incl_count)
 	{
-		for (i = iStart; i <= ncoef0; i += 2, d += dr, d1 += dr)
+		for (i = iStart; i <= ncoef0; i += BRIGHT_GB)
 		{
-			double tmp = 0, tmp1 = 0;
-			double l_dbr = dbr[0];
-			int l_incl = incl[0];
-			tmp = l_dbr * (*CUDA_CC).Dsph[l_incl][i];
-			int is_next_coef_valid = (i + 1) <= ncoef0;
-			if (is_next_coef_valid)
+			double t[BRIGHT_GB];
 			{
-				tmp1 = l_dbr * (*CUDA_CC).Dsph[l_incl][i + 1];
+				double l_dbr = dbr[0];
+				__global double* row = (*CUDA_CC).Dsph[incl[0]] + i;
+				for (int b = 0; b < BRIGHT_GB; b++)
+					t[b] = l_dbr * row[b];
 			}
 
 			for (j = 1; j < incl_count; j++)
 			{
 				double l_dbr = dbr[j];
-				int l_incl = incl[j];
-				tmp += l_dbr * (*CUDA_CC).Dsph[l_incl][i];
-				if (is_next_coef_valid)
-				{
-					tmp1 += l_dbr * (*CUDA_CC).Dsph[l_incl][i + 1];
-				}
+				__global double* row = (*CUDA_CC).Dsph[incl[j]] + i;
+				for (int b = 0; b < BRIGHT_GB; b++)
+					t[b] += l_dbr * row[b];
 			}
 
-			dytempG[d] = Scale * tmp;
-			if (is_next_coef_valid)
+			for (int b = 0; b < BRIGHT_GB; b++)
 			{
-				dytempG[d1] = Scale * tmp1;
+				if (i + b <= ncoef0)
+					dytempG[(jp - 1) * DYT_STRIDE + i + b] = Scale * t[b];
 			}
 		}
 	}
