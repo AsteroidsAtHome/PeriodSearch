@@ -559,6 +559,7 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
 
     std::ifstream f(kernelFileName);
     bool kernelExist = f.good();
+    f.close();
 
     bool readsource = false;
 #if defined (_DEBUG)
@@ -570,7 +571,8 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
 
     // program = clCreateProgramWithSource(context, 1, (const char**)&kernel_code, NULL, &err_num);
 
-    if (!kernelExist || readsource)
+    // Compile kernels from source and cache the device binary in kernels.bin
+    auto buildFromSource = [&]() -> cl_int
     {
         //auto kernelSource = ocl_src_kernelSource.c_str();
         binProgram = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
@@ -613,20 +615,80 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
 
         cerr << "Binary build log for " << deviceName << ":" << std::endl << buildlogStr << " (" << buildStatus << ")" << endl;
         delete[] buildlog;
-        err_num = SaveKernelsToBinary(binProgram, kernelFileName);
+        cl_int saveErr = SaveKernelsToBinary(binProgram, kernelFileName);
+        clReleaseProgram(binProgram);
+        binProgram = nullptr;
+        return saveErr;
+    };
+
+    // Load kernels.bin and build it for the device. Fails when the cached binary
+    // was produced for a different device / ISA (or is truncated / corrupted).
+    auto loadBinary = [&]() -> cl_int
+    {
+        program = nullptr;
+        std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
+        if (!file)
+            return CL_INVALID_BINARY;
+        std::streamoff fileSize = file.tellg();
+        if (fileSize <= 0)
+            return CL_INVALID_BINARY;
+        size_t binary_size = static_cast<size_t>(fileSize);
+        file.seekg(0, std::ios::beg);
+        vector<unsigned char> binary(binary_size);
+        if (!file.read(reinterpret_cast<char*>(binary.data()), binary_size))
+            return CL_INVALID_BINARY;
+
+        const unsigned char* binaryPtr = binary.data();
+        cl_int binary_status = CL_SUCCESS;
+        cl_int err = CL_SUCCESS;
+        program = clCreateProgramWithBinary(context, 1, &device, &binary_size, &binaryPtr, &binary_status, &err);
+        if (err == CL_SUCCESS && binary_status != CL_SUCCESS)
+            err = binary_status;
+        if (err != CL_SUCCESS)
+        {
+            if (program)
+                clReleaseProgram(program);
+            program = nullptr;
+            return err;
+        }
+
+        //char options[]{ "-Werror" };
+        char options[]{ "-w" };
+        return clBuildProgram(program, 1, &device, options, NULL, NULL); // "-Werror -cl-std=CL1.1" "-g -x cl -cl-std=CL1.2 -Werror"
+    };
+
+    bool builtFromSource = false;
+    if (!kernelExist || readsource)
+    {
+        err_num = buildFromSource();
         if (err_num > 0)
         {
             return err_num;
         }
+        builtFromSource = true;
     }
 
     try
     {
-        std::ifstream file(kernelFileName, std::ios::binary | std::ios::in | std::ios::ate);
-        size_t binary_size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        char* binary = new char[binary_size];
-        file.read(binary, binary_size);
+        err_num = loadBinary();
+        if (err_num != CL_SUCCESS && !builtFromSource)
+        {
+            // Stale kernels.bin (e.g. built for a GPU with a different ISA) - rebuild it for this device
+            cerr << "Cached " << kernelFileName << " cannot be used on " << deviceName << " (" << cl_error_to_str(err_num) << ", " << err_num << "), rebuilding from source..." << endl;
+            if (program)
+            {
+                clReleaseProgram(program);
+                program = nullptr;
+            }
+            std::remove(kernelFileName);
+            cl_int buildErr = buildFromSource();
+            if (buildErr > 0)
+            {
+                return buildErr;
+            }
+            err_num = loadBinary();
+        }
+
         //file.close();
 
         //size_t* binary_size = (size_t*)malloc(sizeof(size_t));
@@ -654,23 +716,19 @@ cl_int ClPrepare(cl_platform_id clBoincPlatformId, cl_device_id clBoincDeviceId,
         //program = clCreateProgramWithSource(context, 1, (const char**)&kSource, NULL, &err_num);
 
         //program = clCreateProgramWithSource(context, 1, (const char**)&ocl_src_kernelSource, NULL, &err_num);
-        cl_int binary_status;
-        program = clCreateProgramWithBinary(context, 1, &device, &binary_size, (const unsigned char**)&binary, &binary_status, &err_num);
-
-        //char options[]{ "-Werror" };
-        char options[]{ "-w" };
-        err_num = clBuildProgram(program, 1, &device, options, NULL, NULL); // "-Werror -cl-std=CL1.1" "-g -x cl -cl-std=CL1.2 -Werror"
         if (err_num != CL_SUCCESS)
         {
-            size_t len;
+            size_t len = 0;
             //size_t* len = (size_t*)malloc(sizeof(size_t));
-            clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-            //char* buffer = (char*)calloc(len, sizeof(char));
-            auto buffer = new char[len];
-            clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
-            cerr << "Build log: " << name << " | " << deviceName << ":" << endl << buffer << endl;
-            std::cerr << " Error creating queue: " << cl_error_to_str(err_num) << "(" << err_num << ")\n";
-            delete[] buffer;
+            if (program && clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len) == CL_SUCCESS && len > 0)
+            {
+                //char* buffer = (char*)calloc(len, sizeof(char));
+                auto buffer = new char[len];
+                clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
+                cerr << "Build log: " << name << " | " << deviceName << ":" << endl << buffer << endl;
+                delete[] buffer;
+            }
+            std::cerr << " Error loading kernels binary: " << cl_error_to_str(err_num) << "(" << err_num << ")\n";
             //free(len);
             //free(binary);
             //free(binary_size);
