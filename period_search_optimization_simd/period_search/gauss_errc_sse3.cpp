@@ -13,7 +13,6 @@
 #include <pmmintrin.h>
 #include "CalcStrategySse3.hpp"
 
-const  __m128i avx_ones = _mm_set_epi16(1, 1, 1, 1, 1, 1, 1, 1);
 
 #if defined(__GNUC__)
 __attribute__((target("sse3")))
@@ -91,7 +90,7 @@ void CalcStrategySse3::gauss_errc(struct globals& gl, const int n, std::vector<d
             if (ipiv[j] != 1) {
                 for (k = 0; k < n; k += 8) {
                     __m128i avx_ipiv = _mm_load_si128((__m128i*) & ipiv[k]);
-                    __m128i avx_iserror = _mm_cmpgt_epi16(avx_ipiv, avx_ones);
+                    __m128i avx_iserror = _mm_cmpgt_epi16(avx_ipiv, _mm_set1_epi16(1));
                     int ria = _mm_movemask_epi8(avx_iserror);
                     if (ria)
                     {
