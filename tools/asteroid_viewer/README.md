@@ -32,6 +32,10 @@ The C++ brightness model reproduces period_search exactly (the rms matches the v
 
 Windows: `bin/asteroid_viewer.exe` (prebuilt, a single exe with no DLLs needed), or `view_example.bat`.
 
+Linux: `bin/asteroid_viewer` (prebuilt for x86-64, runs on any distribution with glibc 2.27 or newer: Ubuntu 18.04+,
+Debian 10+, RHEL/Rocky 8+, Fedora). It needs only an X11 or XWayland session with OpenGL 3.3 and `curl` for the
+JPL lookups. If the file lost its executable flag on the way, run `chmod +x bin/asteroid_viewer`.
+
 ```
 asteroid_viewer [files or folders ...]
 asteroid_viewer ..\..\period_search\period_search_in ..\..\period_search\period_search_out
@@ -63,8 +67,11 @@ The viewer finds the Asteroids@home tasks your BOINC client is running and lists
 ![boinc](docs/screenshot_boinc.png)
 
 * **Data folder:** `C:\ProgramData\BOINC` by default. The BOINC installer's `DATADIR` registry value is used if it is set,
-  and `/var/lib/boinc-client` elsewhere. Change it in the panel (*Apply*, saved in `%APPDATA%\asteroid_viewer\settings.ini`),
-  or start with `--boinc DIR`.
+  On Linux the default is `/var/lib/boinc` (`/var/lib/boinc-client` if only that exists, as with older Debian/Ubuntu packages).
+  Change it in the panel (*Apply*, saved in `%APPDATA%\asteroid_viewer\settings.ini`, on Linux
+  `~/.config/asteroid_viewer/settings.ini`), or start with `--boinc DIR`.
+  On Linux the slots belong to the `boinc` user; if no tasks are found, add yourself to its group
+  (`sudo usermod -aG boinc $USER`, then log in again).
 * **Running tasks:** every slot in `<data folder>\slots\N` that holds a period_search task is listed, rescanned every 5 s.
   The list shows slot, asteroid name, orbit class (e.g. *Main-belt Asteroid (MBA)*), progress (rows written / trial periods)
   and WU name.
@@ -305,7 +312,10 @@ cmake --build build --config Release
 ```
 
 * Visual Studio 2019/2022: *Open Folder*, or the commands above in a Developer prompt.
-* Linux: you also need `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl-dev`.
+* Linux: you also need `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev`. A build made this way runs on
+  your distribution and newer ones.
+* Linux, portable (as `bin/asteroid_viewer`): `scripts/build_linux_portable.sh` builds with zig (`pip install ziglang`)
+  against glibc 2.27 and links the C++ runtime in, so the binary runs on older distributions too.
 * Windows exe from Linux: `cmake -B build-win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake` (needs mingw-w64).
 
 ## Source

@@ -57,9 +57,9 @@ std::string boincDefaultDataDir() {
   return "C:\\ProgramData\\BOINC";
 #else
   std::error_code ec;
-  if (fs::exists("/var/lib/boinc-client", ec)) return "/var/lib/boinc-client";
   if (fs::exists("/var/lib/boinc", ec)) return "/var/lib/boinc";
-  return "/var/lib/boinc-client";
+  if (fs::exists("/var/lib/boinc-client", ec)) return "/var/lib/boinc-client";  // older Debian/Ubuntu packages
+  return "/var/lib/boinc";
 #endif
 }
 

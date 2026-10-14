@@ -35,8 +35,13 @@ add_library(imgui_lib STATIC
   ${implot_SOURCE_DIR}/implot.cpp ${implot_SOURCE_DIR}/implot_items.cpp)
 target_include_directories(imgui_lib PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${implot_SOURCE_DIR})
 target_link_libraries(imgui_lib PUBLIC glfw)
+target_compile_definitions(imgui_lib PRIVATE GLFW_INCLUDE_NONE)  # the GLFW backend needs no GL headers
 
-find_package(OpenGL REQUIRED)
+# OpenGL functions are loaded at run time (glfwGetProcAddress); GLFW opens libGL itself on Linux,
+# so only Windows links the GL library.
+if(WIN32)
+  find_package(OpenGL REQUIRED)
+endif()
 
 # ---- period_search numerics (compiled from the repository's period_search/*.c) ----
 set(PERIOD_SEARCH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../period_search" CACHE PATH "folder with period_search C sources")
@@ -91,9 +96,9 @@ find_package(Threads REQUIRED)
 add_executable(asteroid_viewer
   src/main.cpp src/data.cpp src/model.cpp src/renderer.cpp src/gl_loader.cpp
   src/ps_core.cpp src/compute.cpp src/minkowski.cpp src/sbdb.cpp src/boinc.cpp src/cache.cpp src/orbitfit.cpp)
-target_link_libraries(asteroid_viewer PRIVATE imgui_lib glfw OpenGL::GL ps_numerics Threads::Threads)
+target_link_libraries(asteroid_viewer PRIVATE imgui_lib glfw ps_numerics Threads::Threads)
 if(WIN32)
-  target_link_libraries(asteroid_viewer PRIVATE winhttp)
+  target_link_libraries(asteroid_viewer PRIVATE OpenGL::GL winhttp)
 endif()
 target_compile_definitions(asteroid_viewer PRIVATE _USE_MATH_DEFINES)
 if(MINGW)
