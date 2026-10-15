@@ -9,11 +9,6 @@
 //struct __attribute__((packed)) freq_context
 //struct mfreq_context
 //struct __attribute__((aligned(8))) mfreq_context
-//#ifdef NVIDIA
-//struct mfreq_context
-//#else
-//typedef struct mfreq_context
-//#endif
 typedef struct mfreq_context
 {
 	//double* Area;
@@ -24,11 +19,12 @@ typedef struct mfreq_context
 	//double* ytemp;
 
 	double Area[MAX_N_FAC + 1];
-	double alpha[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double covar[(MAX_N_PAR + 1) * (MAX_N_PAR + 1)];
-	double dytemp[(POINTS_MAX + 1) * (MAX_N_PAR + 1)];
-	double ytemp[POINTS_MAX + 1];
-
+	/* The point- and fit-dimensioned work arrays (alpha, covar, dytemp,
+	   ytemp, jp_*, e_*, de, de0) live in a separate runtime-sized scratch
+	   buffer - one slice of freq_context.scrStride doubles per work-group,
+	   at the offsets recorded in freq_context - instead of compile-time
+	   worst-case arrays here. That cuts per-context memory ~6x (2.27 MB ->
+	   ~0.4 MB for typical workunits). */
 	double beta[MAX_N_PAR + 1];
 	double atry[MAX_N_PAR + 1];
 	double da[MAX_N_PAR + 1];
@@ -65,11 +61,6 @@ typedef struct mfreq_context
 
 //struct freq_context
 //typedef struct __attribute__((aligned(8))) freq_context
-//#ifdef NVIDIA
-//struct freq_context
-//#else
-//typedef struct freq_context
-//#endif
 struct freq_context
 {
 	double Phi_0;
@@ -139,11 +130,6 @@ struct freq_context
 
 //struct freq_result
 //struct __attribute__((aligned(8))) freq_result
-//#ifdef NVIDIA
-//struct freq_result
-//#else
-//typedef struct freq_result
-//#endif
 struct freq_result
 {
 	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;

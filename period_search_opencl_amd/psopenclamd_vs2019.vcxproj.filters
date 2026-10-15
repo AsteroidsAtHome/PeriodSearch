@@ -31,9 +31,7 @@
   <ItemGroup>
     <None Include="period_search\clear_files.bat" />
     <None Include="period_search\curv.cl" />
-    <None Include="period_search\dave.cl" />
     <None Include="period_search\period_search_in" />
-    <None Include="period_search\sig2iwght.cl" />
     <None Include="period_search\bright.cl" />
     <None Include="period_search\blmatrix.cl" />
     <None Include="period_search\conv.cl" />

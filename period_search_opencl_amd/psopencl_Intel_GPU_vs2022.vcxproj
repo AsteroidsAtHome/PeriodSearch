@@ -457,7 +457,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_USE_MATH_DEFINES;__CL_ENABLE_EXCEPTIONS;AMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_USE_MATH_DEFINES;__CL_ENABLE_EXCEPTIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
       <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Release;$(AMDAPPSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -512,9 +512,6 @@
     <None Include="period_search\Curv2.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="period_search\dave.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="period_search\gauss_errc.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
@@ -529,9 +526,6 @@
     </None>
     <None Include="period_search\mrqmin.cl">
       <FileType>Document</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="period_search\Start.cl">

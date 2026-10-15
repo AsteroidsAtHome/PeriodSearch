@@ -32,8 +32,8 @@ public:
 	void gauss_errc(struct globals& gl, const int n, std::vector<double>& b, int &error) override;
 
 private:
-	__m256d* Dg_row[MAX_N_FAC + 3];
-	__m256d dbr[MAX_N_FAC + 3];
+	__m256d* Dg_row[MAX_N_FAC + 4 + DG_PREFETCH_ROWS];
+	double dbr[MAX_N_FAC + 4];
 
 	double php[N_PHOT_PAR + 1];
 	double dphp[N_PHOT_PAR + 1];

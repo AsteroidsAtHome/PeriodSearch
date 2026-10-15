@@ -97,6 +97,25 @@
 UC_SHMEM* shmem;
 #endif
 
+#if !defined _WIN32
+#include <stdarg.h>
+
+int fscanf_s(FILE* file, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int result = vfscanf(file, format, args);
+    va_end(args);
+
+    if (result == EOF) {
+        fprintf(stderr, "\nError: reading input\n"); fflush(stderr); std::exit(2);
+    }
+    else if (result == 0) {
+        fprintf(stderr, "\nError: input format mismatch\n"); fflush(stderr); std::exit(2);
+    }
+    return result;
+}
+#endif
+
 using std::string;
 
 #if _MSC_VER >= 1900 // Visual Studio 2015 or later
@@ -347,43 +366,46 @@ int main(int argc, char** argv)
 	boinc_register_timer_callback(update_shmem);
 #endif
 
+    int err = 0;
+    char* line = nullptr;
+
 	// NOTE: Period interval (hours) fixed or free
-	fscanf(infile, "%lf %lf %lf %d", &startPeriod, &periodStepCoef, &endPeriod, &ia_prd); 	fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %lf %lf %d", &startPeriod, &periodStepCoef, &endPeriod, &ia_prd); 	line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Epoch of zero time t0
-	fscanf(infile, "%lf", &jd00);                          	fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &jd00);                          	line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Initial fixed rotation angle fi0
-	fscanf(infile, "%lf", &phi_0);                          	fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &phi_0);                          	line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: The weight factor for conv. reg.
-	fscanf(infile, "%lf", &conw);                           	fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &conw);                           	line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Degree and order of the Laplace series
-	fscanf(infile, "%d %d", &l_max, &m_max);                	fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%d %d", &l_max, &m_max);                	line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Number of triangulation rows per octant
-	fscanf(infile, "%d", &nrows);                               fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%d", &nrows);                               line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Initial guesses for phase funct. params.
-	fscanf(infile, "%lf %d", &par[1], &ia_par[1]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
-	fscanf(infile, "%lf %d", &par[2], &ia_par[2]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
-	fscanf(infile, "%lf %d", &par[3], &ia_par[3]);              fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[1], &ia_par[1]);              line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[2], &ia_par[2]);              line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &par[3], &ia_par[3]);              line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Initial Lambert coefficient (L - S = 1)
-	fscanf(infile, "%lf %d", &cl, &ia_cl);                      fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf %d", &cl, &ia_cl);                      line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Maximum number of iterations (when > 1) or  minimum difference in dev to stop (when < 1)
-	fscanf(infile, "%lf", &stopCondition);                     fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &stopCondition);                     line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Minimum number of iterations when stop_condition < 1
-	fscanf(infile, "%d", &nIterMin);                          fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%d", &nIterMin);                          line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Multiplicative factor for Alamda
-	fscanf(infile, "%lf", &a_lamda_incr);                       fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &a_lamda_incr);                       line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	// NOTE: Alamda initial value
-	fscanf(infile, "%lf", &a_lamda_start);                      fgets(stringTemp, MAX_LINE_LENGTH, infile);
+	err = fscanf_s(infile, "%lf", &a_lamda_start);                      line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 
 	if (boinc_is_standalone())
 	{
@@ -405,7 +427,7 @@ int main(int argc, char** argv)
 	// NOTE: light curves + geometry file
 	// NOTE: number of light curves and the first relative one
 	int tlcurves;
-	fscanf(infile, "%d", &tlcurves);
+	err = fscanf_s(infile, "%d", &tlcurves);
 
 	if (boinc_is_standalone())
 	{
@@ -427,12 +449,12 @@ int main(int argc, char** argv)
 	for (i = 1; i <= gl.Lcurves; i++)
 	{
 		ave = 0; /* average */
-		fscanf(infile, "%d %d", &gl.Lpoints[i], &iTemp); /* points in this lightcurve */
+		err = fscanf_s(infile, "%d %d", &gl.Lpoints[i], &iTemp); /* points in this lightcurve */
 		if (boinc_is_standalone())
 		{
 			printf("%d points in light curve[%d]\n", gl.Lpoints[i], i);
 		}
-		fgets(stringTemp, MAX_LINE_LENGTH, infile);
+		line = fgets(stringTemp, MAX_LINE_LENGTH, infile);
 		gl.Inrel[i] = 1 - iTemp;
 		if (gl.Inrel[i] == 0)
 			onlyrel = 0;
@@ -442,9 +464,9 @@ int main(int argc, char** argv)
 		{
 			ndata++;
 
-			fscanf(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); // NOTE: JD, brightness
-			fscanf(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]);      // NOTE: ecliptic astronomical tempo-centric coordinates of the Sun in AU
-			fscanf(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]);         // NOTE: ecliptic astronomical centric coordinates of the Earth in AU
+			err = fscanf_s(infile, "%lf %lf", &tim[ndata], &brightness[ndata]); // NOTE: JD, brightness
+			err = fscanf_s(infile, "%lf %lf %lf", &e0[1], &e0[2], &e0[3]);      // NOTE: ecliptic astronomical tempo-centric coordinates of the Sun in AU
+			err = fscanf_s(infile, "%lf %lf %lf", &e[1], &e[2], &e[3]);         // NOTE: ecliptic astronomical centric coordinates of the Earth in AU
 
 			// NOTE: selects the minimum and maximum JD
 			if (tim[ndata] < jdMin) jdMin = tim[ndata];
@@ -499,15 +521,18 @@ int main(int argc, char** argv)
 		weightLc[i] = -1;
 
 	/* reads weights */
-	while (feof(infile) == 0)
-	{
-		fscanf(infile, "%d", &lcNumber);
-		fscanf(infile, "%lf", &weightLc[lcNumber]);
-		if (boinc_is_standalone())
-		{
-			printf("Weights: Light curve[%d], Weight[%g]\n", lcNumber, weightLc[lcNumber]);
-		}
-	}
+    auto scanResult = 0;
+    while (true)
+    {
+        scanResult = fscanf(infile, "%d", &lcNumber);
+        if (scanResult <= 0) break;
+        scanResult = fscanf(infile, "%lf", &weightLc[lcNumber]);
+        if (scanResult <= 0) break;
+        if (boinc_is_standalone())
+            printf("Weights: Light curve[%d], Weight[%g]\n", lcNumber, weightLc[lcNumber]);
+
+        if (feof(infile)) break;
+    }
 
 	/* If input jd_0 <= 0 then the jd_0 is set to the day before the
 	   lowest JD in the data */

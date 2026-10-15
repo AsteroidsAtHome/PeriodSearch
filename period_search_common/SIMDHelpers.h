@@ -28,8 +28,11 @@ struct AlignedAllocator
 
     T* allocate(const std::size_t n)
     {
-#if defined __GNUC__
-        void* ptr = std::aligned_alloc(alignment, n * sizeof(T));
+#if defined __GNUC__ && !defined _WIN32
+        void* ptr = nullptr;
+        if (posix_memalign(&ptr, alignment, n * sizeof(T)) != 0) {
+            throw std::bad_alloc();
+        }
 #else
         void* ptr = _aligned_malloc(n * sizeof(T), alignment);
 #endif
@@ -42,7 +45,7 @@ struct AlignedAllocator
 
     void deallocate(T* p, std::size_t) noexcept
     {
-#if defined __GNUC__
+#if defined __GNUC__ && !defined _WIN32
         free(p);
 #else
         _aligned_free(p);
@@ -56,7 +59,7 @@ struct AlignedDeleter
     void operator()(T* ptr) const
     {
         ptr->~T();			// Explicitly call the destructor
-#if defined __GNUC__
+#if defined __GNUC__ && !defined _WIN32
         free(ptr);
 #else
         _aligned_free(ptr);   // Free the aligned memory

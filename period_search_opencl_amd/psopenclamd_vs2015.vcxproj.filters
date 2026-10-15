@@ -45,12 +45,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="period_search\dave.cl">
-      <Filter>Kernel Files</Filter>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
-      <Filter>Kernel Files</Filter>
-    </None>
     <None Include="period_search\curv.cl">
       <Filter>Kernel Files</Filter>
     </None>

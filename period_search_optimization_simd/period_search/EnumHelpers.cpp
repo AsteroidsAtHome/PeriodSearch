@@ -10,7 +10,7 @@
  * @param simdEnum The SIMDEnum value to be converted to a string.
  * @return Returns a string representing the name of the SIMDEnum value.
  *
- * @note The function covers several SIMD optimization levels including SSE2, SSE3, AVX, FMA, AVX512, ASIMD, NONE, and an Undefined state.
+ * @note The function covers several SIMD optimization levels including SSE2, SSE3, AVX, FMA, AVX512, ASIMD, SVE, NONE, and an Undefined state.
  */
 const std::string getSIMDEnumName(SIMDEnum simdEnum)
 {
@@ -35,6 +35,9 @@ const std::string getSIMDEnumName(SIMDEnum simdEnum)
 			break;
 		case SIMDEnum::OptASIMD:
 			result = "ASIMD";
+			break;
+		case SIMDEnum::OptSVE:
+			result = "SVE";
 			break;
 		case SIMDEnum::OptNONE:
 			result = "NONE";

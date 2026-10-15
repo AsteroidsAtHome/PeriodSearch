@@ -39,13 +39,10 @@ CXXFLAGS = -O3 -s \
 # CUDA 11.1 - CC: NVCCFLAGS = compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80;compute_86,sm_86
 # CUDA 11.8 - CC: NVCCFLAGS = --ptxas-options=-v --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_70,code=sm_70 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 --generate-code arch=compute_86,code=sm_86 --maxrregcount=80 -rdc=tru
 # CUDA 12.0 - CC:
-NVCCFLAGS = -O3 --extra-device-vectorization  --ptxas-options=-v --generate-code arch=compute_35,code=sm_35 --generate-code arch=compute_37,code=sm_37 \
-	--generate-code arch=compute_50,code=sm_50 \
-	--generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_53,code=sm_53 --generate-code arch=compute_60,code=sm_60 \
-	--generate-code arch=compute_61,code=sm_61 --generate-code arch=compute_62,code=sm_62 --generate-code arch=compute_70,code=sm_70 \
-	--generate-code arch=compute_72,code=sm_72 --generate-code arch=compute_75,code=sm_75 --generate-code arch=compute_80,code=sm_80 \
-	--generate-code arch=compute_86,code=sm_86 --generate-code arch=compute_87,code=sm_87 --generate-code arch=compute_89,code=sm_89 \
-	--generate-code arch=compute_90,code=sm_90 --maxrregcount=255 -rdc=true -Wno-deprecated-gpu-targets 
+NVCC_ARCHS = 50 52 53 60 61 62 70 72 75 80 86 87 89 90
+NVCC_COMMON = -O3 --extra-device-vectorization --maxrregcount=255 -Wno-deprecated-gpu-targets
+NVCCFLAGS = $(NVCC_COMMON) -rdc=true $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=lto_$(a))
+NVCCLINKFLAGS = $(NVCC_COMMON) --ptxas-options=-v -dlto $(foreach a,$(NVCC_ARCHS),--generate-code arch=compute_$(a),code=sm_$(a))
 
 CC=g++
 CXX=g++
@@ -82,7 +79,7 @@ clean:
 distclean:
 	/bin/rm -f $(BUILD_DIR)/* libstdc++.a libcuda.so
 
-install: $(BUILD_DIR)/period_search_BOINC_cuda11800_v10222_Release
+install: $(BUILD_DIR)/period_search_BOINC_cuda12900_v10222_Release
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.
@@ -92,10 +89,11 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/period_search_BOINC_cuda11800_v10222_Release: $(BUILD_DIR)/period_search_BOINC.o $(MY_LIBS) libstdc++.a $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a \
-	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a
+	libcuda.so libnvidia-ml.so $(PS_COMMON_LIB_DIR)/libps_common.a $(CUDA_PATH)/lib64/libcudart_static.a $(CUDA_PATH)/lib64/libcudadevrt.a
 	$(CXX) $(CXXFLAGS) -o $@ $(MY_LIBS) $< libstdc++.a -pthread \
 	$(PS_COMMON_LIB_DIR)/libps_common.a \
 	$(CUDA_PATH)/lib64/libcudart_static.a \
+	 $(CUDA_PATH)/lib64/libcudadevrt.a \
 	$(BOINC_API_DIR)/libboinc_api.a  libcuda.so libnvidia-ml.so \
 	$(BOINC_LIB_DIR)/libboinc.a $(LDFLAGS)
 
@@ -114,7 +112,7 @@ $(BUILD_DIR)/%.o: %.cpp
 # Special rule for pscuda.device-link.o
 $(BUILD_DIR)/pscuda.device-link.o: $(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 	$(CUDA_PATH)/bin/nvcc -dlink -o $@ --compiler-bindir=/usr/bin/gcc $(OPTIMIZATION) \
-		$(NVCCFLAGS) \
+		$(NVCCLINKFLAGS) \
 		--compiler-options="$(CXXFLAGS)" \
 		$(BUILD_DIR)/start_CUDA.o $(BUILD_DIR)/Start.o $(BUILD_DIR)/blmatrix.o $(BUILD_DIR)/bright.o $(BUILD_DIR)/conv.o $(BUILD_DIR)/curv.o $(BUILD_DIR)/gauss_errc.o $(BUILD_DIR)/mrqcof.o $(BUILD_DIR)/mrqmin.o $(BUILD_DIR)/matrix.o $(BUILD_DIR)/curve2_CUDA.o $(BUILD_DIR)/ComputeCapability.o
 

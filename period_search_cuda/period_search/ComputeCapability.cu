@@ -39,6 +39,10 @@ int Cc::GetSmxBlock() const
 	{
 		result = GetSmxBlockCuda6();
 	}
+	else
+	{
+		result = UseDefault();
+	}
 
 	return result;
 }
@@ -71,7 +75,7 @@ int Cc::GetSmxBlockCuda12() const
 		smxBlock = GetSmxBlockCc5(); // Maxwell
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -102,7 +106,7 @@ int Cc::GetSmxBlockCuda11() const
 		smxBlock = GetSmxBlockCc5(); // Maxwell
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -136,7 +140,7 @@ int Cc::GetSmxBlockCuda10() const
 		smxBlock = GetSmxBlockCc3(); // Kepler
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -166,7 +170,7 @@ int Cc::GetSmxBlockCuda6() const
 		smxBlock = GetSmxBlockCc1(); // Tesla
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -185,7 +189,7 @@ int Cc::GetSmxBlockCc12() const
 		smxBlock = 32;	// Blackwell (GB10)
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -201,7 +205,7 @@ int Cc::GetSmxBlockCc9() const
 		smxBlock = 32;	// Hopper
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -216,6 +220,9 @@ int Cc::GetSmxBlockCc8() const
 	case 0:
 		smxBlock = 32;	// Tesla A100 | occupancy 100% = 32 blocks per SMX
 		break;
+	case 5:
+		smxBlock = 16;	// ZLuda
+		break;
 	case 6:
 	case 7:
 		smxBlock = 16;	// GeForce RTX 3080 etc.; Quadro A6000 | occupancy 100% = 16 blocks per SMX
@@ -227,7 +234,7 @@ int Cc::GetSmxBlockCc8() const
 		smxBlock = 24;	// GeForce RTX 4090, RTX 4080 16GB; RTX 6000 Ada | occupancy 100% = 24 blocks per SMX
 		break;
 	default:
-		Exit();
+		smxBlock = UseDefault();
 		break;
 	}
 
@@ -247,7 +254,7 @@ int Cc::GetSmxBlockCc7() const
 			smxBlock = 16;
 			break;
 		default:			
-			Exit();
+			smxBlock = UseDefault();
 			break;
 	}
 
@@ -265,7 +272,7 @@ int Cc::GetSmxBlockCc6() const
 			smxBlock = 32; //occupancy 100% = 32 blocks per SMX
 			break;
 		default:
-			Exit();
+			smxBlock = UseDefault();
 			break;
 	}
 
@@ -286,7 +293,7 @@ int Cc::GetSmxBlockCc5() const
 			smxBlock = 32; //occupancy 100% = 32 blocks per SMX, instead as previous was 16 blocks per SMX which led to only 50%
 			break;
 		default:
-			Exit();
+			smxBlock = UseDefault();
 			break;
 	}
 
@@ -307,7 +314,7 @@ int Cc::GetSmxBlockCc3() const
 			smxBlock = 16; //occupancy 100% = 16 blocks per SMX
 			break;
 		default:
-			Exit();
+			smxBlock = UseDefault();
 			break;			
 	}
 
@@ -325,7 +332,7 @@ int Cc::GetSmxBlockCc2() const
 			smxBlock = 8; //occupancy 100% = 8 blocks per SMX
 			break;
 		default:
-			Exit();
+			smxBlock = UseDefault();
 			break;
 	}
 
@@ -345,15 +352,16 @@ int Cc::GetSmxBlockCc1() const
 			smxBlock = 8; //occupancy 100% = 8 blocks per SMX
 			break;
 		default:
-			Exit();
+			smxBlock = UseDefault();
 			break;
 	}
 
 	return smxBlock;
 }
 
-void Cc::Exit() const
+int Cc::UseDefault() const
 {
-	fprintf(stderr, "Unsupported Compute Capability (CC) detected (%d.%d).\n", deviceCcMajor, deviceCcMinor);
-	exit(1);
+	fprintf(stderr, "Warning: Unsupported Compute Capability (CC) detected (%d.%d) with CUDA runtime %d. Using default of %d resident blocks per SMX.\n",
+		deviceCcMajor, deviceCcMinor, cudaVersion, DefaultSmxBlock);
+	return DefaultSmxBlock;
 }

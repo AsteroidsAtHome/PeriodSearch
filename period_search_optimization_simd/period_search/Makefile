@@ -33,7 +33,8 @@ SRC = areanorm.cpp blmatrix.cpp bright.cpp bright_avx.cpp bright_avx512.cpp brig
 	gauss_errc_avx512.cpp gauss_errc_sse2.cpp gauss_errc_sse3.cpp lubksb.cpp ludcmp.cpp matrix.cpp \
 	mrqcof.cpp mrqcof_avx.cpp mrqcof_avx512.cpp mrqcof_fma.cpp mrqcof_sse2.cpp \
 	mrqcof_sse3.cpp mrqmin.cpp phasec.cpp sphfunc.cpp systeminfo.cpp \
-	trifac.cpp VersionInfo.cpp period_search_BOINC.cpp
+	trifac.cpp VersionInfo.cpp benchmark.cpp period_search_BOINC.cpp \
+    bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp
 
 # Define the object files
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
