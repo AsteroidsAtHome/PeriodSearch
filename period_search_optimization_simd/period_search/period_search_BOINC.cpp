@@ -307,7 +307,7 @@ int main(int argc, char** argv)
     std::vector<std::vector<int>> ifp;
     init_matrix(ifp, MAX_N_FAC + 1, 4 + 1, 0);
 
-#if defined __GNUC__
+#if defined __GNUC__ || (defined(_MSC_VER) && _MSC_VER >= 1900)
     gl.initializeVectors(MAX_N_PAR + 1, MAX_N_PAR + 8 + 1);
 #else
     init_matrix(gl.covar, MAX_N_PAR + 1, MAX_N_PAR + 1, 0.0);
