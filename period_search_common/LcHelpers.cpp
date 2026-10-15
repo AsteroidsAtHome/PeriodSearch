@@ -97,7 +97,7 @@ int PrepareLcData(struct globals& gl, const char* filename)
 	int lineNumber = 0;
 	int offset = 0;
 	int i = 0;
-#if defined _MSC_VER & _MCS_VER < 1900
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #else
 	std::unordered_map<int, std::function<void(const char*, int&)>> actions;
 	actions[15] = [&](const char* line, int& err) { processLine15(gl, line, err); };
@@ -110,7 +110,7 @@ int PrepareLcData(struct globals& gl, const char* filename)
 		std::strcpy(line, lineStr.c_str());
 		lineNumber++;
 
-#if defined _MSC_VER & _MCS_VER < 1900
+#if defined(_MSC_VER) && _MSC_VER < 1900
 		if (lineNumber == 15)
 		{
 			processLine15(gl, line, err);

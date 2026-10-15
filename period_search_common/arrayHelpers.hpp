@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#if defined __GNUC__
+#if defined __GNUC__ || (defined(_MSC_VER) && _MSC_VER >= 1900)
 #include <vector>
 #include <cstdlib>
 #include <stdexcept>
@@ -295,8 +295,8 @@ extern struct globals
     alignas(64) double Darea[MAX_N_FAC + 8];
     alignas(64) double Dg[MAX_N_FAC + 16][MAX_N_PAR + 8];
     alignas(64) double dyda[MAX_N_PAR + 16];
-    alignas(64) std::vector<std::vector<double>> covar;
-    alignas(64) std::vector<std::vector<double>> alpha;
+    AlignedOuterVector covar;
+    AlignedOuterVector alpha;
 #else
     __declspec(align(64)) double Nor[3][MAX_N_FAC + 8];
     __declspec(align(64)) double Area[MAX_N_FAC + 8];
@@ -338,7 +338,7 @@ extern struct globals
     //std::vector<AlignedVector> alpha;
 
     // Function to initialize the vectors
-#if defined __GNUC__
+#if defined __GNUC__ || (defined(_MSC_VER) && _MSC_VER >= 1900)
     void initializeVectors(size_t rows, size_t cols)
     {
         covar.resize(rows, AlignedInnerVector(cols));
