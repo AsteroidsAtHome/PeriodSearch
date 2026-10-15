@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug-Nvidia|Win32">
@@ -325,7 +325,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WIN32;_USE_MATH_DEFINES;_CONSOLE;__CL_ENABLE_EXCEPTIONS;AMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;$(AMDAPPSDKROOT)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boincsdk\boinc\api;C:\boincsdk\boinc\lib;C:\boincsdk\boinc\win_build\Build\x64\Debug;$(AMDAPPSDKROOT)include;..\period_search_common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -341,8 +341,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(AMDAPPSDKROOT)lib\x86_64;C:\boincsdk\boinc\win_build\Build\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;libcmtd.lib;libcpmtd.lib;libboinc.lib;libboincapi.lib;shlwapi.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(AMDAPPSDKROOT)lib\x86_64;C:\boincsdk\boinc\win_build\Build\x64\Debug;..\period_search_common\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenCL.lib;libcmtd.lib;libcpmtd.lib;libboinc.lib;libboincapi.lib;shlwapi.lib;version.lib;ps_commond.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>10000000</StackReserveSize>
     </Link>
@@ -525,63 +525,32 @@
     <ClCompile Include="period_search\memory.cpp" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\phasec.cpp" />
+    <ClCompile Include="period_search\Settings.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\Start_OpenCl.cpp" />
-    <ClCompile Include="period_search\Start_OpenCl_c++.cpp" />
     <ClCompile Include="period_search\stdafx.cpp" />
     <ClCompile Include="period_search\trifac.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="kernels.ini" />
     <None Include="oclProgramFileToString.py" />
-    <None Include="period_search\blmatrix.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\bright.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\conv.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="period_search\cpp.hint" />
-    <None Include="period_search\curv.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\Curv2.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\dave.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\gauss_errc.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\GlobalsCL.h">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\Intrinsics.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="period_search\Makefile" />
-    <None Include="period_search\mrqcof.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\mrqmin.cl">
-      <FileType>Document</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\Start.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\swap.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="period_search\test.cl">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
+    <None Include="period_search\OpenCL\blmatrix.cl" />
+    <None Include="period_search\OpenCL\bright.cl" />
+    <None Include="period_search\OpenCL\conv.cl" />
+    <None Include="period_search\OpenCL\curv.cl" />
+    <None Include="period_search\OpenCL\Curv2.cl" />
+    <None Include="period_search\OpenCL\dave.cl" />
+    <None Include="period_search\OpenCL\gauss_errc.cl" />
+    <None Include="period_search\OpenCL\Intrinsics.cl" />
+    <None Include="period_search\OpenCL\mrqcof.cl" />
+    <None Include="period_search\OpenCL\mrqmin.cl" />
+    <None Include="period_search\OpenCL\sig2iwght.cl" />
+    <None Include="period_search\OpenCL\Start.cl" />
+    <None Include="period_search\OpenCL\swap.cl" />
+    <None Include="period_search\OpenCL\test.cl" />
     <None Include="period_search_out_cuda_correct" />
   </ItemGroup>
   <ItemGroup>
@@ -592,6 +561,7 @@
     <ClInclude Include="period_search\declarations_OpenCl.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\Globals_OpenCl.h" />
+    <ClInclude Include="period_search\ini.h" />
     <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\Start_OpenCl.h" />
     <ClInclude Include="period_search\stdafx.h" />

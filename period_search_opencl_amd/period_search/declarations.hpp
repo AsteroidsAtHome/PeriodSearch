@@ -1,11 +1,11 @@
 //#pragma once
-// #include <CL/cl.h>
 // #include <CL/cl_platform.h>
 
 #include <stdbool.h>
 #if defined _WIN32
 #include "Windows.h"
 #endif
+ #include <CL/cl.h>
 
 void trifac(int nrows, int **ifp);
 void areanorm(double t[], double f[], int ndir, int nfac, int **ifp,
@@ -36,6 +36,7 @@ void matrix(double omg, double t, double tmat[][4], double dtm[][4][4]);
 //void shell(int n, double a[], int index[]);
 
 double *vector_double(int length);
+cl_double *vector_cl_double(int length);
 int *vector_int(int length);
 double **matrix_double(int rows, int columns);
 int **matrix_int(int rows, int columns);
@@ -43,6 +44,9 @@ double ***matrix_3_double(int n_1, int n_2, int n_3);
 void deallocate_vector(void *p_x);
 void deallocate_matrix_double(double **p_x, int rows);
 void deallocate_matrix_int(int **p_x, int rows);
+
+void ReleaseGlobalClObjects();
+bool ShouldReadSource(char *deviceName);
 
 //cl_double* vector_cl_double(int length);
 

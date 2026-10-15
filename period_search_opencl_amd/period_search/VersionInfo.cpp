@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #if defined __GNUC__
 const int _major = 102;
-const int _minor = 18;
+const int _minor = 22;
 const int _build = 0;
 const int _revision = 0;
 #else
@@ -16,7 +16,7 @@ bool GetVersionInfo(int &major, int &minor, int &build, int &revision)
     minor = _minor;
     build = _build;
     revision = _revision;
-    
+
     return true;
 }
 

@@ -73,60 +73,58 @@
     <ClCompile Include="period_search\binaries.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="period_search\Start_OpenCl_c++.cpp">
+    <ClCompile Include="period_search\Settings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="period_search\cpp.hint" />
-    <None Include="period_search\GlobalsCL.h">
-      <Filter>Header Files</Filter>
-    </None>
-    <None Include="period_search\blmatrix.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\bright.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\conv.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\curv.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\Curv2.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\dave.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\gauss_errc.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\Intrinsics.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\mrqcof.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\mrqmin.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\sig2iwght.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\Start.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
-    <None Include="period_search\swap.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
     <None Include="period_search\Makefile" />
-    <None Include="period_search\test.cl">
-      <Filter>Source Files CL</Filter>
-    </None>
     <None Include="period_search_out_cuda_correct" />
     <None Include="oclProgramFileToString.py" />
+    <None Include="period_search\OpenCL\blmatrix.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\bright.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\conv.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\curv.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\Curv2.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\dave.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\gauss_errc.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\Intrinsics.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\mrqcof.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\mrqmin.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\sig2iwght.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\Start.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\swap.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="period_search\OpenCL\test.cl">
+      <Filter>Source Files CL</Filter>
+    </None>
+    <None Include="kernels.ini" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\constants.h">
@@ -154,6 +152,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="period_search\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="period_search\ini.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

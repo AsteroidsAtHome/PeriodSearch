@@ -1,6 +1,10 @@
-#define POINTS_MAX         2000             /* max number of data points in one lc. */
-#define MAX_N_OBS         20000             /* max number of data points */
-#define MAX_LC              200             /* max number of lightcurves */
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
+
+#define POINTS_MAX         3000             /* max number of data points in one lc. */
+#define MAX_N_OBS         30000             /* max number of data points */
+#define MAX_LC               30             /* max number of lightcurves */
 #define MAX_LINE_LENGTH    1000             /* max length of line in an input file */
 #define MAX_N_FAC          1000             /* max number of facets */
 #define MAX_N_ITER          100             /* maximum number of iterations */
@@ -1086,20 +1090,10 @@ void bright(
 	ncoef0 -= 3;
 	int m, m1, mr, iStart;
 	int d, d1, dr;
-	if (Inrel)
-	{
-		iStart = 2;
-		//m = blockIdx.x * CUDA_Dg_block + 2 * (CUDA_Numfac1);
-		m = 2 * (*CUDA_CC).Numfac1;
-		d = jp + 2 * (Lpoints1);
-	}
-	else
-	{
-		iStart = 1;
-		//m = blockIdx.x * CUDA_Dg_block + (CUDA_Numfac1);
-		m = (*CUDA_CC).Numfac1;
-		d = jp + (Lpoints1);
-	}
+
+	iStart = Inrel + 1;
+	m = iStart * (*CUDA_CC).Numfac1;
+	d = jp + (Lpoints1 << Inrel);
 
 	m1 = m + (*CUDA_CC).Numfac1;
 	mr = 2 * (*CUDA_CC).Numfac1;
@@ -1939,7 +1933,6 @@ void mrqmin_2_end(
 
 
 }
-kernel void k(){}
 kernel void ClCheckEnd(
     __global int* CUDA_End,
     int theEnd)
@@ -2834,3 +2827,5 @@ __kernel void ClCalculateFinishPole(
     (*CUDA_LFR).chck[3]=(*CUDA_LCC).chck[3];*/
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 }
+
+// Created on: 2025-04-07 20:29:01

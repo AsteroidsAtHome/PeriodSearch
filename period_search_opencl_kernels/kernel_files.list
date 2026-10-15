@@ -1,0 +1,14 @@
+# keep in mind file order is crucial for the kernels to work!
+period_search/constants.h
+period_search/opencl/GlobalsCL.h
+period_search/opencl/Intrinsics.cl
+period_search/opencl/swap.cl
+period_search/opencl/blmatrix.cl
+period_search/opencl/curv.cl
+period_search/opencl/Curv2.cl
+period_search/opencl/bright.cl
+period_search/opencl/conv.cl
+period_search/opencl/mrqcof.cl
+period_search/opencl/gauss_errc.cl
+period_search/opencl/mrqmin.cl
+period_search/opencl/Start.cl

@@ -2,9 +2,9 @@
   #define M_PI 3.14159265358979323846
 #endif
 
-#define POINTS_MAX         2000             /* max number of data points in one lc. */
-#define MAX_N_OBS         20000             /* max number of data points */
-#define MAX_LC              200             /* max number of lightcurves */
+#define POINTS_MAX         3000             /* max number of data points in one lc. */
+#define MAX_N_OBS         30000             /* max number of data points */
+#define MAX_LC               30             /* max number of lightcurves */
 #define MAX_LINE_LENGTH    1000             /* max length of line in an input file */
 #define MAX_N_FAC          1000             /* max number of facets */
 #define MAX_N_ITER          100             /* maximum number of iterations */

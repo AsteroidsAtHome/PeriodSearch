@@ -130,6 +130,7 @@
 UC_SHMEM* shmem;
 
 #endif
+#include "arrayHelpers.hpp"
 
 using std::string;
 
@@ -188,10 +189,10 @@ deallocate; // , max_l_points; // n_iter,
 
 double o_chi_square, chi_square, a_lambda, scale, //phi_0
 d_area[MAX_N_FAC + 1], sclnw[MAX_LC + 1], /*Area[MAX_N_FAC+1],*/
-y_out[MAX_N_OBS + 1],
+//y_out[MAX_N_OBS + 1],
 f_c[MAX_N_FAC + 1][MAX_LM + 1], f_s[MAX_N_FAC + 1][MAX_LM + 1],
 t_c[MAX_N_FAC + 1][MAX_LM + 1], t_s[MAX_N_FAC + 1][MAX_LM + 1],
-d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
+d_sphere[MAX_N_FAC + 1][MAX_N_PAR + 1], //d_g[MAX_N_FAC + 1][MAX_N_PAR + 1],
 normal[MAX_N_FAC + 1][3], bl_matrix[4][4],
 pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
 d_bl_matrix[3][4][4];
@@ -202,7 +203,7 @@ string kernelCurv, kernelDaveFile, kernelSig2wghtFile;
 cl_double a_lamda_incr;
 cl_double a_lamda_start;
 cl_double phi_0;
-cl_double weight[MAX_N_OBS + 1];
+//cl_double weight[MAX_N_OBS + 1];
 cl_int max_l_points;
 cl_int l_points[MAX_LC + 1], in_rel[MAX_LC + 1];
 
@@ -216,10 +217,11 @@ int main(int argc, char** argv)
 {
 	int retval, nlines, checkpointExists, nStartFrom;  //int c, nchars = 0 // double fsize, fd;
 	char inputPath[512], outputPath[512], chkptPath[512], buf[256];
+
 	MFILE out;
 	FILE* state, * infile;
 
-	int i, j, l, m, k, n, nrows, onlyrel, k2, ndir, iTemp, nIterMin, //, ndata
+	int i, j, l, m, k, n, nrows, onlyrel, k2, ndir, iTemp, nIterMin,
 		* ia, ial0, ial0_abs, ia_beta_pole, ia_lambda_pole, ia_prd, ia_par[4], ia_cl,
 		lcNumber, ** ifp, newConw;
 
@@ -228,28 +230,27 @@ int main(int argc, char** argv)
 		* t, * f, * at, * af;
 
 	double jd0, jd00, conw, conwR, a0 = 1.05, b0 = 1.00, c0 = 0.95, a, b, cAxis,
-		al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl, //cl
-		* brightness, e[4], e0[4], // ee[MAX_N_OBS + 1][3], ee0[MAX_N_OBS + 1][3],
-		* cg, * cgFirst, * sig, * al, //, * tim
-		* weightLc; // par[4]
+		al0, al0Abs, ave, e0Len, elen, cosAlpha, dth, dph, rfit, escl,
+		* brightness, e[4], e0[4],
+		* cg, * cgFirst, * sig, * al,
+		* weightLc;
 
-	//, lambdaPole[N_POLES + 1], betaPole[N_POLES + 1]
 	cl_int ndata;
 	cl_double cl;
 
-	cl_double lambdaPole[N_POLES + 1];
-	cl_double betaPole[N_POLES + 1];
 	cl_double par[4];
-	cl_double  ee[MAX_N_OBS + 1][3], ee0[MAX_N_OBS + 1][3];
+	//cl_double lambdaPole[N_POLES + 1];
+	//cl_double betaPole[N_POLES + 1];
+    //cl_double ee[MAX_N_OBS + 1][3];
+    //cl_double ee0[MAX_N_OBS + 1][3];
+    cl_double weight[MAX_N_OBS + 1];
+
+    cl_double *ee = new cl_double[(MAX_N_OBS + 1) * 3];
+    cl_double *ee0 = new cl_double[(MAX_N_OBS + 1) * 3];
 	cl_double* tim;
 
 	char* stringTemp;
 	stringTemp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
-
-	//   ee = matrix_double(MAX_N_OBS,3);
-	//   ee0 = matrix_double(MAX_N_OBS,3);
-	//   covar = matrix_double(MAX_N_PAR,MAX_N_PAR);
-	//   aalpha = matrix_double(MAX_N_PAR,MAX_N_PAR);
 
 	ifp = matrix_int(MAX_N_FAC, 4);
 	brightness = vector_double(MAX_N_OBS);
@@ -262,19 +263,11 @@ int main(int argc, char** argv)
 	af = vector_double(MAX_N_FAC);
 	ia = vector_int(MAX_N_PAR);
 
-	// tim = vector_cl_double(MAX_N_OBS);
-	tim = vector_double(MAX_N_OBS);
+	tim = vector_cl_double(MAX_N_OBS);
+	//tim = vector_double(MAX_N_OBS);
 
-	lambdaPole[1] = 0;    betaPole[1] = 0;
-	lambdaPole[2] = 90;   betaPole[2] = 0;
-	lambdaPole[3] = 180;  betaPole[3] = 0;
-	lambdaPole[4] = 270;  betaPole[4] = 0;
-	lambdaPole[5] = 60;   betaPole[5] = 60;
-	lambdaPole[6] = 180;  betaPole[6] = 60;
-	lambdaPole[7] = 300;  betaPole[7] = 60;
-	lambdaPole[8] = 60;   betaPole[8] = -60;
-	lambdaPole[9] = 180;  betaPole[9] = -60;
-	lambdaPole[10] = 300; betaPole[10] = -60;
+    cl_double lambdaPole[N_POLES + 1] = {0.0, 0.0, 90.0, 180.0, 270.0, 60.0, 180.0, 300.0, 60.0, 180.0, 300.0};
+    cl_double betaPole[N_POLES + 1] = {0.0, 0.0, 0.0, 0.0, 0.0, 60.0, 60.0, 60.0, -60.0, -60.0, -60.0};
 
 	ia_lambda_pole = ia_beta_pole = 1;
 
@@ -486,8 +479,10 @@ int main(int argc, char** argv)
 			/* normalization of distance vectors */
 			for (k = 1; k <= 3; k++)
 			{
-				ee[ndata][k - 1] = e[k] / elen;
-				ee0[ndata][k - 1] = e0[k] / e0Len;
+				//ee[ndata][k - 1] = e[k] / elen;
+				ee[ndata * 3 + (k - 1)] = e[k] / elen;
+				//ee0[ndata][k - 1] = e0[k] / e0Len;
+				ee0[ndata * 3 + (k - 1)] = e0[k] / e0Len;
 			}
 
 			if (j == 1)
@@ -641,7 +636,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "Version: %d.%d.%d.%d\n", major, minor, build, revision);
     }
 
-	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, phi_0, checkpointExists, ndata);
+	retval = ClPrepare(clDevice, betaPole, lambdaPole, par, cl, a_lamda_start, a_lamda_incr, ee, ee0, tim, weight, phi_0, checkpointExists, ndata);
 	if (retval)
 	{
 		fflush(stderr);
@@ -907,7 +902,12 @@ int main(int argc, char** argv)
 	deallocate_vector(weightLc);
 	free(stringTemp);
 
-	boinc_fraction_done(1);
+    delete[] ee;
+    delete[] ee0;
+
+    ReleaseGlobalClObjects();
+
+    boinc_fraction_done(1);
 
 #ifdef APP_GRAPHICS
 	update_shmem();

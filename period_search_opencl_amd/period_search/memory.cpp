@@ -40,7 +40,7 @@ double *vector_double(int length)
    return (p_x);
 }
 
-cl_double* vector_cl_double(int length)
+cl_double *vector_cl_double(int length)
 {
     cl_double* p_x;
 
