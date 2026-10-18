@@ -187,10 +187,10 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
                         k++;
                         for (m = 1; m <= l; m += 4)
                         {
-                            __m256d avx_alpha = _mm256_load_pd(&alpha[j][k]);
+                            __m256d avx_alpha = _mm256_loadu_pd(&alpha[j][k]);
                             __m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
                             avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                            _mm256_store_pd(&alpha[j][k], avx_alpha);
+                            _mm256_storeu_pd(&alpha[j][k], avx_alpha);
                             k += 4;
                         } /* m */
                         beta[j] += gl.dy * gl.wt;
@@ -209,10 +209,10 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
                             int kk = k;
                             for (m = 1; m <= lastone; m += 4)
                             {
-                                __m256d avx_alpha = _mm256_load_pd(&alpha[j][kk]);
+                                __m256d avx_alpha = _mm256_loadu_pd(&alpha[j][kk]);
                             	__m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
                                 avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                                _mm256_store_pd(&alpha[j][kk], avx_alpha);
+                                _mm256_storeu_pd(&alpha[j][kk], avx_alpha);
                                 kk += 4;
                             } /* m */
                             k += lastone;
