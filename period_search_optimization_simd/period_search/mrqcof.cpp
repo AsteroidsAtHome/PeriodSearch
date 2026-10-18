@@ -176,7 +176,7 @@ void CalcStrategyNone::mrqcof(std::vector<std::vector<double>>& x1, std::vector<
 							int kk = k;
 							for (m = 1; m <= lastone; m++)
 							{
-								alpha[j][k] = alpha[j][kk] + gl.wt * gl.dyda[m];
+								alpha[j][kk] = alpha[j][kk] + gl.wt * gl.dyda[m];
 								kk++;
 							} /* m */
 							k += lastone;
