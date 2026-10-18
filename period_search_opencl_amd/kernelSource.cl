@@ -1738,11 +1738,6 @@ int gauss_errc(
 
 			if (covL[covarIdx] == 0.0)
 			{
-				for (int l2 = 1; l2 <= (*CUDA_CC).ma; l2++)
-				{
-					(*CUDA_LCC).atry[l2] = (*CUDA_LCC).cg[l2];
-				}
-
 				icolBC[0] = -1;
 			}
 			else
