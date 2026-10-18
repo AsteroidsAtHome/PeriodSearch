@@ -2,7 +2,7 @@
 #define NVML_NO_UNVERSIONED_FUNC_DEFS
 #endif
 
-#if defined _MSC_VER & _MSC_VER < 1900
+#if defined _MSC_VER && _MSC_VER < 1900
 //#define _WIN32_WINNT _WIN32_WINNT_WINXP 
 //#define NTDDI_VERSION NTDDI_WINXPSP3 
 
@@ -195,7 +195,7 @@ void printCallStack()
 #include <iostream>
 #include <stdexcept>
 #include <vector>
-#if defined _MSC_VER & _MSC_VER >= 1900
+#if defined _MSC_VER && _MSC_VER >= 1900
 
 extern "C"
 USHORT WINAPI CaptureStackBackTrace(
@@ -311,7 +311,7 @@ cudaError_t copyToSymbol(T(&symbol)[N], const T* src, size_t count, const char* 
 
 // Overload for single numerical types
 template <typename T>
-#if defined _MSC_VER & _MSC_VER < 1900
+#if defined _MSC_VER && _MSC_VER < 1900
 cudaError_t copyToSymbol(T& symbol, const T* src, size_t count, const char* symbol_name = nullptr)
 #else
 cudaError_t copyToSymbol(T& symbol, const T* src, size_t count, const char* symbol_name = {})
