@@ -264,7 +264,7 @@ void CalcStrategyAvx512::mrqcof(std::vector<std::vector<double>>& x1, std::vecto
                             //m=0
                             //
                             int kk = 0;
-                            for (m = 1; m <= lastone; m += 4)
+                            for (m = 1; m <= lastone; m += 8)
                             {
                                 __m512d avx_alpha = _mm512_load_pd(&alpha[j][kk]);
                             	__m512d avx_dyda = _mm512_loadu_pd(&gl.dyda[m]);
