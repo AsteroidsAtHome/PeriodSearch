@@ -18,8 +18,9 @@ class Cc
 	int GetSmxBlockCc3() const;
 	int GetSmxBlockCc2() const;
 	int GetSmxBlockCc1() const;
-	//void Exit() const;
-	
+	static const int DefaultSmxBlock = 16; // Safe fallback for unsupported architectures
+	int UseDefault() const;
+
 public:
 
 	int cudaVersion;
@@ -29,10 +30,8 @@ public:
 
 #if defined (_MSC_VER) & (_MSC_VER >= 1900) // Visual Studio 2013 or later
 	~Cc() = default;
-	void Exit() const;
 #else
 	~Cc();
-	void Exit() const;
 #endif
 	
 };

@@ -89,8 +89,6 @@ void mrqcof_start(
 		beta[j] = 0;
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads(); //pro jistotu
-
 	//int q = (*CUDA_CC).Ncoef0 + 2;
 	//if (blockIdx.x == 0)
 	//	printf("[neo] [%d][%3d] cg[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, q, (*CUDA_LCC).cg[q]);
@@ -143,16 +141,23 @@ void mrqcof_curve1(
 	if (brtmph > Lpoints) brtmph = Lpoints;
 	brtmpl++;
 
-	for (jp = brtmpl; jp <= brtmph; jp++)
+	/* points are dealt out round-robin (jp = t+1, t+1+BLOCK_DIM, ...) rather than
+	   in contiguous blocks of ceil(Lpoints/BLOCK_DIM): every point is
+	   independent, and this packs the last partial round into as few
+	   wavefronts as possible (156 points: 5 wave32 rounds instead of 6). The
+	   ytemp partial sums below keep the contiguous blocks, so ave is summed
+	   in the same order as before. */
+	for (jp = threadIdx.x + 1; jp <= Lpoints; jp += BLOCK_DIM)
 	{
 			/*  ---  BRIGHT  ---  */
 		bright(CUDA_LCC, CUDA_CC, cg, jp, Lpoints1, Inrel, scr);
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-
 	if (Inrel == 1)
 	{
+		/* the sums below read other work-items' dytemp/ytemp rows */
+		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
+
 		int tmph, tmpl;
 		tmph = (*CUDA_CC).ma / BLOCK_DIM;
 		if ((*CUDA_CC).ma % BLOCK_DIM) tmph++;
@@ -218,7 +223,7 @@ void mrqcof_curve1_last(
 	__global double* a,
 	__global double* alpha,
 	__global double* beta,
-	__local double* res,
+	__local double* res,   /* [CONV_POINTS * BLOCK_DIM] */
 	int Inrel,
 	int Lpoints,
 	__global double* scr)
@@ -227,7 +232,7 @@ void mrqcof_curve1_last(
 	__global double* dytempG = scr + (*CUDA_CC).offDytemp;
 	__global double* ytempG = scr + (*CUDA_CC).offYtemp;
 	int l, jp, lnp;
-	double ymod, lave;
+	double ymod[CONV_POINTS], lave;
 	int3 threadIdx, blockIdx;
 	threadIdx.x = get_local_id(0);
 	blockIdx.x = get_group_id(0);
@@ -261,37 +266,25 @@ void mrqcof_curve1_last(
 	brtmph = brtmpl + brtmph;
 	if (brtmph > (*CUDA_CC).Numfac) brtmph = (*CUDA_CC).Numfac;
 	brtmpl++;
-
-	barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
 	//if (threadIdx.x == 0)
 	//	printf("conv>>> [%d] \n", blockIdx.x);
 
-	for (jp = 1; jp <= Lpoints; jp++)
+	/* the derivatives w.r.t. the shape coefficients are computed for all
+	   points at once (see conv.cl); conv's first barrier also orders the dave
+	   reset above before its dave updates */
+	conv(CUDA_LCC, CUDA_CC, res, Lpoints, Inrel, tmpl, tmph, brtmpl, brtmph, dytempG, ymod);
+
+	if (threadIdx.x == 0)
 	{
-		lnp++;
-		// *--- CONV() ---* //
-		ymod = conv(CUDA_LCC, CUDA_CC, res, jp - 1, tmpl, tmph, brtmpl, brtmph);
-
-		if (threadIdx.x == 0)
+		for (jp = 1; jp <= Lpoints; jp++)
 		{
-			ytempG[jp] = ymod;
+			ytempG[jp] = ymod[jp - 1];
 
 			if (Inrel == 1)
-				lave = lave + ymod;
+				lave = lave + ymod[jp - 1];
 		}
-		for (l = tmpl; l <= tmph; l++)
-		{
-			dytempG[(jp - 1) * DYT_STRIDE + l] = (*CUDA_LCC).dyda[l];
-
-			if (Inrel == 1)
-				(*CUDA_LCC).dave[l] = (*CUDA_LCC).dave[l] + (*CUDA_LCC).dyda[l];
-		}
-		/* save lightcurves */
-		barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); //__syncthreads();
-
-		/*         if ((*CUDA_LCC).Lastcall == 1) always ==0
-					 (*CUDA_LCC).Yout[np] = ymod;*/
-	} /* jp, lpoints */
+	}
+	lnp += Lpoints;
 
 	if (threadIdx.x == 0)
 	{
@@ -305,19 +298,23 @@ double mrqcof_end(
 	__global struct freq_context* CUDA_CC,
 	__global double* alpha)
 {
-	int j, k;
-	int3 threadIdx, blockIdx;
-	threadIdx.x = get_local_id(0);
-	blockIdx.x = get_group_id(0);
+	/* mirror the lower triangle into the upper one: alpha[k][j] = alpha[j][k]
+	   for k < j. The work-items of the context split the (j, k) pairs; reads
+	   (row > col) and writes (row < col) never overlap, so no ordering is
+	   needed and every entry gets exactly the value it got before. */
+	const int mfit = (*CUDA_CC).Mfit;
+	const int mfit1 = (*CUDA_CC).Mfit1;
+	const int total = mfit * (mfit - 1) / 2;
 
-	for (int j = 2; j <= (*CUDA_CC).Mfit; j++)
+	/* pair e -> row j = 2.., column k = 1..j-1 (row-major lower triangle) */
+	int j = 2, k = get_local_id(0) + 1;
+	while (k > j - 1) { k -= j - 1; j++; }
+	for (int e = get_local_id(0); e < total; e += BLOCK_DIM)
 	{
-		for (k = 1; k <= j - 1; k++)
-		{
-			alpha[k * (*CUDA_CC).Mfit1 + j] = alpha[j * (*CUDA_CC).Mfit1 + k];
-			//if (blockIdx.x ==0 && threadIdx.x == 0)
-			//	printf("[mrqcof_end] [%d][%3d] alpha[%3d]: %10.7f\n", blockIdx.x, threadIdx.x, k * (*CUDA_CC).Mfit1 + j, alpha[k * (*CUDA_CC).Mfit1 + j]);
-		}
+		alpha[k * mfit1 + j] = alpha[j * mfit1 + k];
+
+		k += BLOCK_DIM;
+		while (k > j - 1) { k -= j - 1; j++; }
 	}
 
 	return (*CUDA_LCC).trial_chisq;

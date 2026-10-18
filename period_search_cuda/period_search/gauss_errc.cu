@@ -66,7 +66,7 @@ __device__ int gauss_errc_shared(freq_context* CUDA_LCC, const int ma)
 	for (int i = 1; i <= mf; i++)
 	{
 		/* full-pivot search: thread j scans row j */
-		double big = 0.0;
+		double big = -1.0;
 		int irow = 0, licol = 0;
 		const int j = 1 + tid;
 		if (j <= mf && ipiv[j] != 1)

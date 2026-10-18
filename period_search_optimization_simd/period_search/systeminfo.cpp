@@ -132,8 +132,9 @@ void getSystemInfo()
 	getCpuFrequency(cpuMaxFreqIfstream, "maximum");
 
 	auto totalMemory = getTotalSystemMemory();
-	cerr.precision(2);
-	cerr << "Available memory: " << totalMemory << " GB" << endl;
+	ostringstream memory;
+	memory << fixed << setprecision(2) << totalMemory;
+	cerr << "Available memory: " << memory.str() << " GB" << endl;
 }
 #elif defined __APPLE__
 void getSystemInfo()
@@ -171,8 +172,9 @@ void getSystemInfo()
     cerr << "Number of Processors: " << sysInfo.dwNumberOfProcessors << endl;
 
 	auto totalMemory = getTotalSystemMemory();
-	cerr.precision(2);
-	cerr << "Available memory: " << totalMemory << " GB" << endl;
+	ostringstream memory;
+	memory << fixed << setprecision(2) << totalMemory;
+	cerr << "Available memory: " << memory.str() << " GB" << endl;
 }
 #else
 void getSystemInfo()

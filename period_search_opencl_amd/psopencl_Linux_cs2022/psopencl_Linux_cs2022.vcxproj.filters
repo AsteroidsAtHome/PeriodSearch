@@ -79,9 +79,6 @@
     <None Include="..\period_search\Curv2.cl">
       <Filter>Source files CL</Filter>
     </None>
-    <None Include="..\period_search\dave.cl">
-      <Filter>Source files CL</Filter>
-    </None>
     <None Include="..\period_search\gauss_errc.cl">
       <Filter>Source files CL</Filter>
     </None>

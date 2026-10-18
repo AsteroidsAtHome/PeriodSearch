@@ -30,7 +30,6 @@
     <ClCompile Include="period_search\error.cpp" />
     <ClCompile Include="period_search\lubksb.cpp" />
     <ClCompile Include="period_search\ludcmp.cpp" />
-    <ClCompile Include="period_search\memory.c" />
     <ClCompile Include="period_search\period_search_BOINC.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\stdfax.cpp" />

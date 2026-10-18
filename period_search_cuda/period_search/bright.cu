@@ -18,10 +18,10 @@
 	 CUDA_Dsph matrix (cache-resident for all blocks) instead of a private
 	 ~116 KB Dg that thrashes L1/L2 with 8-byte scattered reads.
 
-   * One warp processes one (frequency, pole) block, two data points at a
-	 time: the visibility pass runs lanes-across-facets (coalesced), the
-	 derivative pass runs lanes-across-coefficients reading CUDA_Dsph rows
-	 coalesced, and each row load feeds both points' accumulators.
+   * One block of CUDA_BLOCK_DIM threads processes one (frequency, pole)
+	 context, one data point per thread (ported from the OpenCL build, which
+	 ran ~2x faster on the same GPU than the former one-warp-per-context,
+	 two-points-at-a-time version): see bright_curve1() below.
 
    * dytemp is stored transposed - dytempT[(jp-1)*DYT_STRIDE + l] - so the
 	 derivative writes here and the tile reads in MrqcofCurve2 are coalesced.
@@ -29,7 +29,7 @@
 	 up to 6, i.e. every production workunit); the host enforces it.
 
    * The per-point geometry (the former matrix_neo pass) is computed
-	 in-kernel, one lane per point, into shared memory: the de, de0, e_1..e0_3 and
+	 in-kernel, by the thread that owns the point: the de, de0, e_1..e0_3 and
 	 jp_Scale/jp_dphp per-point global buffers are gone entirely.
 */
 
@@ -163,19 +163,26 @@ __device__ void __forceinline__ bright_point_geometry(int lnp,
 }
 
 /* the whole former matrix_neo + per-point bright loop for one lightcurve,
-   executed by ONE WARP per block. Handles both relative (Inrel=1) and
-   absolute (Inrel=0) lightcurves; updates dave/ave/np exactly as the old
-   mrqcof_curve1 did. */
-__device__ void bright_curve1_warp(freq_context* __restrict__ CUDA_LCC,
+   ported from the OpenCL build: ONE THREAD PER POINT, the CUDA_BLOCK_DIM
+   threads of the block take the points round-robin. Handles both relative
+   (Inrel=1) and absolute (Inrel=0) lightcurves; updates dave/ave/np exactly
+   as the old mrqcof_curve1 did.
+
+   Per point, two passes over the facets: the cheap visibility test first
+   builds this thread's list of visible facets (all threads walk the facets
+   in lockstep, so the CUDA_Nor reads broadcast from constant memory), then
+   the division-heavy terms run over that list only (a warp executes them
+   max(visible count) times instead of for every facet any lane can see).
+   The derivatives w.r.t. the shape coefficients are gathered BRIGHT_GB
+   columns per pass over the list, i.e. BRIGHT_GB fma per CUDA_Dsph row
+   visit. */
+#define BRIGHT_GB 16
+
+__device__ void bright_curve1(freq_context* __restrict__ CUDA_LCC,
 	double const* __restrict__ a,
 	int Inrel, int Lpoints)
 {
 	const int tid = threadIdx.x;
-	brightshare* __restrict__ shw = &mrq_share_block()->b;
-	double* __restrict__ wcA = shw->wcA;
-	double* __restrict__ wcB = shw->wcB;
-	int* __restrict__ fc = shw->fc;
-	double* __restrict__ inv = shw->inv;
 
 	const int nc = CUDA_ncoef0;
 	const int ma = CUDA_ma;
@@ -184,6 +191,9 @@ __device__ void bright_curve1_warp(freq_context* __restrict__ CUDA_LCC,
 	const int lnp0 = (*CUDA_LCC).np;
 	const int iStart = Inrel + 1;        /* absolute lightcurves keep row 1 */
 
+	/* per-curve invariants: shared, not per-thread registers - they would
+	   stay live across the whole point loop */
+	double* __restrict__ inv = mrq_share_block()->b.inv;
 	if (tid == 0)
 	{
 		inv[0] = a[nc];          /* omega */
@@ -198,245 +208,150 @@ __device__ void bright_curve1_warp(freq_context* __restrict__ CUDA_LCC,
 		inv[9] = (*CUDA_LCC).Blmat[2][1];
 		inv[10] = (*CUDA_LCC).Blmat[2][2];
 	}
-	__syncwarp();
-
-	/* each lane owns two parameter rows across the whole curve */
-	const int c1 = 1 + tid;   /* rows 1..32 */
-	const int c2 = 33 + tid;  /* rows 33..64 */
-	double dave1 = 0, dave2 = 0;
-	double lave = 0;
+	__syncthreads();
+	const double cl = inv[5], cls = inv[6];
 
 	double const* __restrict__ areap = &CUDA_Area[blockIdx.x * CUDA_Numfac1];
 	double* __restrict__ dytemp = (*CUDA_LCC).dytemp;
 	double* __restrict__ ytemp = (*CUDA_LCC).ytemp;
 
+	/* per-thread visible-facet list (local memory, interleaved per thread,
+	   so the same list position is coalesced across a warp) */
+	short incl[MAX_N_FAC];
+	double dbr[MAX_N_FAC];
+
 #pragma unroll 1
-	for (int jp0 = 1; jp0 <= Lpoints; jp0 += GEO_BATCH)
+	for (int jp = tid + 1; jp <= Lpoints; jp += CUDA_BLOCK_DIM)
 	{
-		int nb = Lpoints - jp0 + 1;
-		if (nb > GEO_BATCH) nb = GEO_BATCH;
+		double po[GEOM_PT_SIZE];
+		bright_point_geometry(lnp0 + jp, inv, po);
 
-		/* one lane computes one point's geometry (the acos/sincos/exp-heavy
-		   part runs once per point instead of once per lane per point) */
-		if (tid < nb)
-			bright_point_geometry(lnp0 + jp0 + tid, inv, shw->geo[tid]);
-		__syncwarp();
-
-		/* two points (A = jp, B = jp+1) share every CUDA_Dsph row load */
-#pragma unroll 1
-		for (int jp = jp0; jp < jp0 + nb; jp += 2)
-		{
-			const int haveB = (jp + 1 < jp0 + nb);
-			double const* __restrict__ ptA = shw->geo[jp - jp0];
-			double const* __restrict__ ptB = shw->geo[jp - jp0 + (haveB ? 1 : 0)];
-
-			double brA = 0, t1A = 0, t2A = 0, t3A = 0, t4A = 0, t5A = 0;
-			double brB = 0, t1B = 0, t2B = 0, t3B = 0, t4B = 0, t5B = 0;
-			double accA1 = 0, accA2 = 0, accB1 = 0, accB2 = 0;
-
-#pragma unroll 1
-			for (int f0 = 1; f0 <= nf; f0 += 32)
-			{
-				const int i = f0 + tid;
-				double dbrA = 0.0, dbrB = 0.0;
-				if (i <= nf)
-				{
-					double n0 = CUDA_Nor[i][0], n1 = CUDA_Nor[i][1], n2 = CUDA_Nor[i][2];
-					double ar = areap[i];
-					double cl = inv[5], cls = inv[6];
-
-					{
-						double lmu = ptA[16] * n0 + ptA[17] * n1 + ptA[18] * n2;
-						double lmu0 = ptA[19] * n0 + ptA[20] * n1 + ptA[21] * n2;
-						if ((lmu > TINY) && (lmu0 > TINY))
-						{
-							double dnom = lmu + lmu0;
-							double s = lmu * lmu0 * (cl + cls / dnom);
-							brA += ar * s;
-							dbrA = ar * s;   /* == (Darea*s) * g : the fold */
-							double lmu0_dnom = lmu0 / dnom;
-							double dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-							double lmu_dnom = lmu / dnom;
-							double dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
-
-							double sum1 = n0 * ptA[0] + n1 * ptA[1] + n2 * ptA[2];
-							double sum10 = n0 * ptA[3] + n1 * ptA[4] + n2 * ptA[5];
-							double sum2 = n0 * ptA[6] + n1 * ptA[7] + n2 * ptA[8];
-							double sum20 = n0 * ptA[9] + n1 * ptA[10] + n2 * ptA[11];
-							double sum3 = n0 * ptA[12] + n1 * ptA[13];
-							double sum30 = n0 * ptA[14] + n1 * ptA[15];
-
-							t1A += ar * (dsmu * sum1 + dsmu0 * sum10);
-							t2A += ar * (dsmu * sum2 + dsmu0 * sum20);
-							t3A += ar * (dsmu * sum3 + dsmu0 * sum30);
-							t4A += lmu * lmu0 * ar;
-							t5A += ar * lmu * lmu0 / (lmu + lmu0);
-						}
-					}
-					if (haveB)
-					{
-						double lmu = ptB[16] * n0 + ptB[17] * n1 + ptB[18] * n2;
-						double lmu0 = ptB[19] * n0 + ptB[20] * n1 + ptB[21] * n2;
-						if ((lmu > TINY) && (lmu0 > TINY))
-						{
-							double dnom = lmu + lmu0;
-							double s = lmu * lmu0 * (cl + cls / dnom);
-							brB += ar * s;
-							dbrB = ar * s;
-							double lmu0_dnom = lmu0 / dnom;
-							double dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
-							double lmu_dnom = lmu / dnom;
-							double dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
-
-							double sum1 = n0 * ptB[0] + n1 * ptB[1] + n2 * ptB[2];
-							double sum10 = n0 * ptB[3] + n1 * ptB[4] + n2 * ptB[5];
-							double sum2 = n0 * ptB[6] + n1 * ptB[7] + n2 * ptB[8];
-							double sum20 = n0 * ptB[9] + n1 * ptB[10] + n2 * ptB[11];
-							double sum3 = n0 * ptB[12] + n1 * ptB[13];
-							double sum30 = n0 * ptB[14] + n1 * ptB[15];
-
-							t1B += ar * (dsmu * sum1 + dsmu0 * sum10);
-							t2B += ar * (dsmu * sum2 + dsmu0 * sum20);
-							t3B += ar * (dsmu * sum3 + dsmu0 * sum30);
-							t4B += lmu * lmu0 * ar;
-							t5B += ar * lmu * lmu0 / (lmu + lmu0);
-						}
-					}
-				}
-
-				/* compact the visible facets (union of both points) so the
-				   derivative sweep below is branch-free with independent,
-				   pipelineable loads */
-				unsigned vis = __ballot_sync(0xffffffff, (dbrA != 0.0) || (dbrB != 0.0));
-				int cnt = __popc(vis);
-				if ((dbrA != 0.0) || (dbrB != 0.0))
-				{
-					int pos = __popc(vis & ((1u << tid) - 1u));
-					wcA[pos] = dbrA;
-					wcB[pos] = dbrB;
-					fc[pos] = i;
-				}
-				__syncwarp();
-
+		int cnt = 0;
 #pragma unroll 4
-				for (int j = 0; j < cnt; j++)
+		for (int i = 1; i <= nf; i++)
+		{
+			double n0 = CUDA_Nor[i][0], n1 = CUDA_Nor[i][1], n2 = CUDA_Nor[i][2];
+			double lmu = po[16] * n0 + po[17] * n1 + po[18] * n2;
+			double lmu0 = po[19] * n0 + po[20] * n1 + po[21] * n2;
+			if ((lmu > TINY) && (lmu0 > TINY))
+				incl[cnt++] = (short)i;
+		}
+
+		double br = 0, t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
+#pragma unroll 1
+		for (int c = 0; c < cnt; c++)
+		{
+			const int i = incl[c];
+			/* divergent facet index: global copy, not the constant bank */
+			double n0 = CUDA_NorG[i][0], n1 = CUDA_NorG[i][1], n2 = CUDA_NorG[i][2];
+			double ar = areap[i];
+			double lmu = po[16] * n0 + po[17] * n1 + po[18] * n2;
+			double lmu0 = po[19] * n0 + po[20] * n1 + po[21] * n2;
+
+			double dnom = lmu + lmu0;
+			double s = lmu * lmu0 * (cl + cls / dnom);
+			br += ar * s;
+			dbr[c] = ar * s;   /* == (Darea*s) * g : the Dg fold, see above */
+			double lmu0_dnom = lmu0 / dnom;
+			double dsmu = cls * (lmu0_dnom * lmu0_dnom) + cl * lmu0;
+			double lmu_dnom = lmu / dnom;
+			double dsmu0 = cls * (lmu_dnom * lmu_dnom) + cl * lmu;
+
+			double sum1 = n0 * po[0] + n1 * po[1] + n2 * po[2];
+			double sum10 = n0 * po[3] + n1 * po[4] + n2 * po[5];
+			double sum2 = n0 * po[6] + n1 * po[7] + n2 * po[8];
+			double sum20 = n0 * po[9] + n1 * po[10] + n2 * po[11];
+			double sum3 = n0 * po[12] + n1 * po[13];
+			double sum30 = n0 * po[14] + n1 * po[15];
+
+			t1 += ar * (dsmu * sum1 + dsmu0 * sum10);
+			t2 += ar * (dsmu * sum2 + dsmu0 * sum20);
+			t3 += ar * (dsmu * sum3 + dsmu0 * sum30);
+			t4 += lmu * lmu0 * ar;
+			t5 += ar * lmu * lmu0 / (lmu + lmu0);
+		}
+
+		const double Scale = po[22];
+		double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
+
+		/* Ders. of brightness w.r.t. rotation parameters */
+		row[nshape + 1] = Scale * t1;
+		row[nshape + 2] = Scale * t2;
+		row[nshape + 3] = Scale * t3;
+		/* Ders. of br. w.r.t. phase function params. */
+		row[nc + 1] = br * po[23];
+		row[nc + 2] = br * po[24];
+		row[nc + 3] = br * po[25];
+		/* Ders. of br. w.r.t. cl, cls */
+		row[ma - 1] = Scale * t4 * cl;
+		row[ma] = Scale * t5;
+		/* Scaled brightness */
+		ytemp[jp] = br * Scale;
+
+		/* Derivatives of brightness w.r.t. the shape coefficients: BRIGHT_GB
+		   columns per pass over the visible-facet list. Up to BRIGHT_GB - 1
+		   columns past nshape are read (inside the Dsph row) but not stored. */
+		if (cnt)
+		{
+#pragma unroll 1
+			for (int i0 = iStart; i0 <= nshape; i0 += BRIGHT_GB)
+			{
+				double t[BRIGHT_GB];
 				{
-					double wA = wcA[j];
-					double wB = wcB[j];
-					double const* __restrict__ row = CUDA_Dsph[fc[j]];
-					double v1 = row[c1];
-					accA1 += wA * v1;
-					accB1 += wB * v1;
-					if (c2 <= nshape)
-					{
-						double v2 = row[c2];
-						accA2 += wA * v2;
-						accB2 += wB * v2;
-					}
-				}
-				__syncwarp();
-			} /* facet chunks */
-
-			/* butterfly-reduce both points' sums so every lane has them */
+					const double w = dbr[0];
+					double const* __restrict__ r = &CUDA_Dsph[incl[0]][i0];
 #pragma unroll
-			for (int off = 16; off > 0; off >>= 1)
-			{
-				brA += __shfl_xor_sync(0xffffffff, brA, off);
-				t1A += __shfl_xor_sync(0xffffffff, t1A, off);
-				t2A += __shfl_xor_sync(0xffffffff, t2A, off);
-				t3A += __shfl_xor_sync(0xffffffff, t3A, off);
-				t4A += __shfl_xor_sync(0xffffffff, t4A, off);
-				t5A += __shfl_xor_sync(0xffffffff, t5A, off);
-				brB += __shfl_xor_sync(0xffffffff, brB, off);
-				t1B += __shfl_xor_sync(0xffffffff, t1B, off);
-				t2B += __shfl_xor_sync(0xffffffff, t2B, off);
-				t3B += __shfl_xor_sync(0xffffffff, t3B, off);
-				t4B += __shfl_xor_sync(0xffffffff, t4B, off);
-				t5B += __shfl_xor_sync(0xffffffff, t5B, off);
+					for (int b = 0; b < BRIGHT_GB; b++)
+						t[b] = w * r[b];
+				}
+#pragma unroll 1
+				for (int j = 1; j < cnt; j++)
+				{
+					const double w = dbr[j];
+					double const* __restrict__ r = &CUDA_Dsph[incl[j]][i0];
+#pragma unroll
+					for (int b = 0; b < BRIGHT_GB; b++)
+						t[b] += w * r[b];
+				}
+#pragma unroll
+				for (int b = 0; b < BRIGHT_GB; b++)
+					if (i0 + b <= nshape)
+						row[i0 + b] = Scale * t[b];
 			}
+		}
+		else
+		{
+			for (int l = iStart; l <= nshape; l++)
+				row[l] = 0;
+		}
+	} /* jp */
 
-			/* one transposed dytemp row per point, lanes = parameters */
-			{
-				double Scale = ptA[22], dphp1 = ptA[23], dphp2 = ptA[24], dphp3 = ptA[25];
-				double cl = inv[5];
-				double ymod = brA * Scale;
-				double* __restrict__ row = dytemp + (size_t)(jp - 1) * DYT_STRIDE;
-
-				double v1, v2;
-				if (c1 <= nshape)           v1 = Scale * accA1;
-				else if (c1 == nshape + 1)  v1 = Scale * t1A;
-				else if (c1 == nshape + 2)  v1 = Scale * t2A;
-				else if (c1 == nshape + 3)  v1 = Scale * t3A;
-				else if (c1 == nc + 1)      v1 = brA * dphp1;
-				else if (c1 == nc + 2)      v1 = brA * dphp2;
-				else if (c1 == nc + 3)      v1 = brA * dphp3;
-				else if (c1 == ma - 1)      v1 = Scale * t4A * cl;
-				else                        v1 = Scale * t5A; /* c1 == ma */
-				if (c2 <= nshape)           v2 = Scale * accA2;
-				else if (c2 == nshape + 1)  v2 = Scale * t1A;
-				else if (c2 == nshape + 2)  v2 = Scale * t2A;
-				else if (c2 == nshape + 3)  v2 = Scale * t3A;
-				else if (c2 == nc + 1)      v2 = brA * dphp1;
-				else if (c2 == nc + 2)      v2 = brA * dphp2;
-				else if (c2 == nc + 3)      v2 = brA * dphp3;
-				else if (c2 == ma - 1)      v2 = Scale * t4A * cl;
-				else                        v2 = Scale * t5A; /* c2 == ma */
-
-				if (c1 >= iStart && c1 <= ma) { row[c1] = v1; if (c1 >= 2) dave1 += v1; }
-				if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
-				if (tid == 0) ytemp[jp] = ymod;
-				lave += ymod;
-			}
-			if (haveB)
-			{
-				double Scale = ptB[22], dphp1 = ptB[23], dphp2 = ptB[24], dphp3 = ptB[25];
-				double cl = inv[5];
-				double ymod = brB * Scale;
-				double* __restrict__ row = dytemp + (size_t)jp * DYT_STRIDE;
-
-				double v1, v2;
-				if (c1 <= nshape)           v1 = Scale * accB1;
-				else if (c1 == nshape + 1)  v1 = Scale * t1B;
-				else if (c1 == nshape + 2)  v1 = Scale * t2B;
-				else if (c1 == nshape + 3)  v1 = Scale * t3B;
-				else if (c1 == nc + 1)      v1 = brB * dphp1;
-				else if (c1 == nc + 2)      v1 = brB * dphp2;
-				else if (c1 == nc + 3)      v1 = brB * dphp3;
-				else if (c1 == ma - 1)      v1 = Scale * t4B * cl;
-				else                        v1 = Scale * t5B;
-				if (c2 <= nshape)           v2 = Scale * accB2;
-				else if (c2 == nshape + 1)  v2 = Scale * t1B;
-				else if (c2 == nshape + 2)  v2 = Scale * t2B;
-				else if (c2 == nshape + 3)  v2 = Scale * t3B;
-				else if (c2 == nc + 1)      v2 = brB * dphp1;
-				else if (c2 == nc + 2)      v2 = brB * dphp2;
-				else if (c2 == nc + 3)      v2 = brB * dphp3;
-				else if (c2 == ma - 1)      v2 = Scale * t4B * cl;
-				else                        v2 = Scale * t5B;
-
-				if (c1 >= iStart && c1 <= ma) { row[c1] = v1; if (c1 >= 2) dave1 += v1; }
-				if (c2 <= ma) { row[c2] = v2; dave2 += v2; }
-				if (tid == 0) ytemp[jp + 1] = ymod;
-				lave += ymod;
-			}
-
-			/* geo[]/wc/fc are re-written next pass; every lane must be done
-			   reading them (lanes run independently since Volta) */
-			__syncwarp();
-		} /* jp pair */
-	} /* geometry batch */
+	/* every thread has read np and written its dytemp/ytemp rows */
+	__syncthreads();
 
 	if (Inrel == 1)
 	{
-		/* per-lane column sums ARE the dave entries (rows 2..ma) */
-		if (c1 >= 2 && c1 <= ma) (*CUDA_LCC).dave[c1] = dave1;
-		if (c2 <= ma) (*CUDA_LCC).dave[c2] = dave2;
+		/* column sums over the points in point order: the same sums (and
+		   summation order) the per-lane accumulators of the warp version
+		   produced */
+		for (int l = tid + 2; l <= ma; l += CUDA_BLOCK_DIM)
+		{
+			double s = 0;
+			double const* __restrict__ col = dytemp + l;
+			for (int jp = 0; jp < Lpoints; jp++)
+				s += col[(size_t)jp * DYT_STRIDE];
+			(*CUDA_LCC).dave[l] = s;
+		}
 	}
 	if (tid == 0)
 	{
 		(*CUDA_LCC).np = lnp0 + Lpoints;
 		if (Inrel == 1)
+		{
+			double lave = 0;
+			for (int jp = 1; jp <= Lpoints; jp++)
+				lave += ytemp[jp];
 			(*CUDA_LCC).ave = lave;
+		}
 	}
-	__syncwarp();
 }

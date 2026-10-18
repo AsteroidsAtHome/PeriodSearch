@@ -13,7 +13,6 @@
 #include <pmmintrin.h>
 #include "CalcStrategySse3.hpp"
 
-const  __m128i avx_ones = _mm_set_epi16(1, 1, 1, 1, 1, 1, 1, 1);
 
 #if defined(__GNUC__)
 __attribute__((target("sse3")))
@@ -65,15 +64,10 @@ void CalcStrategySse3::gauss_errc(struct globals& gl, const int n, std::vector<d
 //    ipiv = (short*)_aligned_malloc(ipivsize * sizeof(short), 16); //is zero indexed
 //#endif
 
-#if defined __GNUC__
-    // std::vector<short> ipiv(ipivsize, 0) __attribute__((aligned(16))); //is zero indexed
-    alignas(16) std::vector<short> ipiv(ipivsize, 0);
+#if defined __GNUC__ || (defined(_MSC_VER) && _MSC_VER >= 1900)
+    std::vector<short, AlignedAllocatorNew<short, 16>> ipiv(ipivsize, 0); // is zero indexed
 #else
-#if _MSC_VER >= 1900 // Visual Studio 2015 or later
-    alignas(16) std::vector<short> ipiv(ipivsize, 0); //is zero indexed
-#else
-    __declspec(align(16)) std::vector<short> ipiv(ipivsize, 0);  //is zero indexed
-#endif
+    std::vector<short> ipiv(ipivsize, 0); // is zero indexed (WARNING: data not guaranteed 16-byte aligned)
 #endif
 
 
@@ -91,7 +85,7 @@ void CalcStrategySse3::gauss_errc(struct globals& gl, const int n, std::vector<d
             if (ipiv[j] != 1) {
                 for (k = 0; k < n; k += 8) {
                     __m128i avx_ipiv = _mm_load_si128((__m128i*) & ipiv[k]);
-                    __m128i avx_iserror = _mm_cmpgt_epi16(avx_ipiv, avx_ones);
+                    __m128i avx_iserror = _mm_cmpgt_epi16(avx_ipiv, _mm_set1_epi16(1));
                     int ria = _mm_movemask_epi8(avx_iserror);
                     if (ria)
                     {

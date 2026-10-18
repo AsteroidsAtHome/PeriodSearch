@@ -9,11 +9,6 @@
 //struct __attribute__((packed)) freq_context
 //struct mfreq_context
 //struct __attribute__((aligned(8))) mfreq_context
-//#ifdef NVIDIA
-//struct mfreq_context
-//#else
-//typedef struct mfreq_context
-//#endif
 typedef struct mfreq_context
 {
 	//double* Area;
@@ -66,11 +61,6 @@ typedef struct mfreq_context
 
 //struct freq_context
 //typedef struct __attribute__((aligned(8))) freq_context
-//#ifdef NVIDIA
-//struct freq_context
-//#else
-//typedef struct freq_context
-//#endif
 struct freq_context
 {
 	double Phi_0;
@@ -140,11 +130,6 @@ struct freq_context
 
 //struct freq_result
 //struct __attribute__((aligned(8))) freq_result
-//#ifdef NVIDIA
-//struct freq_result
-//#else
-//typedef struct freq_result
-//#endif
 struct freq_result
 {
 	double dark_best, per_best, dev_best, dev_best_x2, la_best, be_best, freq;

@@ -37,8 +37,10 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 			(*CUDA_LCC).atry[j] = (*CUDA_LCC).cg[j];
 		}
 
-		__syncthreads();
 	}
+	/* no barrier needed: the solver does not touch atry, and its first
+	   (unconditional) barrier orders this copy before thread 0's atry
+	   update below */
 
 	/* the damped matrix is staged straight from alpha into shared memory by
 	   the solver; covar is not touched (it is rezeroed by mrqcof_start before
@@ -66,28 +68,34 @@ __device__ int mrqmin_1_end(freq_context* CUDA_LCC, const int ma, const int mfit
 				(*CUDA_LCC).atry[l] = (*CUDA_LCC).cg[l] + (*CUDA_LCC).da[j];
 			}
 	}
-	__syncthreads();
 
 	return err_code;
 }
 
 __device__ void mrqmin_2_end(freq_context* CUDA_LCC, int ia[], int ma)
 {
-	int j, k, l;
+	const int tid = threadIdx.x;
 
+	/* The threads of the block split the copies; the scalar updates are
+	   done by thread 0 only. Its Chisq = Ochisq in the else branch cannot
+	   send a late reader down the other branch (Chisq < Ochisq stays false). */
 	if ((*CUDA_LCC).Chisq < (*CUDA_LCC).Ochisq)
 	{
-		(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / CUDA_Alamda_incr;
-		for (j = 1; j <= CUDA_mfit; j++)
+		if (tid == 0)
+			(*CUDA_LCC).Alamda = (*CUDA_LCC).Alamda / CUDA_Alamda_incr;
+
+		for (int e = tid; e < CUDA_mfit * CUDA_mfit; e += CUDA_BLOCK_DIM)
 		{
-			for (k = 1; k <= CUDA_mfit; k++)
-				(*CUDA_LCC).alpha[j * CUDA_mfit1 + k] = (*CUDA_LCC).covar[j * CUDA_mfit1 + k];
-			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
+			const int j = e / CUDA_mfit + 1;
+			const int k = e - (j - 1) * CUDA_mfit + 1;
+			(*CUDA_LCC).alpha[j * CUDA_mfit1 + k] = (*CUDA_LCC).covar[j * CUDA_mfit1 + k];
 		}
-		for (l = 1; l <= ma; l++)
+		for (int j = tid + 1; j <= CUDA_mfit; j += CUDA_BLOCK_DIM)
+			(*CUDA_LCC).beta[j] = (*CUDA_LCC).da[j];
+		for (int l = tid + 1; l <= ma; l += CUDA_BLOCK_DIM)
 			(*CUDA_LCC).cg[l] = (*CUDA_LCC).atry[l];
 	}
-	else
+	else if (tid == 0)
 	{
 		(*CUDA_LCC).Alamda = CUDA_Alamda_incr * (*CUDA_LCC).Alamda;
 		(*CUDA_LCC).Chisq = (*CUDA_LCC).Ochisq;

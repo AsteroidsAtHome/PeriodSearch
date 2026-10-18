@@ -5,13 +5,11 @@ on:
     branches:
       - main
       - dev
-      - openwrt
 
   pull_request:
     branches:
       - main
       - dev
-      - openwrt
 
 env:
   OPENWRT_VERSION: 24.10.4
