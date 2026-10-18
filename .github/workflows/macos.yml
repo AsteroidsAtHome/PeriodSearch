@@ -32,7 +32,7 @@ jobs:
         include:
           - {
               variant: 'arm64',
-              os: 'macos-14',
+              os: 'macos-15',
               working-directory: './period_search_optimization_simd/period_search',
               makefile: 'Makefile_arm64_mac_11',
               ps_makefile: 'Makefile_arm',
