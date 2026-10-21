@@ -114,7 +114,7 @@ using AlignedOuterVector = std::vector<AlignedInnerVector, AlignedAllocatorNew<A
  * @param init_value An optional initial value for the elements of the vector.
  *                   Defaults to a value-initialized T object if not specified.
  */
-#if defined _MSC_VER & _MSC_VER < 1900 // Visual Studio 2013 or older
+#if defined _MSC_VER && _MSC_VER < 1900 // Visual Studio 2013 or older
 template <typename T>
 void init_vector(std::vector<T>& vector, const int size, T init_value = T())
 {
@@ -141,7 +141,7 @@ void init_vector(std::vector<T>& vector, const int size, T init_value = T{})
  * @param init_value An optional initial value for the elements of the matrix.
  *                   Defaults to a value-initialized T object if not specified.
  */
-#if defined (_MSC_VER) & (_MSC_VER < 1900) // Visual Studio 2013 or older
+#if defined (_MSC_VER) && (_MSC_VER < 1900) // Visual Studio 2013 or older
 template <typename T>
 void init_matrix(std::vector<std::vector<T>>& matrix, const int rows, const int cols, T init_value = T())
 {
@@ -239,7 +239,7 @@ std::vector<T> flatten2Dvector(const std::vector<std::vector<T>>& matrix)
     std::vector<T> flattened_vec;
     flattened_vec.reserve(rows * cols); // Pre-allocate space for efficiency
 
-#if defined _MSC_VER & _MSC_VER < 1900
+#if defined _MSC_VER && _MSC_VER < 1900
 	for (size_t i = 0; i < matrix.size(); ++i)
 	{
 		const auto& row = matrix[i];
