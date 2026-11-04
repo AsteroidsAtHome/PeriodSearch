@@ -19,7 +19,7 @@ ANDROID_NDK_BIN = $(ANDROID_NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin
 
 CXX=$(ANDROID_NDK_BIN)/aarch64-linux-android34-clang++
 LD=$(ANDROID_NDK_BIN)/ld
-CXXFLAGS = -march=armv8-a -O3 -std=c++2a -w -s -frecord-gcc-switches -static-libstdc++ -static -ldl \
+CXXFLAGS = -march=armv8-a -O3 -std=c++2a -w -s -frecord-gcc-switches -static-libstdc++ -static -fopenmp -ldl \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
@@ -41,7 +41,8 @@ SRC = areanorm.cpp blmatrix.cpp bright.cpp \
 	mrqcof.cpp \
 	mrqmin.cpp phasec.cpp sphfunc.cpp systeminfo.cpp \
 	trifac.cpp VersionInfo.cpp benchmark.cpp period_search_BOINC.cpp \
-	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp
+	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp \
+	threadstate.cpp
 
 # Define the object files
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
