@@ -13,8 +13,6 @@
 #include "arrayHelpers.hpp"
 #include "benchmark.hpp"
 
-globals gl;
-
 namespace
 {
 	constexpr int benchmark_triangulation_rows = 6;
@@ -66,7 +64,7 @@ namespace
 		{
 			double trial_chisq = 0.0;
 
-			calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, beta_sv, mfit, lastone, lastma, trial_chisq, gl, false);
+			gl.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, beta_sv, mfit, lastone, lastma, trial_chisq, gl, false);
 
 			for (auto j = 0; j < mfit; j++)
 			{
@@ -78,14 +76,14 @@ namespace
 			}
 
 			int err_code = 0;
-			calcCtx.CalculateGaussErrc(gl, mfit, da, err_code);
+			gl.ctx.CalculateGaussErrc(gl, mfit, da, err_code);
 			if (err_code != 0)
 			{
 				failed = true;
 				return;
 			}
 
-			calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, da, mfit, lastone, lastma, trial_chisq, gl, true);
+			gl.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, da, mfit, lastone, lastma, trial_chisq, gl, true);
 
 			chisq = trial_chisq;
 		}
@@ -362,7 +360,7 @@ int RunBenchmark()
 		if (!candidate.supported)
 			continue;
 
-		SetOptimizationStrategy(candidate.simd);
+		gl.ctx.SetStrategy(CreateCalcStrategy(candidate.simd));
 
 		wl.failed = false;
 		wl.Round();
