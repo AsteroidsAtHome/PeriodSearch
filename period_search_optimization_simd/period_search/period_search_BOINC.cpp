@@ -236,23 +236,22 @@ int main(int argc, char** argv)
     MFILE out;
 
     int i, j, l, m, k, n = 0, nrows, ndir, i_temp,
-        n_iter_max, n_iter_min,
+        n_iter_min,
         ia_prd, ia_par[4]{}, ia_cl,
         lc_number,
         new_conw, max_test_periods,
         ma = 0;
 
     double per_start, per_step_coef, per_end,
-        freq, freq_start, freq_step, freq_end,
-        dev_old, dev_new, iter_diff, iter_diff_max, stop_condition,
-        totarea, sum, dark, dev_best, per_best, dark_best, la_tmp, be_tmp, la_best, be_best, fraction_done,
+        freq_start, freq_step, freq_end,
+        stop_condition,
         sum_dark_facet = 0.0, ave_dark_facet;
 
     double jd_00, conw, conw_r, a0 = 1.05, b0 = 1.00, c0 = 0.95,
-        prd, cl, e0len, elen, cos_alpha,
+        cl, e0len, elen, cos_alpha,
         dth, dph, rfit, escl,
         chck[4]{},
-        par[4]{}, rchisq;
+        par[4]{};
 
     auto* str_temp = static_cast<char*>(malloc(MAX_LINE_LENGTH));
 
