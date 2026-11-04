@@ -141,9 +141,9 @@ void CalcStrategyAsimd::bright(const double t, std::vector<double>& cg, const in
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php, gl);				/* computes also gl.Scale */
+	phasec(dphp, alpha, php);	/* computes also Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm, gl);
+	matrix(cg[ncoef0], t, tmat, dtm);
 
 	/* Directions (and derivatives) in the rotating system */
 	for (i = 1; i <= 3; i++)
@@ -189,7 +189,7 @@ void CalcStrategyAsimd::bright(const double t, std::vector<double>& cg, const in
 	const float64x2_t avx_de031 = vdupq_n_f64(de0[3][1]);
 	const float64x2_t avx_de032 = vdupq_n_f64(de0[3][2]);
 	const float64x2_t avx_de033 = vdupq_n_f64(de0[3][3]);
-	const float64x2_t avx_Scale = vdupq_n_f64(gl.Scale);
+	const float64x2_t avx_Scale = vdupq_n_f64(Scale);
 
 	const float64x2_t avx_tiny = vdupq_n_f64(TINY);
 	const float64x2_t avx_cl = vdupq_n_f64(cl);
@@ -314,5 +314,5 @@ void CalcStrategyAsimd::bright(const double t, std::vector<double>& cg, const in
 		gl.dyda[ncoef0 + i - 1] = gl.ymod * dphp[i];
 
 	/* Scaled brightness */
-	gl.ymod *= gl.Scale;
+	gl.ymod *= Scale;
 }

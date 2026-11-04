@@ -880,7 +880,7 @@ int main(int argc, char** argv)
                 const int n_tasks = n_count * N_POLES;
                 std::vector<PeriodPoleResult> taskRes(n_tasks);
 
-#pragma omp parallel num_threads(n_threads)
+#pragma omp parallel num_threads(n_threads) if(n_threads > 1)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
@@ -1204,7 +1204,7 @@ int main(int argc, char** argv)
                 const int n_tasks = n_periods * N_POLES;
                 taskRes.assign(n_tasks, PeriodPoleResult());
 
-#pragma omp parallel num_threads(n_threads)
+#pragma omp parallel num_threads(n_threads) if(n_threads > 1)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)

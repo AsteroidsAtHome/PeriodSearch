@@ -57,6 +57,8 @@ void CalcStrategySse3::mrqcof(std::vector<std::vector<double>>& x1, std::vector<
 	auto& alpha = isCovar ? gl.covar : gl.alpha;
 #endif
 
+	double* const dyda = gl.dyda; /* fixed-size member array */
+
 	/* N.B. curv and blmatrix called outside bright because output same for all points */
 	CalcStrategySse3::curv(a, gl);
 
@@ -119,9 +121,10 @@ void CalcStrategySse3::mrqcof(std::vector<std::vector<double>>& x1, std::vector<
 			}
 			else
 			{
-				for (l = 1; l <= ma; l++)
 				{
-					gl.dytemp[jp][l] = gl.dyda[l - 1];
+				    double* const dyt = gl.dytemp[jp].data();
+				    for (l = 1; l <= ma; l++)
+				        dyt[l] = dyda[l - 1];
 				}
 			}
 			/* save lightcurves */
@@ -129,164 +132,116 @@ void CalcStrategySse3::mrqcof(std::vector<std::vector<double>>& x1, std::vector<
 
 		if (gl.Lastcall != 1)
 		{
-			__m128d avx_ave, avx_coef, avx_ytemp;
-			avx_ave = _mm_set1_pd(gl.ave);
-			for (jp = 1; jp <= gl.Lpoints[i]; jp++)
-			{
-				np1++;
-				if (gl.Inrel[i] /*== 1*/)
-				{
-					gl.coef = sig[np1] * gl.Lpoints[i] / gl.ave;
-					avx_coef = _mm_set1_pd(gl.coef);
-					avx_ytemp = _mm_loaddup_pd(&gl.ytemp[jp]);
-					for (l = 1; l <= ma; l += 2)
-					{
-						__m128d avx_dytemp = _mm_loadu_pd(&gl.dytemp[jp][l]), avx_dave = _mm_loadu_pd(&gl.dave[l]);
-						avx_dytemp = _mm_sub_pd(avx_dytemp, _mm_div_pd(_mm_mul_pd(avx_ytemp, avx_dave), avx_ave));
-						avx_dytemp = _mm_mul_pd(avx_dytemp, avx_coef);
-						_mm_storeu_pd(&gl.dytemp[jp][l], avx_dytemp);
-					}
+            const __m128d avx_ave = _mm_set1_pd(gl.ave);
+            for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+            {
+                np1++;
+                if (gl.Inrel[i] /*== 1*/)
+                {
+                    const double coef = sig[np1] * gl.Lpoints[i] / gl.ave;
+                    const __m128d avx_coef = _mm_set1_pd(coef);
+                    const __m128d avx_ytemp = _mm_set1_pd(gl.ytemp[jp]);
+                    double* const dyt = gl.dytemp[jp].data();
+                    for (l = 1; l <= ma; l += 2)
+                    {
+                        __m128d avx_dytemp = _mm_loadu_pd(&dyt[l]);
+                        const __m128d avx_dave = _mm_loadu_pd(&gl.dave[l]);
+                        avx_dytemp = _mm_sub_pd(avx_dytemp, _mm_div_pd(_mm_mul_pd(avx_ytemp, avx_dave), avx_ave));
+                        avx_dytemp = _mm_mul_pd(avx_dytemp, avx_coef);
+                        _mm_storeu_pd(&dyt[l], avx_dytemp);
+                    }
 
-					gl.ytemp[jp] *= gl.coef;
-					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
-					gl.dytemp[jp][1] = 0;
-				}
-			}
-			if (ia[0]) //not relative
-			{
-				for (jp = 1; jp <= gl.Lpoints[i]; jp++)
-				{
-					gl.ymod = gl.ytemp[jp];
-					for (l = 1; l <= ma; l++)
-						gl.dyda[l - 1] = gl.dytemp[jp][l];
-					np2++;
-					gl.sig2i = 1 / (sig[np2] * sig[np2]);
-					gl.wght = gl.Weight[np2];
-					gl.dy = y[np2] - gl.ymod;
-					j = 0;
-					//
-					double sig2iwght = gl.sig2i * gl.wght;
-					//l=0
-					gl.wt = gl.dyda[0] * sig2iwght;
-					alpha[j][0] += gl.wt * gl.dyda[0];
-					beta[j] += gl.dy * gl.wt;
-					j++;
-					//
-					for (l = 1; l <= lastone; l++)  //line of ones
-					{
-						gl.wt = gl.dyda[l] * sig2iwght;
-						__m128d avx_wt = _mm_set1_pd(gl.wt);
-						k = 0;
-						//m=0
-						alpha[j][k] += gl.wt * gl.dyda[0];
-						k++;
-						for (m = 1; m <= l; m += 2)
-						{
-							__m128d avx_alpha = _mm_loadu_pd(&alpha[j][k]), avx_dyda = _mm_loadu_pd(&gl.dyda[m]);
-							avx_alpha = _mm_add_pd(avx_alpha, _mm_mul_pd(avx_wt, avx_dyda));
-							_mm_storeu_pd(&alpha[j][k], avx_alpha);
-							k += 2;
-						} /* m */
-						beta[j] += gl.dy * gl.wt;
-						j++;
-					} /* l */
-					for (; l <= lastma; l++)  //rest parameters
-					{
-						if (ia[l])
-						{
-							gl.wt = gl.dyda[l] * sig2iwght;
-							__m128d avx_wt = _mm_set1_pd(gl.wt);
-							k = 0;
-							//m=0
-							alpha[j][k] += gl.wt * gl.dyda[0];
-							k++;
-							int kk = k;
-							for (m = 1; m <= lastone; m += 2)
-							{
-								__m128d avx_alpha = _mm_loadu_pd(&alpha[j][kk]), avx_dyda = _mm_loadu_pd(&gl.dyda[m]);
-								avx_alpha = _mm_add_pd(avx_alpha, _mm_mul_pd(avx_wt, avx_dyda));
-								_mm_storeu_pd(&alpha[j][kk], avx_alpha);
-								kk += 2;
-							} /* m */
-							k += lastone;
-							for (m = lastone + 1; m <= l; m++)
-								if (ia[m])
-								{
-									alpha[j][k] += gl.wt * gl.dyda[m];
-									k++;
-								}
-							beta[j] += gl.dy * gl.wt;
-							j++;
-						}
-					} /* l */
+                    gl.ytemp[jp] *= coef;
+                    /* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
+                    dyt[1] = 0;
+                    gl.coef = coef;
+                }
+            }
 
-					trial_chisq += gl.dy * gl.dy * sig2iwght;
-				} /* jp */
-			}
-			else //relative ia[0]==0
-			{
-				for (jp = 1; jp <= gl.Lpoints[i]; jp++)
-				{
-					gl.ymod = gl.ytemp[jp];
-					for (l = 1; l <= ma; l++)
-						gl.dyda[l - 1] = gl.dytemp[jp][l];
-					np2++;
-					gl.sig2i = 1 / (sig[np2] * sig[np2]);
-					gl.wght = gl.Weight[np2];
-					gl.dy = y[np2] - gl.ymod;
-					j = 0;
-					//
-					double sig2iwght = gl.sig2i * gl.wght;
-					// l=0
-					//
-					for (l = 1; l <= lastone; l++)  //line of ones
-					{
-						gl.wt = gl.dyda[l] * sig2iwght;
-						__m128d avx_wt = _mm_set1_pd(gl.wt);
-						k = 0;
-						//m=0
-						//
-						for (m = 1; m <= l; m += 2)
-						{
-							__m128d avx_alpha = _mm_load_pd(&alpha[j][k]), avx_dyda = _mm_loadu_pd(&gl.dyda[m]);
-							avx_alpha = _mm_add_pd(avx_alpha, _mm_mul_pd(avx_wt, avx_dyda));
-							_mm_store_pd(&alpha[j][k], avx_alpha);
-							k += 2;
-						} /* m */
-						beta[j] += gl.dy * gl.wt;
-						j++;
-					} /* l */
-					for (; l <= lastma; l++)  //rest parameters
-					{
-						if (ia[l])
-						{
-							gl.wt = gl.dyda[l] * sig2iwght;
-							__m128d avx_wt = _mm_set1_pd(gl.wt);
-							//m=0
-							//
-							int kk = 0;
-							for (m = 1; m <= lastone; m += 2)
-							{
-								__m128d avx_alpha = _mm_load_pd(&alpha[j][kk]), avx_dyda = _mm_loadu_pd(&gl.dyda[m]);
-								avx_alpha = _mm_add_pd(avx_alpha, _mm_mul_pd(avx_wt, avx_dyda));
-								_mm_store_pd(&alpha[j][kk], avx_alpha);
-								kk += 2;
-							} /* m */
-							k = lastone;
-							for (m = lastone + 1; m <= l; m++)
-								if (ia[m])
-								{
-									alpha[j][k] += gl.wt * gl.dyda[m];
-									k++;
-								}
-							beta[j] += gl.dy * gl.wt;
-							j++;
-						}
-					} /* l */
+            /* The per-point scratch values (wt, dy, sig2i, ...) are kept in locals and the
+               row pointers are hoisted: as double members of gl the compiler had to assume
+               every store into alpha could change them and reload them. The arithmetic and
+               its order are unchanged, so the results are bit-identical. */
+            double* const bta = beta.data();
+            double chisq_acc = trial_chisq;
+            const bool absolute = ia[0] != 0; /* not relative */
 
-					trial_chisq += gl.dy * gl.dy * sig2iwght;
-				} /* jp */
-			}
+            for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+            {
+                const double* const dyt = gl.dytemp[jp].data();
+                for (l = 1; l <= ma; l++)
+                    dyda[l - 1] = dyt[l];
+                np2++;
+                const double sig2i = 1 / (sig[np2] * sig[np2]);
+                const double dy = y[np2] - gl.ytemp[jp];
+                const double sig2iwght = sig2i * gl.Weight[np2];
+                const double d0 = dyda[0];
+                j = 0;
+
+                if (absolute)
+                {
+                    //l=0
+                    const double wt = d0 * sig2iwght;
+                    alpha[j][0] += wt * d0;
+                    bta[j] += dy * wt;
+                    j++;
+                }
+
+                for (l = 1; l <= lastone; l++)  //line of ones
+                {
+                    const double wt = dyda[l] * sig2iwght;
+                    const __m128d avx_wt = _mm_set1_pd(wt);
+                    double* const arow = alpha[j].data();
+                    if (absolute)
+                    {
+                        arow[0] += wt * d0; //m=0
+                        for (m = 1, k = 1; m <= l; m += 2, k += 2)
+                            _mm_storeu_pd(&arow[k], _mm_add_pd(_mm_loadu_pd(&arow[k]), _mm_mul_pd(avx_wt, _mm_loadu_pd(&dyda[m]))));
+                    }
+                    else
+                    {
+                        for (m = 1, k = 0; m <= l; m += 2, k += 2)
+                            _mm_store_pd(&arow[k], _mm_add_pd(_mm_load_pd(&arow[k]), _mm_mul_pd(avx_wt, _mm_loadu_pd(&dyda[m]))));
+                    }
+                    bta[j] += dy * wt;
+                    j++;
+                } /* l */
+
+                for (; l <= lastma; l++)  //rest parameters
+                {
+                    if (ia[l])
+                    {
+                        const double wt = dyda[l] * sig2iwght;
+                        const __m128d avx_wt = _mm_set1_pd(wt);
+                        double* const arow = alpha[j].data();
+                        if (absolute)
+                        {
+                            arow[0] += wt * d0; //m=0
+                            for (m = 1, k = 1; m <= lastone; m += 2, k += 2)
+                                _mm_storeu_pd(&arow[k], _mm_add_pd(_mm_loadu_pd(&arow[k]), _mm_mul_pd(avx_wt, _mm_loadu_pd(&dyda[m]))));
+                            k = 1 + lastone;
+                        }
+                        else
+                        {
+                            for (m = 1, k = 0; m <= lastone; m += 2, k += 2)
+                                _mm_store_pd(&arow[k], _mm_add_pd(_mm_load_pd(&arow[k]), _mm_mul_pd(avx_wt, _mm_loadu_pd(&dyda[m]))));
+                            k = lastone;
+                        }
+                        for (m = lastone + 1; m <= l; m++)
+                            if (ia[m])
+                            {
+                                arow[k] += wt * dyda[m];
+                                k++;
+                            }
+                        bta[j] += dy * wt;
+                        j++;
+                    }
+                } /* l */
+
+                chisq_acc += dy * dy * sig2iwght;
+            } /* jp */
+
+            trial_chisq = chisq_acc;
 		} /* Lastcall != 1 */
 	} /* i,  lcurves */
 
