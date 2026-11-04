@@ -654,7 +654,6 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
       <AdditionalLibraryDirectories>C:\boincsdk\boinc\win_build\Build\Win32\Release;$(WindowsSdk_71A_LibraryPath_x86);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_7|Win32'">

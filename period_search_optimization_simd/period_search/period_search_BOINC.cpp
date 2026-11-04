@@ -269,8 +269,15 @@ int main(int argc, char** argv)
     {
         if (strcmp(argv[i], "--benchmark") == 0)
         {
+            /* --nthreads N caps the thread-scaling sweep (default: omp_get_max_threads()) */
+            int bench_threads = 0;
+            for (int k = 0; k < argc; k++)
+            {
+                if (strcmp(argv[k], "--nthreads") == 0 && k + 1 < argc)
+                    bench_threads = atoi(argv[k + 1]);
+            }
             free(str_temp);
-            return RunBenchmark();
+            return RunBenchmark(bench_threads);
         }
     }
 
@@ -689,10 +696,31 @@ int main(int argc, char** argv)
        own strategy instances from this selection. */
     SelectThreadStrategy(useOptimization);
 
-    int max_threads = 1;
+    int n_threads = 1;
 #ifdef _OPENMP
-    max_threads = omp_get_max_threads();
-    std::cerr << "Using OpenMP with " << max_threads << " threads." << std::endl;
+    if (aid.ncpus > 0) {
+        n_threads = static_cast<int>(aid.ncpus);
+    } else if (boinc_is_standalone()) {
+        n_threads = omp_get_max_threads();
+    } else {
+        n_threads = 1;
+    }
+
+    for (i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--nthreads") == 0 && i + 1 < argc)
+            n_threads = atoi(argv[i + 1]);
+    }
+    if (n_threads < 1) {
+        n_threads = 1;
+    }
+    if (n_threads > omp_get_max_threads()) {
+        n_threads = omp_get_max_threads();
+    }
+    omp_set_num_threads(n_threads);
+    if (n_threads > 1) {
+      std::cerr << "Using OpenMP with " << n_threads << " threads." << std::endl;
+    }
 #endif
 
     // -------------
@@ -853,7 +881,7 @@ int main(int argc, char** argv)
                 const int n_tasks = n_count * N_POLES;
                 std::vector<PeriodPoleResult> taskRes(n_tasks);
 
-#pragma omp parallel
+#pragma omp parallel num_threads(n_threads)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
@@ -1165,7 +1193,6 @@ int main(int argc, char** argv)
                checkpointing and progress reporting */
 
 			const int base_periods = 2;                       // periods per chunk for a single thread (Increase to reduce checkpointing/progress reporting overhead)
-            const int n_threads = max_threads;
 			const int chunk = (std::min)(n_count, base_periods * n_threads);    //Scale chunk size with number of threads to keep checkpointing/progress reporting at a reasonable frequency
 
             const bool standalone = boinc_is_standalone();
@@ -1178,7 +1205,7 @@ int main(int argc, char** argv)
                 const int n_tasks = n_periods * N_POLES;
                 taskRes.assign(n_tasks, PeriodPoleResult());
 
-#pragma omp parallel
+#pragma omp parallel num_threads(n_threads)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)

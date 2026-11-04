@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <random>
 #include <string>
 #include <vector>
@@ -12,6 +13,10 @@
 #include "constants.h"
 #include "arrayHelpers.hpp"
 #include "benchmark.hpp"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace
 {
@@ -26,6 +31,13 @@ namespace
 	constexpr int benchmark_min_rounds = 5;
 	constexpr int benchmark_max_rounds = 5000;
 
+	// Thread-scaling benchmark: a fixed batch of independent rounds sized so the
+	// single-thread run takes about benchmark_mt_target_ms, and every thread gets
+	// at least benchmark_mt_min_rounds_per_thread rounds at the highest count.
+	constexpr double benchmark_mt_target_ms = 400.0;
+	constexpr int benchmark_mt_min_rounds_per_thread = 8;
+	constexpr int benchmark_mt_repeats = 3; // best-of-N per thread count
+
 	struct SimdCandidate
 	{
 		SIMDEnum simd;
@@ -39,6 +51,7 @@ namespace
 		double ms_per_round;
 		double chisq;
 		bool failed;
+		SIMDEnum simd;
 	};
 
 	struct BenchmarkWorkload
@@ -60,30 +73,30 @@ namespace
 		std::vector<double> da;
 		std::vector<int> ia;
 
-		void Round()
+		void Round(globals& g)
 		{
 			double trial_chisq = 0.0;
 
-			gl.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, beta_sv, mfit, lastone, lastma, trial_chisq, gl, false);
+			g.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, beta_sv, mfit, lastone, lastma, trial_chisq, g, false);
 
 			for (auto j = 0; j < mfit; j++)
 			{
 				for (auto k = 0; k < mfit; k++)
-					gl.covar[j][k] = gl.alpha[j][k];
+					g.covar[j][k] = g.alpha[j][k];
 
-				gl.covar[j][j] *= (1.0 + benchmark_alamda);
+				g.covar[j][j] *= (1.0 + benchmark_alamda);
 				da[j] = beta_sv[j];
 			}
 
 			int err_code = 0;
-			gl.ctx.CalculateGaussErrc(gl, mfit, da, err_code);
+			g.ctx.CalculateGaussErrc(g, mfit, da, err_code);
 			if (err_code != 0)
 			{
 				failed = true;
 				return;
 			}
 
-			gl.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, da, mfit, lastone, lastma, trial_chisq, gl, true);
+			g.ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, da, mfit, lastone, lastma, trial_chisq, g, true);
 
 			chisq = trial_chisq;
 		}
@@ -93,7 +106,7 @@ namespace
 	{
 		const auto start = std::chrono::steady_clock::now();
 		for (auto r = 0; r < rounds; r++)
-			wl.Round();
+			wl.Round(gl);
 
 		const auto stop = std::chrono::steady_clock::now();
 		return std::chrono::duration<double, std::milli>(stop - start).count() / rounds;
@@ -295,9 +308,130 @@ namespace
 			}
 		}
 	}
+
+#ifdef _OPENMP
+	/* Per-thread working set for the scaling benchmark: like ThreadState in the
+	   period scan, every thread owns a deep copy of the master globals (with its
+	   own strategy instance) and its own copy of the workload vectors. */
+	struct MtState
+	{
+		globals g;
+		BenchmarkWorkload wl;
+	};
+
+	/* Strong-scaling sweep: the same fixed batch of independent LM rounds is
+	   distributed over 1..max_threads threads (schedule(dynamic) like the
+	   guided schedule of the real period/pole loop). Returns the number of
+	   thread counts whose chi^2 did not match the single-thread reference. */
+	int RunThreadScaling(const BenchmarkWorkload& proto, const BenchmarkRow& simdRow, const int max_threads)
+	{
+		omp_set_dynamic(0);
+
+		auto total_rounds = static_cast<int>(benchmark_mt_target_ms / (std::max)(simdRow.ms_per_round, 0.001));
+		total_rounds = (std::max)(total_rounds, max_threads * benchmark_mt_min_rounds_per_thread);
+
+		std::vector<std::unique_ptr<MtState>> states(static_cast<size_t>(max_threads));
+
+		/* Build each thread's state on the thread that will use it (first touch). */
+#pragma omp parallel num_threads(max_threads)
+		{
+			const int id = omp_get_thread_num();
+#pragma omp critical(benchmark_mt_setup)
+			{
+				auto st = std::make_unique<MtState>();
+				st->g = ::gl;
+				st->g.ctx.SetStrategy(CreateCalcStrategy(simdRow.simd));
+				st->wl = proto;
+				st->wl.failed = false;
+				st->wl.Round(st->g); // warm-up
+				states[static_cast<size_t>(id)] = std::move(st);
+			}
+		}
+
+		for (const auto& st : states)
+		{
+			if (!st)
+			{
+				std::fprintf(stderr, "Thread-scaling benchmark: could not start %d OpenMP threads.\n", max_threads);
+				return 1;
+			}
+		}
+
+		std::fprintf(stdout, "\nOpenMP thread scaling (%s, %d independent rounds per run, best of %d, max %d threads)\n",
+			simdRow.name.c_str(), total_rounds, benchmark_mt_repeats, max_threads);
+		std::fprintf(stdout, "%-8s %12s %14s %10s %11s   %s\n", "Threads", "ms total", "rounds/s", "speedup", "efficiency", "chi^2 check");
+
+		double t1_ms = 0.0;
+		double best_throughput = 0.0;
+		int best_threads = 1;
+		int mismatches = 0;
+
+		for (int nt = 1; nt <= max_threads; nt++)
+		{
+			double best_ms = 0.0;
+
+			for (int rep = 0; rep < benchmark_mt_repeats; rep++)
+			{
+				const auto start = std::chrono::steady_clock::now();
+
+#pragma omp parallel num_threads(nt)
+				{
+					MtState& st = *states[static_cast<size_t>(omp_get_thread_num())];
+
+#pragma omp for schedule(dynamic, 1)
+					for (int r = 0; r < total_rounds; r++)
+						st.wl.Round(st.g);
+				}
+
+				const auto stop = std::chrono::steady_clock::now();
+				const double ms = std::chrono::duration<double, std::milli>(stop - start).count();
+				if (rep == 0 || ms < best_ms)
+					best_ms = ms;
+			}
+
+			/* Every participating thread must have reproduced the reference chi^2. */
+			bool ok = true;
+			for (int id = 0; id < nt; id++)
+			{
+				const auto& wl = states[static_cast<size_t>(id)]->wl;
+				if (wl.failed || !ChisqMatches(simdRow.chisq, wl.chisq))
+					ok = false;
+			}
+			if (!ok) mismatches++;
+
+			if (nt == 1) t1_ms = best_ms;
+
+			const double throughput = total_rounds / (best_ms / 1000.0);
+			const double speedup = t1_ms / best_ms;
+			const double efficiency = speedup / nt * 100.0;
+
+			if (throughput > best_throughput)
+			{
+				best_throughput = throughput;
+				best_threads = nt;
+			}
+
+			char speedup_buf[16], eff_buf[16];
+			std::snprintf(speedup_buf, sizeof(speedup_buf), "%.2fx", speedup);
+			std::snprintf(eff_buf, sizeof(eff_buf), "%.1f%%", efficiency);
+
+			std::fprintf(stdout, "%-8d %12.2f %14.1f %10s %11s   %s\n",
+				nt, best_ms, throughput, speedup_buf, eff_buf, ok ? "OK" : "MISMATCH");
+			std::fflush(stdout);
+		}
+
+		std::fprintf(stdout, "\nPeak throughput: %.1f rounds/s at %d thread(s) (%.2fx vs 1 thread)\n",
+			best_throughput, best_threads, best_throughput / (total_rounds / (t1_ms / 1000.0)));
+
+		if (mismatches > 0)
+			std::fprintf(stderr, "Thread-scaling benchmark FAILED: %d thread count(s) produced inconsistent chi^2.\n", mismatches);
+
+		return mismatches;
+	}
+#endif
 }
 
-int RunBenchmark()
+int RunBenchmark(const int maxThreads)
 {
 	std::cerr << "Running SIMD self-test benchmark..." << std::endl;
 
@@ -363,11 +497,11 @@ int RunBenchmark()
 		gl.ctx.SetStrategy(CreateCalcStrategy(candidate.simd));
 
 		wl.failed = false;
-		wl.Round();
+		wl.Round(gl);
 
 		if (wl.failed)
 		{
-			rows.push_back({ getSIMDEnumName(candidate.simd), 0, 0.0, 0.0, true });
+			rows.push_back({ getSIMDEnumName(candidate.simd), 0, 0.0, 0.0, true, candidate.simd });
 			continue;
 		}
 
@@ -378,7 +512,7 @@ int RunBenchmark()
 
 		const double ms_per_round = TimedRounds(wl, rounds);
 
-		rows.push_back({ getSIMDEnumName(candidate.simd), rounds, ms_per_round, wl.chisq, false });
+		rows.push_back({ getSIMDEnumName(candidate.simd), rounds, ms_per_round, wl.chisq, false, candidate.simd });
 	}
 
 	const BenchmarkRow* baseline = nullptr;
@@ -448,5 +582,22 @@ int RunBenchmark()
 	if (mismatches == 0 && failures == 0)
 		std::fprintf(stdout, "Self-test PASSED: all implementations agree within tolerance.\n");
 
-	return (mismatches > 0 || failures > 0) ? 1 : 0;
+	auto mt_mismatches = 0;
+#ifdef _OPENMP
+	if (best != nullptr)
+	{
+		const int max_threads = maxThreads > 0 ? maxThreads : omp_get_max_threads();
+
+		/* Leave the workload as the fastest implementation produced it. */
+		gl.ctx.SetStrategy(CreateCalcStrategy(best->simd));
+		wl.failed = false;
+		wl.Round(gl);
+
+		mt_mismatches = RunThreadScaling(wl, *best, (std::max)(max_threads, 1));
+	}
+#else
+	std::fprintf(stdout, "\nOpenMP not enabled in this build: thread-scaling benchmark skipped.\n");
+#endif
+
+	return (mismatches > 0 || failures > 0 || mt_mismatches > 0) ? 1 : 0;
 }
