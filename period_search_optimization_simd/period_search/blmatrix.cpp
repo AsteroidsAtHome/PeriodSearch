@@ -11,12 +11,13 @@
  *
  * @param bet The beta angle (in radians).
  * @param lam The lambda angle (in radians).
+ * @param gl The per-thread globals instance; Blmat and Dblm are stored there.
  *
- * @note The rotation matrix and its derivatives are stored in the global arrays Blmat and Dblm.
+ * @note The rotation matrix and its derivatives are stored in gl.Blmat and gl.Dblm.
  *
  * @date 8.11.2006
  */
-void blmatrix(const double bet, const double lam)
+void blmatrix(const double bet, const double lam, struct globals& gl)
 {
     double cb, sb, cl, sl;
 

@@ -219,15 +219,6 @@
     <ClInclude Include="period_search\VersionInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="period_search\arrayHelpers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="period_search\LcHelpers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="period_search\sve_emulator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

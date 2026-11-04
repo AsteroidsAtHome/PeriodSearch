@@ -703,13 +703,14 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
       <OmitFramePointers>true</OmitFramePointers>
-      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
-      <EnableEnhancedInstructionSet>
-      </EnableEnhancedInstructionSet>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <MinimalRebuild>false</MinimalRebuild>
       <SDLCheck>false</SDLCheck>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -720,6 +721,7 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <StackReserveSize>20000000</StackReserveSize>
       <AdditionalLibraryDirectories>..\period_search_common\x64\Release;C:\boincsdk\boinc\win_build\Build\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -1069,7 +1071,6 @@
     <ClCompile Include="period_search\VersionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="period_search\arrayHelpers.hpp" />
     <ClInclude Include="period_search\CalcStrategyAsimd.hpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
@@ -1081,12 +1082,10 @@
     <ClInclude Include="period_search\CalcStrategyNone.hpp" />
     <ClInclude Include="period_search\CalcStrategySse2.hpp" />
     <ClInclude Include="period_search\CalcStrategySse3.hpp" />
-    <ClInclude Include="period_search\constants.h" />
     <ClInclude Include="period_search\declarations.h" />
     <ClInclude Include="period_search\Enums.h" />
     <ClInclude Include="period_search\globals.h" />
     <ClInclude Include="period_search\CalcStrategyAvx.hpp" />
-    <ClInclude Include="period_search\LcHelpers.hpp" />
     <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\sve_emulator.hpp" />
     <ClInclude Include="period_search\systeminfo.h" />
