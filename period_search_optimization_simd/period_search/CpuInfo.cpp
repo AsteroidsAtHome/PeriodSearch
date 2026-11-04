@@ -380,43 +380,38 @@ SIMDEnum GetBestSupportedSIMD()
 }
 
 /**
- * @brief Sets the calculation strategy based on the specified SIMD optimization.
+ * @brief Creates the calculation strategy for the specified SIMD optimization.
  *
- * This function selects and sets the appropriate calculation strategy based on the provided SIMDEnum value.
- * It utilizes different strategies for AVX512, FMA, AVX, SSE3, SSE2, and falls back to a default strategy if none are specified.
+ * This function creates a new strategy instance (with its own scratch state)
+ * for the provided SIMDEnum value. Each worker thread needs its own instance
+ * because the strategies keep per-call scratch state as member variables.
  *
  * @param useOptimization The SIMDEnum value representing the desired SIMD optimization strategy.
+ * @return A new strategy instance (or an empty shared_ptr on failure).
  */
-void SetOptimizationStrategy(const SIMDEnum useOptimization)
+std::shared_ptr<CalcStrategy> CreateCalcStrategy(const SIMDEnum useOptimization)
 {
     switch (useOptimization)
     {
 #if !defined _VC140_XP
-    case SIMDEnum::OptAVX512:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyAvx512>(64));
-        break;
-    case SIMDEnum::OptFMA:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyFma>(64));
-        break;
-    case SIMDEnum::OptAVX:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyAvx>(64));
-        break;
+        case SIMDEnum::OptAVX512:
+            return CreateAlignedShared<CalcStrategyAvx512>(64);
+        case SIMDEnum::OptFMA:
+            return CreateAlignedShared<CalcStrategyFma>(64);
+        case SIMDEnum::OptAVX:
+            return CreateAlignedShared<CalcStrategyAvx>(64);
 #endif
-    case SIMDEnum::OptSSE3:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySse3>(64));
-        break;
-    case SIMDEnum::OptSSE2:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySse2>(64));
-        break;
-    case SIMDEnum::OptSVE:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySve>(64));
-        break;
-    //case SIMDEnum::OptASIMD:
-    //	calcCtx.set_strategy(std::make_unique<CalcStrategyAsimd>(64));  // TODO: Needs to be finished
-    case SIMDEnum::OptNONE:
-    case SIMDEnum::Undefined:
-    default:
-        calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyNone>(64));
-        break;
+        case SIMDEnum::OptSSE3:
+            return CreateAlignedShared<CalcStrategySse3>(64);
+        case SIMDEnum::OptSSE2:
+            return CreateAlignedShared<CalcStrategySse2>(64);
+        case SIMDEnum::OptSVE:
+            return CreateAlignedShared<CalcStrategySve>(64);
+        //case SIMDEnum::OptASIMD:
+        //	return std::make_unique<CalcStrategyAsimd>(64);  // TODO: Needs to be finished
+        case SIMDEnum::OptNONE:
+        case SIMDEnum::Undefined:
+        default:
+            return CreateAlignedShared<CalcStrategyNone>(64);
     }
 }

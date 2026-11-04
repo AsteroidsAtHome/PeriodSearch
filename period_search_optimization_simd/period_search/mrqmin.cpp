@@ -18,13 +18,16 @@
  * @param a A reference to a vector of doubles representing the initial parameters.
  * @param ia A reference to a vector of integers indicating which parameters are to be fitted.
  * @param ma An integer representing the total number of parameters.
- * @param gl A reference to a globals structure containing necessary global data.
+ * @param gl The per-thread globals instance; the fit state (Chisq, Ochisq, Alamda,
+ *        Niter, Lastcall, Deallocate, atry, beta, da, alpha, covar) and the
+ *        calculation strategy (ctx) are stored there so that each OpenMP worker
+ *        thread keeps its own LM state.
  *
  * @return An integer error code:
  *         - 0: No error
  *         - Non-zero: Indicates an error occurred during fitting
  *
- * @note The function modifies the global variables related to the fitting process. Converted from Mikko's Fortran code.
+ * @note The fit state is modified in `gl`. Converted from Mikko's Fortran code.
  *
  * @source Numerical Recipes: Nonlinear least-squares fit, Marquardt’s method.
  *
@@ -34,14 +37,24 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 		std::vector<double>& sig, std::vector<double>& a, std::vector<int>& ia, const int ma, globals& gl)
 {
 	int j, k, l, err_code;
-	static int mfit, lastone, lastma; /* it is set in the first call*/
+	// mfit/lastone/lastma are derived from ma and ia (both constant for a whole
+	// fit). In the serial code they were function-statics, so the values
+	// computed on the first call persisted into every later call. Function-
+	// statics are unsafe across threads, so they are recomputed on EVERY call
+	// instead (O(ma), negligible next to the fit). Recomputing them on every
+	// call - not only the first - is essential: the covariance build, the Gauss
+	// solve and both mrqcof calls all rely on them being the true values.
+	int mfit, lastone, lastma;
+
 	//static double* beta, * da, * atry; //beta, da are zero indexed
 
 	double trial_chisq;
 	//double** alpha, ** covar; // Dummy placeholders
 
+	auto& ctx = gl.ctx; // per-thread calculation strategy
+
 	/* deallocates memory when used in period_search */
-	if (Deallocate == 1)
+	if (gl.Deallocate == 1)
 	{
 		//deallocate_vector((void*)atry);
 		//deallocate_vector((void*)beta);
@@ -49,47 +62,47 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 		return(0);
 	}
 
-	if (Lastcall != 1)
+	/* number of fitted parameters (valid for every call of a fit) */
+	mfit = 0;
+	lastma = 0;
+	for (j = 0; j < ma; j++)
 	{
-		if (Alamda < 0)
+		if (ia[j])
+		{
+			mfit++;
+			lastma = j;
+		}
+	}
+
+	lastone = 0;
+	for (j = 1; j <= lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
+	{
+		if (!ia[j]) break;
+		lastone = j;
+	}
+
+	if (gl.Lastcall != 1)
+	{
+		if (gl.Alamda < 0)
 		{
 			//atry = vector_double(ma);
 			//beta = vector_double(ma);
 			//da = vector_double(ma);
 
-			std::fill(atry.begin(), atry.end(), 0.0);
-			std::fill(beta.begin(), beta.end(), 0.0);
-			std::fill(da.begin(), da.end(), 0.0);
+			std::fill(gl.atry.begin(), gl.atry.end(), 0.0);
+			std::fill(gl.beta.begin(), gl.beta.end(), 0.0);
+			std::fill(gl.da.begin(), gl.da.end(), 0.0);
 
-			/* number of fitted parameters */
-			mfit = 0;
-			lastma = 0;
-			for (j = 0; j < ma; j++)
-			{
-				if (ia[j])
-				{
-					mfit++;
-					lastma = j;
-				}
-			}
-
-			lastone = 0;
-			for (j = 1; j <= lastma; j++) //ia[0] is skipped because ia[0]=0 is acceptable inside mrqcof
-			{
-				if (!ia[j]) break;
-				lastone = j;
-			}
-
-			Alamda = Alamda_start; /* initial alambda */
+			gl.Alamda = Alamda_start; /* initial alambda */
 
 			//gl.isCovar = false;
 			// NOTE: Use gl.alpha
-			calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, beta, mfit, lastone, lastma, trial_chisq, gl, false);
+			ctx.CalculateMrqcof(x1, x2, x3, y, sig, a, ia, ma, gl.beta, mfit, lastone, lastma, trial_chisq, gl, false);
 
-			Ochisq = trial_chisq;
+			gl.Ochisq = trial_chisq;
 			for (j = 1; j <= ma; j++)
 			{
-				atry[j] = a[j];
+				gl.atry[j] = a[j];
 			}
 		}
 
@@ -100,8 +113,8 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 				gl.covar[j][k] = gl.alpha[j][k];
 			}
 
-			gl.covar[j][j] = gl.alpha[j][j] * (1 + Alamda);
-			da[j] = beta[j];
+			gl.covar[j][j] = gl.alpha[j][j] * (1 + gl.Alamda);
+			gl.da[j] = gl.beta[j];
 		}
 
 		//calcCtx.CalculateGaussErrc(covar, mfit, da.data(), err_code);
@@ -117,7 +130,7 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 	 //   }
 
 		//calcCtx.CalculateGaussErrc(flatCovar, mfit, da.data(), err_code);
-		calcCtx.CalculateGaussErrc(gl, mfit, da, err_code);
+		ctx.CalculateGaussErrc(gl, mfit, gl.da, err_code);
 
 		if (err_code != 0) return(err_code);
 
@@ -126,27 +139,27 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 		{
 			if (ia[l - 1])
 			{
-				atry[l] = a[l] + da[j];
+				gl.atry[l] = a[l] + gl.da[j];
 				j++;
 			}
 		}
 	} /* Lastcall != 1 */
 
-	if (Lastcall == 1)
+	if (gl.Lastcall == 1)
 	{
 		for (l = 1; l <= ma; l++)
 		{
-			atry[l] = a[l];
+			gl.atry[l] = a[l];
 		}
 	}
 
 	//gl.isCovar = true;
 	// NOTE: Use gl.covar
-	calcCtx.CalculateMrqcof(x1, x2, x3, y, sig, atry, ia, ma, da, mfit, lastone, lastma, trial_chisq, gl, true);
+	ctx.CalculateMrqcof(x1, x2, x3, y, sig, gl.atry, ia, ma, gl.da, mfit, lastone, lastma, trial_chisq, gl, true);
 
-	Chisq = trial_chisq;
+	gl.Chisq = trial_chisq;
 
-	if (Lastcall == 1)
+	if (gl.Lastcall == 1)
 	{
 		//deallocate_vector((void*)atry);
 		//deallocate_vector((void*)beta);
@@ -154,27 +167,27 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 		return(0);
 	}
 
-	if (trial_chisq < Ochisq)
+	if (trial_chisq < gl.Ochisq)
 	{
-		Alamda = Alamda / Alamda_incr;
+		gl.Alamda = gl.Alamda / Alamda_incr;
 		for (j = 0; j < mfit; j++)
 		{
 			for (k = 0; k < mfit; k++)
 			{
 				gl.alpha[j][k] = gl.covar[j][k];
 			}
-			beta[j] = da[j];
+			gl.beta[j] = gl.da[j];
 		}
 
 		for (l = 1; l <= ma; l++)
 		{
-			a[l] = atry[l];
+			a[l] = gl.atry[l];
 		}
 	}
 	else
 	{
-		Alamda = Alamda_incr * Alamda;
-		Chisq = Ochisq;
+		gl.Alamda = Alamda_incr * gl.Alamda;
+		gl.Chisq = gl.Ochisq;
 	}
 
 	return(0);

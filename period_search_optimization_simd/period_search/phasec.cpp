@@ -1,5 +1,6 @@
 #include <cmath>
 #include "globals.h"
+#include "arrayHelpers.hpp"
 
 /**
  * @brief Computes the linear-exponential phase function and its derivatives.
@@ -12,13 +13,13 @@
  * @param alpha A double representing the phase angle in radians.
  * @param p An array of doubles representing the model parameters.
  *
- * @note The function modifies the global variable `Scale` to store the computed phase function value.
+ * @note The function stores the computed phase function value in gl.Scale.
  *
  * @source Converted from Mikko's Fortran code
  *
  * @date 8.11.2006
  */
-void phasec(double dcdp[], const double alpha, double p[])
+void phasec(double dcdp[], const double alpha, double p[], struct globals& gl)
 {
     double e, c;
 
@@ -31,7 +32,7 @@ void phasec(double dcdp[], const double alpha, double p[])
     dcdp[2] = p[1] * e * alpha / (p[2] * p[2]);
     dcdp[3] = alpha;
 
-    Scale = c;
+    gl.Scale = c;
 
     //printf("\nScale: %.30f", Scale);
     /*printf("dcdp[6]:\n");

@@ -64,7 +64,7 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
     //   #else
-    blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
+    blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar], gl);
     //   #endif
 
     for (j = 0; j < mfit; j++)
@@ -129,7 +129,7 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
             /* save lightcurves */
         } /* jp, lpoints */
 
-        if (Lastcall != 1)
+        if (gl.Lastcall != 1)
         {
             __m256d avx_ave, avx_coef, avx_ytemp;
             avx_ave = _mm256_set1_pd(gl.ave);

@@ -90,6 +90,11 @@
 #include "LcHelpers.hpp"
 #include "SIMDHelpers.h"
 #include "benchmark.hpp"
+#include "threadstate.hpp"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -116,8 +121,24 @@ int fscanf_s(FILE* file, const char* format, ...) {
 }
 #endif
 
-CalcContext calcCtx(std::allocate_shared<CalcStrategyNone>(AlignedAllocator<CalcStrategyNone>(64)));
 SIMDSupport CPUopt;
+
+/* Master (shared) state. It is set up single-threaded in main() and is then
+   read-only; every OpenMP worker thread works on its own deep copy (see
+   threadstate.hpp). That is why the per-fit mutable state (Chisq, atry, the
+   calc strategy, ...) is a member of the globals struct instead of a file-scope
+   global. */
+globals gl;
+
+/* Per-(period, pole) fit result, used by the parallel period scan. */
+struct PeriodPoleResult
+{
+    double dev = 1e40;  /* rms residual of the fit (lower is better) */
+    double per = 0.0;   /* period [hr]                                */
+    double dark = 0.0;  /* dark facet [%]                             */
+    double la = 0.0;    /* lambda [deg]                               */
+    double be = 0.0;    /* beta [deg]                                 */
+};
 
 constexpr auto checkpoint_file = "period_search_state";
 constexpr auto input_filename = "period_search_in";
@@ -187,22 +208,16 @@ void update_shmem() {
 
 
 /* global parameters */
-int Lmax, Mmax, Niter, Lastcall,
+int Lmax, Mmax,
 Ncoef, Numfac, Nphpar,
-Deallocate, n_iter;
+n_iter;
 
-double Ochisq, Chisq, Alamda, Alamda_incr, Alamda_start, Phi_0, Scale,
+double Alamda_incr, Alamda_start, Phi_0,
 
 Fc[MAX_N_FAC + 1][MAX_LM + 1], Fs[MAX_N_FAC + 1][MAX_LM + 1],
 Tc[MAX_N_FAC + 1][MAX_LM + 1], Ts[MAX_N_FAC + 1][MAX_LM + 1],
 Dsph[MAX_N_FAC + 1][MAX_N_PAR + 1],
-Blmat[4][4],
-Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1],
-Dblm[3][4][4];
-
-std::vector<double> atry;
-std::vector<double> beta;
-std::vector<double> da;
+Pleg[MAX_N_FAC + 1][MAX_LM + 1][MAX_LM + 1];
 
 // NOTE: RPi related:
 //void blinkLed(int count) {
@@ -269,7 +284,6 @@ int main(int argc, char** argv)
     // resolve logical name first
     boinc_resolve_filename(input_filename, input_path, sizeof(input_path));
 
-    auto gl = globals();
     auto res = PrepareLcData(gl, input_path);
     if (res <= 0)
     {
@@ -671,7 +685,15 @@ int main(int argc, char** argv)
         ? GetBestSupportedSIMD()
         : CheckSupportedSIMDs(useOptimization);
 
-    SetOptimizationStrategy(useOptimization);
+    /* Worker threads (created later, inside the OpenMP regions) build their
+       own strategy instances from this selection. */
+    SelectThreadStrategy(useOptimization);
+
+    int max_threads = 1;
+#ifdef _OPENMP
+    max_threads = omp_get_max_threads();
+    std::cerr << "Using OpenMP with " << max_threads << " threads." << std::endl;
+#endif
 
     // -------------
 
@@ -767,9 +789,9 @@ int main(int argc, char** argv)
         Nphpar = 3;
         ma = Ncoef + 5 + Nphpar;
 
-        atry.resize(ma + 1, 0.0);
-        beta.resize(ma + 1, 0.0);
-        da.resize(ma + 1, 0.0);
+        gl.atry.resize(ma + 1, 0.0);
+        gl.beta.resize(ma + 1, 0.0);
+        gl.da.resize(ma + 1, 0.0);
 
         /* shape is free to be optimized */
         for (i = 0; i < Ncoef; i++)
@@ -782,6 +804,12 @@ int main(int argc, char** argv)
 
         /* Lommel-Seeliger part is fixed */
         ia[Ncoef + 3 + Nphpar + 2 - 1] = 0;
+
+        /* Phase function free/fixed flags are identical for every fit in this
+           phase; set them once here so worker threads only read `ia` (no
+           concurrent writes inside the parallel region). */
+        for (i = 1; i <= Nphpar; i++)
+            ia[Ncoef + 3 + i - 1] = ia_par[i];
 
         if ((Ncoef + 3 + Nphpar + 1) > MAX_N_PAR)
         {
@@ -814,169 +842,180 @@ int main(int argc, char** argv)
         }
 
         //NOTE: Gathering initial poles...
-        for (; n <= max_test_periods; n++)
+        /* Parallelize over the independent (test period, initial pole) fits.
+           Each task runs the identical Levenberg-Marquardt fit on its own
+           thread state, so results are bit-identical to the serial code. */
         {
-            boinc_fraction_done(n / 10000.0 / max_test_periods);
-
-            freq = freq_start - (n - 1) * freq_step;
-
-            /* initial poles */
-            per_best = dark_best = la_best = be_best = 0;
-            dev_best = 1e40;
-            for (m = 1; m <= N_POLES; m++)
+            const int n_end = max_test_periods;
+            const int n_count = n_end - n + 1;
+            if (n_count > 0)
             {
-                prd = 1 / freq;
-#ifdef _DEBUG
-                printf(".");
-                fflush(stderr);
-#endif
-                /* starts from the initial ellipsoid */
-                for (i = 1; i <= Ncoef; i++)
-                    cg[i] = cg_first[i];
+                const int n_tasks = n_count * N_POLES;
+                std::vector<PeriodPoleResult> taskRes(n_tasks);
 
-                cg[Ncoef + 1] = beta_pole[m];
-                cg[Ncoef + 2] = lambda_pole[m];
-
-                /* The formulas use beta measured from the pole */
-                cg[Ncoef + 1] = 90 - cg[Ncoef + 1];
-                /* conversion of lambda, beta to radians */
-                cg[Ncoef + 1] = DEG2RAD * cg[Ncoef + 1];
-                cg[Ncoef + 2] = DEG2RAD * cg[Ncoef + 2];
-
-                /* Use omega instead of period */
-                cg[Ncoef + 3] = 24 * 2 * PI / prd;
-
-                for (i = 1; i <= Nphpar; i++)
+#pragma omp parallel
                 {
-                    cg[Ncoef + 3 + i] = par[i];
-                    ia[Ncoef + 3 + i - 1] = ia_par[i];
-                }
-                /* Lommel-Seeliger part */
-                cg[Ncoef + 3 + Nphpar + 2] = 1;
-                /* Use logarithmic formulation for Lambert to keep it positive */
-                cg[Ncoef + 3 + Nphpar + 1] = log(cl);
+                    ThreadState& ts = GetThreadState();
+                    if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
+                        ts.cg.resize(static_cast<std::size_t>(ma) + 1, 0.0);
 
-                // For Unit tests reference only
-                //printArray(cg, 24, "cg");
-                //printArray(ia, 24, "ia");
-
-                /* Levenberg-Marquardt loop */
-                n_iter_max = 0;
-                iter_diff_max = -1;
-                rchisq = -1;
-                if (stop_condition > 1)
-                {
-                    n_iter_max = static_cast<int>(stop_condition);
-                    iter_diff_max = 0;
-                    n_iter_min = 0; /* to not overwrite the n_iter_max value */
-                }
-                if (stop_condition < 1)
-                {
-                    n_iter_max = MAX_N_ITER; /* to avoid neverending loop */
-                    iter_diff_max = stop_condition;
-                }
-                Alamda = -1;
-                Niter = 0;
-                iter_diff = 1e40;
-                dev_old = 1e30;
-                dev_new = 0;
-                Lastcall = 0;
-
-                // For Unit tests reference only
-                //printArray(brightness, ndata, "brightness[ndata] -> brightness");
-
-                while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
-                {
-                    //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha, gl);
-                    //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, covar, aalpha, gl);
-                    mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, gl);
-
-                    // For Unite test reference only
-                    //printArray(aalpha, 25, 25, "aaplha");
-                    //printArray(covar, 25, 25, "covar");
-
-                    Niter++;
-
-                    if ((Niter == 1) || (Chisq < Ochisq))
+#pragma omp for schedule(guided, 1)
+                    for (int task = 0; task < n_tasks; task++)
                     {
-                        Ochisq = Chisq;
-                        calcCtx.CalculateCurv(cg, gl);
+                        const int pn = n + task / N_POLES;      /* period index */
+                        const int pm = task % N_POLES + 1;      /* pole index   */
 
-                        for (i = 1; i <= 3; i++)
+                        const double freq = freq_start - (pn - 1) * freq_step;
+                        const double prd0 = 1.0 / freq;
+
+                        PeriodPoleResult r;
+
+                        /* starts from the initial ellipsoid */
+                        for (int i = 1; i <= Ncoef; i++)
+                            ts.cg[i] = cg_first[i];
+
+                        ts.cg[Ncoef + 1] = beta_pole[pm];
+                        ts.cg[Ncoef + 2] = lambda_pole[pm];
+
+                        /* The formulas use beta measured from the pole */
+                        ts.cg[Ncoef + 1] = 90 - ts.cg[Ncoef + 1];
+                        /* conversion of lambda, beta to radians */
+                        ts.cg[Ncoef + 1] = DEG2RAD * ts.cg[Ncoef + 1];
+                        ts.cg[Ncoef + 2] = DEG2RAD * ts.cg[Ncoef + 2];
+
+                        /* Use omega instead of period */
+                        ts.cg[Ncoef + 3] = 24 * 2 * PI / prd0;
+
+                        for (int i = 1; i <= Nphpar; i++)
                         {
-                            chck[i] = 0;
-                            for (j = 1; j <= Numfac; j++)
-                                chck[i] = chck[i] + gl.Area[j - 1] * gl.Nor[i - 1][j - 1];
+                            ts.cg[Ncoef + 3 + i] = par[i];
                         }
-                        rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
-                    }
-                    dev_new = sqrt(rchisq / (ndata - 3));
-                    //printf("% 0.6f\n", dev_new);
+                        /* Lommel-Seeliger part */
+                        ts.cg[Ncoef + 3 + Nphpar + 2] = 1;
+                        /* Use logarithmic formulation for Lambert to keep it positive */
+                        ts.cg[Ncoef + 3 + Nphpar + 1] = log(cl);
 
-                    /* only if this step is better than the previous,
-                       1e-10 is for numeric errors */
-                    if (dev_old - dev_new > 1e-10)
+                        /* Levenberg-Marquardt loop */
+                        int n_iter_max = 0;
+                        double iter_diff_max = -1;
+                        double rchisq = -1;
+                        int n_iter_min_t = n_iter_min;
+                        if (stop_condition > 1)
+                        {
+                            n_iter_max = static_cast<int>(stop_condition);
+                            iter_diff_max = 0;
+                            n_iter_min_t = 0; /* to not overwrite the n_iter_max value */
+                        }
+                        if (stop_condition < 1)
+                        {
+                            n_iter_max = MAX_N_ITER; /* to avoid neverending loop */
+                            iter_diff_max = stop_condition;
+                        }
+                        ts.gl.Alamda = -1;
+                        ts.gl.Niter = 0;
+                        double iter_diff = 1e40;
+                        double dev_old = 1e30;
+                        double dev_new = 0;
+                        ts.gl.Lastcall = 0;
+                        double chck[4] = { 0.0, 0.0, 0.0, 0.0 };
+
+                        while (((ts.gl.Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (ts.gl.Niter < n_iter_min_t))
+                        {
+                            mrqmin(ee, ee0, tim, brightness, sig, ts.cg, ia, ma, ts.gl);
+                            ts.gl.Niter++;
+
+                            if ((ts.gl.Niter == 1) || (ts.gl.Chisq < ts.gl.Ochisq))
+                            {
+                                ts.gl.Ochisq = ts.gl.Chisq;
+                                ts.gl.ctx.CalculateCurv(ts.cg, ts.gl);
+
+                                for (int i = 1; i <= 3; i++)
+                                {
+                                    chck[i] = 0;
+                                    for (int j = 1; j <= Numfac; j++)
+                                        chck[i] = chck[i] + ts.gl.Area[j - 1] * ts.gl.Nor[i - 1][j - 1];
+                                }
+                                rchisq = ts.gl.Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
+                            }
+                            dev_new = sqrt(rchisq / (ndata - 3));
+
+                            /* only if this step is better than the previous,
+                               1e-10 is for numeric errors */
+                            if (dev_old - dev_new > 1e-10)
+                            {
+                                iter_diff = dev_old - dev_new;
+                                dev_old = dev_new;
+                            }
+                        }
+
+                        /* deallocates variables used in mrqmin */
+                        ts.gl.Deallocate = 1;
+                        mrqmin(ee, ee0, tim, brightness, sig, ts.cg, ia, ma, ts.gl);
+                        ts.gl.Deallocate = 0;
+
+                        double totarea = 0;
+                        for (int i = 1; i <= Numfac; i++)
+                        {
+                            totarea = totarea + ts.gl.Area[i - 1];
+                        }
+
+                        const double sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
+                        const double dark = sqrt(sum);
+
+                        /* period solution */
+                        const double prd = 2 * PI / ts.cg[Ncoef + 3];
+
+                        /* pole solution */
+                        const double la_tmp = RAD2DEG * ts.cg[Ncoef + 2];
+                        const double be_tmp = 90 - RAD2DEG * ts.cg[Ncoef + 1];
+
+                        r.dev = dev_new;
+                        r.per = prd;
+                        r.dark = dark / totarea * 100;
+                        r.la = la_tmp;
+                        r.be = be_tmp;
+
+                        taskRes[task] = r;
+                    }
+                }
+
+                /* master thread: reduce per period in order, progress, checkpoint */
+                for (int pn = n; pn <= n_end; pn++)
+                {
+                    PeriodPoleResult best;
+                    for (int pm = 1; pm <= N_POLES; pm++)
                     {
-                        iter_diff = dev_old - dev_new;
-                        dev_old = dev_new;
+                        const PeriodPoleResult& r = taskRes[(pn - n) * N_POLES + (pm - 1)];
+                        if (r.dev < best.dev)
+                            best = r;
                     }
-                }
 
-                /* deallocates variables used in mrqmin */
-                Deallocate = 1;
-                //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha, gl);
-                //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, covar, aalpha, gl);
-                mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, gl);
-                Deallocate = 0;
-
-                totarea = 0;
-                for (i = 1; i <= Numfac; i++)
-                {
-                    totarea = totarea + gl.Area[i - 1];
-                }
-
-                sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
-                dark = sqrt(sum);
-
-                /* period solution */
-                prd = 2 * PI / cg[Ncoef + 3];
-
-                /* pole solution */
-                la_tmp = RAD2DEG * cg[Ncoef + 2];
-                be_tmp = 90 - RAD2DEG * cg[Ncoef + 1];
-
-                if (dev_new < dev_best)
-                {
-                    dev_best = dev_new;
-                    per_best = prd;
-                    dark_best = dark / totarea * 100;
-                    la_best = la_tmp;
-                    be_best = be_tmp;
-                }
-            } /* pole loop */
-
-#ifdef _DEBUG
-            printf("\n");
-#endif
-            if (la_best < 0)
-                la_best += 360;
+                    if (best.la < 0)
+                        best.la += 360;
 
 #ifdef __GNUC__
-            if (std::isnan(dark_best) == 1)
-                dark_best = 1.0;
+                    if (std::isnan(best.dark) == 1)
+                        best.dark = 1.0;
 #else
-            if (_isnan(dark_best) == 1)
-                dark_best = 1.0;
+                    if (_isnan(best.dark) == 1)
+                        best.dark = 1.0;
 #endif
 
-            sum_dark_facet += dark_best;
+                    sum_dark_facet += best.dark;
 
-            if (boinc_time_to_checkpoint() || boinc_is_standalone()) {
-                retval = DoCheckpoint(out, 0, new_conw, conw_r, sum_dark_facet, n); //zero lines
-                if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); std::exit(retval); }
-                boinc_checkpoint_completed();
+                    boinc_fraction_done(pn / 10000.0 / max_test_periods);
+
+                    if (boinc_time_to_checkpoint() || boinc_is_standalone())
+                    {
+                        retval = DoCheckpoint(out, 0, new_conw, conw_r, sum_dark_facet, pn); //zero lines
+                        if (retval)
+                        {
+                            fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); std::exit(retval);
+                        }
+                        boinc_checkpoint_completed();
+                    }
+                }
             }
-
         } /* period loop */
 
         ave_dark_facet = sum_dark_facet / max_test_periods;
@@ -1079,9 +1118,9 @@ int main(int argc, char** argv)
     Nphpar = 3;
     ma = Ncoef + 5 + Nphpar;
 
-    atry.resize(ma + 1, 0.0);
-    beta.resize(ma + 1, 0.0);
-    da.resize(ma + 1, 0.0);
+    gl.atry.resize(ma + 1, 0.0);
+    gl.beta.resize(ma + 1, 0.0);
+    gl.da.resize(ma + 1, 0.0);
 
     /* shape is free to be optimized */
     for (i = 0; i < Ncoef; i++)
@@ -1100,188 +1139,235 @@ int main(int argc, char** argv)
     /* Lommel-Seeliger part is fixed */
     ia[Ncoef + 3 + Nphpar + 2 - 1] = 0;
 
+    /* Phase function free/fixed flags are identical for every fit in this
+       phase; set them once here so worker threads only read `ia` (no
+       concurrent writes inside the parallel region). */
+    for (i = 1; i <= Nphpar; i++)
+        ia[Ncoef + 3 + i - 1] = ia_par[i];
+
     if ((Ncoef + 3 + Nphpar + 1) > MAX_N_PAR)
     {
         fprintf(stderr, "\nError: Number of parameters is greater than MAX_N_PAR = %d\n", MAX_N_PAR); fflush(stderr); std::exit(2);
     }
 
-    for (n = n_start_from; n <= static_cast<int>((freq_start - freq_end) / freq_step) + 1; n++)
     {
-        fraction_done = n / (((freq_start - freq_end) / freq_step) + 1);
-        boinc_fraction_done(fraction_done);
+        const int n_total = static_cast<int>((freq_start - freq_end) / freq_step) + 1;
+        const int n_count = n_total - n_start_from + 1;
+
+        /* Parallelize over the independent (period, pole) fits, chunked so the
+           master thread can write the output in order, report progress and let
+           BOINC checkpoint between chunks. Each task runs the identical
+           Levenberg-Marquardt fit on its own thread state, so results are
+           bit-identical to the serial code. */
+        if (n_count > 0)
+        {
+            /* chunking: enough parallel work per chunk, frequent enough for
+               checkpointing and progress reporting */
+
+			const int base_periods = 2;                       // periods per chunk for a single thread (Increase to reduce checkpointing/progress reporting overhead)
+            const int n_threads = max_threads;
+			const int chunk = (std::min)(n_count, base_periods * n_threads);    //Scale chunk size with number of threads to keep checkpointing/progress reporting at a reasonable frequency
+
+            const bool standalone = boinc_is_standalone();
+            std::vector<PeriodPoleResult> taskRes;
+
+            for (int n0 = n_start_from; n0 <= n_total; n0 += chunk)
+            {
+                const int n1 = (std::min)(n0 + chunk - 1, n_total);
+                const int n_periods = n1 - n0 + 1;
+                const int n_tasks = n_periods * N_POLES;
+                taskRes.assign(n_tasks, PeriodPoleResult());
+
+#pragma omp parallel
+                {
+                    ThreadState& ts = GetThreadState();
+                    if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
+                        ts.cg.resize(static_cast<std::size_t>(ma) + 1, 0.0);
+
+#pragma omp for schedule(guided, 1)
+                    for (int task = 0; task < n_tasks; task++)
+                    {
+                        const int pn = n0 + task / N_POLES;      /* period index */
+                        const int pm = task % N_POLES + 1;       /* pole index   */
+
+                        const double freq = freq_start - (pn - 1) * freq_step;
+                        const double prd0 = 1.0 / freq;
+
+                        PeriodPoleResult r;
+
+                        /* starts from the initial ellipsoid */
+                        for (int i = 1; i <= Ncoef; i++)
+                            ts.cg[i] = cg_first[i];
+
+                        ts.cg[Ncoef + 1] = beta_pole[pm];
+                        ts.cg[Ncoef + 2] = lambda_pole[pm];
+
+                        /* The formulas use beta measured from the pole */
+                        ts.cg[Ncoef + 1] = 90 - ts.cg[Ncoef + 1];
+                        /* conversion of lambda, beta to radians */
+                        ts.cg[Ncoef + 1] = DEG2RAD * ts.cg[Ncoef + 1];
+                        ts.cg[Ncoef + 2] = DEG2RAD * ts.cg[Ncoef + 2];
+
+                        /* Use omega instead of period */
+                        ts.cg[Ncoef + 3] = 24 * 2 * PI / prd0;
+
+                        for (int i = 1; i <= Nphpar; i++)
+                        {
+                            ts.cg[Ncoef + 3 + i] = par[i];
+                        }
+                        /* Lommel-Seeliger part */
+                        ts.cg[Ncoef + 3 + Nphpar + 2] = 1;
+                        /* Use logarithmic formulation for Lambert to keep it positive */
+                        ts.cg[Ncoef + 3 + Nphpar + 1] = log(cl);
+
+                        /* Levenberg-Marquardt loop */
+                        int n_iter_max = 0;
+                        double iter_diff_max = -1;
+                        double rchisq = -1;
+                        int n_iter_min_t = n_iter_min;
+                        if (stop_condition > 1)
+                        {
+                            n_iter_max = static_cast<int>(stop_condition);
+                            iter_diff_max = 0;
+                            n_iter_min_t = 0; /* to not overwrite the n_iter_max value */
+                        }
+                        if (stop_condition < 1)
+                        {
+                            n_iter_max = MAX_N_ITER; /* to avoid neverending loop */
+                            iter_diff_max = stop_condition;
+                        }
+                        ts.gl.Alamda = -1;
+                        ts.gl.Niter = 0;
+                        double iter_diff = 1e40;
+                        double dev_old = 1e30;
+                        double dev_new = 0;
+                        ts.gl.Lastcall = 0;
+                        double chck[4] = { 0.0, 0.0, 0.0, 0.0 };
+
+                        while (((ts.gl.Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (ts.gl.Niter < n_iter_min_t))
+                        {
+                            mrqmin(ee, ee0, tim, brightness, sig, ts.cg, ia, ma, ts.gl);
+                            ts.gl.Niter++;
+
+                            if ((ts.gl.Niter == 1) || (ts.gl.Chisq < ts.gl.Ochisq))
+                            {
+                                ts.gl.Ochisq = ts.gl.Chisq;
+                                ts.gl.ctx.CalculateCurv(ts.cg, ts.gl);
+
+                                for (int i = 1; i <= 3; i++)
+                                {
+                                    chck[i] = 0;
+                                    for (int j = 1; j <= Numfac; j++)
+                                    {
+                                        chck[i] = chck[i] + ts.gl.Area[j - 1] * ts.gl.Nor[i - 1][j - 1];
+                                    }
+                                }
+                                rchisq = ts.gl.Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
+                            }
+                            dev_new = sqrt(rchisq / (ndata - 3));
+                            /* only if this step is better than the previous,
+                               1e-10 is for numeric errors */
+                            if (dev_old - dev_new > 1e-10)
+                            {
+                                iter_diff = dev_old - dev_new;
+                                dev_old = dev_new;
+                            }
+                        }
+
+                        /* deallocates variables used in mrqmin */
+                        ts.gl.Deallocate = 1;
+                        mrqmin(ee, ee0, tim, brightness, sig, ts.cg, ia, ma, ts.gl);
+                        ts.gl.Deallocate = 0;
+
+                        double totarea = 0;
+                        for (int i = 1; i <= Numfac; i++)
+                        {
+                            totarea = totarea + ts.gl.Area[i - 1];
+                        }
+
+                        const double sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
+                        const double dark = sqrt(sum);
+
+                        /* period solution */
+                        const double prd = 2 * PI / ts.cg[Ncoef + 3];
+
+                        /* pole solution */
+                        const double la_tmp = RAD2DEG * ts.cg[Ncoef + 2];
+                        const double be_tmp = 90 - RAD2DEG * ts.cg[Ncoef + 1];
+
+                        r.dev = dev_new;
+                        r.per = prd;
+                        r.dark = dark / totarea * 100;
+                        r.la = la_tmp;
+                        r.be = be_tmp;
+
+                        taskRes[task] = r;
+                    }
+                }
+
+                /* master thread: reduce per period, write output in order,
+                   report progress, checkpoint */
+                for (int pn = n0; pn <= n1; pn++)
+                {
+                    PeriodPoleResult best;
+                    for (int pm = 1; pm <= N_POLES; pm++)
+                    {
+                        const PeriodPoleResult& r = taskRes[(pn - n0) * N_POLES + (pm - 1)];
+                        if (r.dev < best.dev)
+                            best = r;
+                    }
 
 #ifdef _DEBUG
-        auto fraction = fraction_done * 100;
-        auto time = std::time(nullptr);   // get time now
-        std::tm now{};
-#if defined __GNUC__ && !defined _WIN32
-        localtime_r(&time, &now);
-#else
-        _localtime64_s(&now, &time);
-#endif
-        printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now.tm_hour, now.tm_min, now.tm_sec, fraction);
-        fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now.tm_hour, now.tm_min, now.tm_sec, fraction);
-#endif
-
-        freq = freq_start - (n - 1) * freq_step;
-
-        /* initial poles */
-        per_best = dark_best = la_best = be_best = 0;
-        dev_best = 1e40;
-        for (m = 1; m <= N_POLES; m++)
-        {
-            prd = 1 / freq;
-            /* starts from the initial ellipsoid */
-            for (i = 1; i <= Ncoef; i++)
-                cg[i] = cg_first[i];
-
-            cg[Ncoef + 1] = beta_pole[m];
-            cg[Ncoef + 2] = lambda_pole[m];
-
-            /* The formulas use beta measured from the pole */
-            cg[Ncoef + 1] = 90 - cg[Ncoef + 1];
-            /* conversion of lambda, beta to radians */
-            cg[Ncoef + 1] = DEG2RAD * cg[Ncoef + 1];
-            cg[Ncoef + 2] = DEG2RAD * cg[Ncoef + 2];
-
-            /* Use omega instead of period */
-            cg[Ncoef + 3] = 24 * 2 * PI / prd;
-
-            for (i = 1; i <= Nphpar; i++)
-            {
-                cg[Ncoef + 3 + i] = par[i];
-                ia[Ncoef + 3 + i - 1] = ia_par[i];
-            }
-            /* Lommel-Seeliger part */
-            cg[Ncoef + 3 + Nphpar + 2] = 1;
-            /* Use logarithmic formulation for Lambert to keep it positive */
-            cg[Ncoef + 3 + Nphpar + 1] = log(cl);
-
-            /* Levenberg-Marquardt loop */
-            n_iter_max = 0;
-            iter_diff_max = -1;
-            rchisq = -1;
-            if (stop_condition > 1)
-            {
-                n_iter_max = static_cast<int>(stop_condition);
-                iter_diff_max = 0;
-                n_iter_min = 0; /* to not overwrite the n_iter_max value */
-            }
-            if (stop_condition < 1)
-            {
-                n_iter_max = MAX_N_ITER; /* to avoid neverending loop */
-                iter_diff_max = stop_condition;
-            }
-            Alamda = -1;
-            Niter = 0;
-            iter_diff = 1e40;
-            dev_old = 1e30;
-            dev_new = 0;
-            Lastcall = 0;
-
-            while (((Niter < n_iter_max) && (iter_diff > iter_diff_max)) || (Niter < n_iter_min))
-            {
-                //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha, gl);
-                //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, covar, aalpha, gl);
-                mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, gl);
-                Niter++;
-
-                if ((Niter == 1) || (Chisq < Ochisq))
-                {
-                    Ochisq = Chisq;
-                    calcCtx.CalculateCurv(cg, gl);
-
-                    for (i = 1; i <= 3; i++)
                     {
-                        chck[i] = 0;
-                        for (j = 1; j <= Numfac; j++)
-                        {
-                            chck[i] = chck[i] + gl.Area[j - 1] * gl.Nor[i - 1][j - 1];
-                        }
+                        const double fraction = pn / (double)n_total * 100;
+                        auto time = std::time(nullptr);   // get time now
+                        std::tm now{};
+#if defined __GNUC__ && !defined _WIN32
+                        localtime_r(&time, &now);
+#else
+                        _localtime64_s(&now, &time);
+#endif
+                        printf("%02d:%02d:%02d | Fraction done: %.3f%%\n", now.tm_hour, now.tm_min, now.tm_sec, fraction);
+                        fprintf(stderr, "%02d:%02d:%02d | Fraction done: %.3f%%\n", now.tm_hour, now.tm_min, now.tm_sec, fraction);
                     }
-                    rchisq = Chisq - (pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2)) * pow(conw_r, 2);
-                }
-                dev_new = sqrt(rchisq / (ndata - 3));
-                /* only if this step is better than the previous,
-                   1e-10 is for numeric errors */
-                if (dev_old - dev_new > 1e-10)
-                {
-                    iter_diff = dev_old - dev_new;
-                    dev_old = dev_new;
-                }
-            }
+#endif
 
-            /* deallocates variables used in mrqmin */
-            Deallocate = 1;
-            //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, Ncoef + 5 + Nphpar, covar, aalpha, gl);
-            //mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, covar, aalpha, gl);
-            mrqmin(ee, ee0, tim, brightness, sig, cg, ia, ma, gl);
-            Deallocate = 0;
-
-            totarea = 0;
-            for (i = 1; i <= Numfac; i++)
-            {
-                totarea = totarea + gl.Area[i - 1];
-            }
-
-            sum = pow(chck[1], 2) + pow(chck[2], 2) + pow(chck[3], 2);
-            dark = sqrt(sum);
-
-            /* period solution */
-            prd = 2 * PI / cg[Ncoef + 3];
-
-            /* pole solution */
-            la_tmp = RAD2DEG * cg[Ncoef + 2];
-            be_tmp = 90 - RAD2DEG * cg[Ncoef + 1];
-
-            if (dev_new < dev_best)
-            {
-                dev_best = dev_new;
-                per_best = prd;
-                dark_best = dark / totarea * 100;
-                la_best = la_tmp;
-                be_best = be_tmp;
-            }
-        } /* pole loop */
-
-        if (la_best < 0)
-            la_best += 360;
+                    if (best.la < 0)
+                        best.la += 360;
 
 #ifdef __GNUC__
-        if (std::isnan(dark_best) == 1)
-            dark_best = 1.0;
+                    if (std::isnan(best.dark) == 1)
+                        best.dark = 1.0;
 #else
-        if (_isnan(dark_best) == 1)
-            dark_best = 1.0;
+                    if (_isnan(best.dark) == 1)
+                        best.dark = 1.0;
 #endif
 
-        /* output file */
-        auto darkBest = n == 1
-            ? conw_r * escl * escl
-            : dark_best;
+                    /* output file */
+                    const auto darkBest = pn == 1
+                        ? conw_r * escl * escl
+                        : best.dark;
 
-        out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best* dev_best* (ndata - 3), darkBest, round(la_best), round(be_best));
+                    out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * best.per, best.dev, best.dev * best.dev * (ndata - 3), darkBest, round(best.la), round(best.be));
 
-        //if (n == 1)
-        //{
-        //    out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), conw_r * escl * escl, round(la_best), round(be_best));
-        //}
-        //else
-        //{
-        //    out.printf("%.8f  %.6f  %.6f %4.1f %4.0f %4.0f\n", 24 * per_best, dev_best, dev_best * dev_best * (ndata - 3), dark_best, round(la_best), round(be_best));
-        //}
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
-            // blinkLed(3);
+                    // blinkLed(3);
 #endif
 
+                    boinc_fraction_done(pn / (double)n_total);
 
-        if (boinc_time_to_checkpoint() || boinc_is_standalone())
-        {
-            retval = DoCheckpoint(out, n, new_conw, conw_r, 0.0, 0);
-            if (retval) { fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); std::exit(retval); }
-            boinc_checkpoint_completed();
+                    if (boinc_time_to_checkpoint() || standalone)
+                    {
+                        retval = DoCheckpoint(out, pn, new_conw, conw_r, 0.0, 0);
+                        if (retval)
+                        {
+                            fprintf(stderr, "%s APP: period_search checkpoint failed %d\n", boinc_msg_prefix(buf, sizeof(buf)), retval); std::exit(retval);
+                        }
+                        boinc_checkpoint_completed();
+                    }
+                }
+            }
         }
-
     } /* period loop */
 
     out.close();
