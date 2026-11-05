@@ -1065,6 +1065,7 @@
     <ClCompile Include="period_search\phasec.cpp" />
     <ClCompile Include="period_search\sphfunc.cpp" />
     <ClCompile Include="period_search\systeminfo.cpp" />
+    <ClCompile Include="period_search\threadpool.cpp" />
     <ClCompile Include="period_search\threadstate.cpp" />
     <ClCompile Include="period_search\trifac.cpp" />
     <ClCompile Include="period_search\VersionInfo.cpp" />
@@ -1088,6 +1089,7 @@
     <ClInclude Include="period_search\resource.h" />
     <ClInclude Include="period_search\sve_emulator.hpp" />
     <ClInclude Include="period_search\systeminfo.h" />
+    <ClInclude Include="period_search\threadpool.hpp" />
     <ClInclude Include="period_search\threadstate.hpp" />
     <ClInclude Include="period_search\VersionInfo.h" />
   </ItemGroup>
