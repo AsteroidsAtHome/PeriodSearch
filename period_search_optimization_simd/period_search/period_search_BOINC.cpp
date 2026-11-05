@@ -92,9 +92,7 @@
 #include "benchmark.hpp"
 #include "threadstate.hpp"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include "threadpool.hpp"
 
 #ifdef APP_GRAPHICS
 #include "graphics2.h"
@@ -124,7 +122,7 @@ int fscanf_s(FILE* file, const char* format, ...) {
 SIMDSupport CPUopt;
 
 /* Master (shared) state. It is set up single-threaded in main() and is then
-   read-only; every OpenMP worker thread works on its own deep copy (see
+   read-only; every worker thread works on its own deep copy (see
    threadstate.hpp). That is why the per-fit mutable state (Chisq, atry, the
    calc strategy, ...) is a member of the globals struct instead of a file-scope
    global. */
@@ -268,7 +266,7 @@ int main(int argc, char** argv)
     {
         if (strcmp(argv[i], "--benchmark") == 0)
         {
-            /* --nthreads N caps the thread-scaling sweep (default: omp_get_max_threads()) */
+            /* --nthreads N caps the thread-scaling sweep (default: hardware threads) */
             int bench_threads = 0;
             for (int k = 0; k < argc; k++)
             {
@@ -691,16 +689,15 @@ int main(int argc, char** argv)
         ? GetBestSupportedSIMD()
         : CheckSupportedSIMDs(useOptimization);
 
-    /* Worker threads (created later, inside the OpenMP regions) build their
-       own strategy instances from this selection. */
+    /* Worker threads (created later by the thread pool, see threadpool.hpp)
+       build their own strategy instances from this selection. */
     SelectThreadStrategy(useOptimization);
 
     int n_threads = 1;
-#ifdef _OPENMP
     if (aid.ncpus > 0) {
         n_threads = static_cast<int>(aid.ncpus);
     } else if (boinc_is_standalone()) {
-        n_threads = omp_get_max_threads();
+        n_threads = HardwareThreads();
     } else {
         n_threads = 1;
     }
@@ -713,14 +710,12 @@ int main(int argc, char** argv)
     if (n_threads < 1) {
         n_threads = 1;
     }
-    if (n_threads > omp_get_max_threads()) {
-        n_threads = omp_get_max_threads();
+    if (n_threads > HardwareThreads()) {
+        n_threads = HardwareThreads();
     }
-    omp_set_num_threads(n_threads);
     if (n_threads > 1) {
-      std::cerr << "Using OpenMP with " << n_threads << " threads." << std::endl;
+      std::cerr << "Using " << n_threads << " worker threads." << std::endl;
     }
-#endif
 
     // -------------
 
@@ -880,14 +875,12 @@ int main(int argc, char** argv)
                 const int n_tasks = n_count * N_POLES;
                 std::vector<PeriodPoleResult> taskRes(n_tasks);
 
-#pragma omp parallel num_threads(n_threads) if(n_threads > 1)
+                ParallelFor(n_threads, n_tasks, [&](const int task)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
                         ts.cg.resize(static_cast<std::size_t>(ma) + 1, 0.0);
 
-#pragma omp for schedule(guided, 1)
-                    for (int task = 0; task < n_tasks; task++)
                     {
                         const int pn = n + task / N_POLES;      /* period index */
                         const int pm = task % N_POLES + 1;      /* pole index   */
@@ -1004,7 +997,7 @@ int main(int argc, char** argv)
 
                         taskRes[task] = r;
                     }
-                }
+                });
 
                 /* master thread: reduce per period in order, progress, checkpoint */
                 for (int pn = n; pn <= n_end; pn++)
@@ -1204,14 +1197,12 @@ int main(int argc, char** argv)
                 const int n_tasks = n_periods * N_POLES;
                 taskRes.assign(n_tasks, PeriodPoleResult());
 
-#pragma omp parallel num_threads(n_threads) if(n_threads > 1)
+                ParallelFor(n_threads, n_tasks, [&](const int task)
                 {
                     ThreadState& ts = GetThreadState();
                     if (ts.cg.size() < static_cast<std::size_t>(ma) + 1)
                         ts.cg.resize(static_cast<std::size_t>(ma) + 1, 0.0);
 
-#pragma omp for schedule(guided, 1)
-                    for (int task = 0; task < n_tasks; task++)
                     {
                         const int pn = n0 + task / N_POLES;      /* period index */
                         const int pm = task % N_POLES + 1;       /* pole index   */
@@ -1329,7 +1320,7 @@ int main(int argc, char** argv)
 
                         taskRes[task] = r;
                     }
-                }
+                });
 
                 /* master thread: reduce per period, write output in order,
                    report progress, checkpoint */

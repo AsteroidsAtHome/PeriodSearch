@@ -12,7 +12,7 @@ namespace
 
 	std::mutex g_stateMutex;
 	// Owns all ThreadState objects; the thread_local pointers below observe
-	// them. Freed at program exit (after the OpenMP threads have been joined).
+	// them. Freed at program exit (the idle pool threads never touch them again).
 	std::vector<std::unique_ptr<ThreadState>> g_statePool;
 
 	thread_local ThreadState* g_tlsState = nullptr;

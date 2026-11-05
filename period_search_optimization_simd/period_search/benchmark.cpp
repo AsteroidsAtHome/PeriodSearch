@@ -14,9 +14,8 @@
 #include "arrayHelpers.hpp"
 #include "benchmark.hpp"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include <mutex>
+#include "threadpool.hpp"
 
 namespace
 {
@@ -309,10 +308,10 @@ namespace
 		}
 	}
 
-#ifdef _OPENMP
 	/* Per-thread working set for the scaling benchmark: like ThreadState in the
-	   period scan, every thread owns a deep copy of the master globals (with its
-	   own strategy instance) and its own copy of the workload vectors. */
+	   period scan, every pool worker owns a deep copy of the master globals (with
+	   its own strategy instance) and its own copy of the workload vectors. It is
+	   created lazily on the worker that uses it (first touch). */
 	struct MtState
 	{
 		globals g;
@@ -320,44 +319,43 @@ namespace
 	};
 
 	/* Strong-scaling sweep: the same fixed batch of independent LM rounds is
-	   distributed over 1..max_threads threads (schedule(dynamic) like the
-	   guided schedule of the real period/pole loop). Returns the number of
+	   distributed over 1..max_threads threads of the native thread pool (dynamic
+	   task distribution, like the real period/pole loop). Returns the number of
 	   thread counts whose chi^2 did not match the single-thread reference. */
 	int RunThreadScaling(const BenchmarkWorkload& proto, const BenchmarkRow& simdRow, const int max_threads)
 	{
-		omp_set_dynamic(0);
-
 		auto total_rounds = static_cast<int>(benchmark_mt_target_ms / (std::max)(simdRow.ms_per_round, 0.001));
 		total_rounds = (std::max)(total_rounds, max_threads * benchmark_mt_min_rounds_per_thread);
 
 		std::vector<std::unique_ptr<MtState>> states(static_cast<size_t>(max_threads));
+		std::mutex setupMutex;
 
-		/* Build each thread's state on the thread that will use it (first touch). */
-#pragma omp parallel num_threads(max_threads)
+		auto stateFor = [&](const int worker) -> MtState&
 		{
-			const int id = omp_get_thread_num();
-#pragma omp critical(benchmark_mt_setup)
-			{
-				auto st = std::make_unique<MtState>();
-				st->g = ::gl;
-				st->g.ctx.SetStrategy(CreateCalcStrategy(simdRow.simd));
-				st->wl = proto;
-				st->wl.failed = false;
-				st->wl.Round(st->g); // warm-up
-				states[static_cast<size_t>(id)] = std::move(st);
-			}
-		}
-
-		for (const auto& st : states)
-		{
+			auto& st = states[static_cast<size_t>(worker)];
 			if (!st)
 			{
-				std::fprintf(stderr, "Thread-scaling benchmark: could not start %d OpenMP threads.\n", max_threads);
-				return 1;
+				auto created = std::make_unique<MtState>();
+				{
+					std::lock_guard<std::mutex> lock(setupMutex); // copies the shared master state
+					created->g = ::gl;
+				}
+				created->g.ctx.SetStrategy(CreateCalcStrategy(simdRow.simd));
+				created->wl = proto;
+				created->wl.failed = false;
+				st = std::move(created);
 			}
-		}
+			return *st;
+		};
 
-		std::fprintf(stdout, "\nOpenMP thread scaling (%s, %d independent rounds per run, best of %d, max %d threads)\n",
+		/* Warm-up at the highest thread count: starts the pool threads and builds their states. */
+		ParallelForWorker(max_threads, total_rounds, [&](int, const int worker)
+		{
+			MtState& st = stateFor(worker);
+			st.wl.Round(st.g);
+		});
+
+		std::fprintf(stdout, "\nThread scaling (native threads, %s, %d independent rounds per run, best of %d, max %d threads)\n",
 			simdRow.name.c_str(), total_rounds, benchmark_mt_repeats, max_threads);
 		std::fprintf(stdout, "%-8s %12s %14s %10s %11s   %s\n", "Threads", "ms total", "rounds/s", "speedup", "efficiency", "chi^2 check");
 
@@ -374,14 +372,11 @@ namespace
 			{
 				const auto start = std::chrono::steady_clock::now();
 
-#pragma omp parallel num_threads(nt)
+				ParallelForWorker(nt, total_rounds, [&](int, const int worker)
 				{
-					MtState& st = *states[static_cast<size_t>(omp_get_thread_num())];
-
-#pragma omp for schedule(dynamic, 1)
-					for (int r = 0; r < total_rounds; r++)
-						st.wl.Round(st.g);
-				}
+					MtState& st = stateFor(worker);
+					st.wl.Round(st.g);
+				});
 
 				const auto stop = std::chrono::steady_clock::now();
 				const double ms = std::chrono::duration<double, std::milli>(stop - start).count();
@@ -389,12 +384,12 @@ namespace
 					best_ms = ms;
 			}
 
-			/* Every participating thread must have reproduced the reference chi^2. */
+			/* Every worker that took part must have reproduced the reference chi^2. */
 			bool ok = true;
 			for (int id = 0; id < nt; id++)
 			{
-				const auto& wl = states[static_cast<size_t>(id)]->wl;
-				if (wl.failed || !ChisqMatches(simdRow.chisq, wl.chisq))
+				const auto& st = states[static_cast<size_t>(id)];
+				if (st && (st->wl.failed || !ChisqMatches(simdRow.chisq, st->wl.chisq)))
 					ok = false;
 			}
 			if (!ok) mismatches++;
@@ -428,7 +423,6 @@ namespace
 
 		return mismatches;
 	}
-#endif
 }
 
 int RunBenchmark(const int maxThreads)
@@ -583,10 +577,9 @@ int RunBenchmark(const int maxThreads)
 		std::fprintf(stdout, "Self-test PASSED: all implementations agree within tolerance.\n");
 
 	auto mt_mismatches = 0;
-#ifdef _OPENMP
 	if (best != nullptr)
 	{
-		const int max_threads = maxThreads > 0 ? maxThreads : omp_get_max_threads();
+		const int max_threads = maxThreads > 0 ? maxThreads : HardwareThreads();
 
 		/* Leave the workload as the fastest implementation produced it. */
 		gl.ctx.SetStrategy(CreateCalcStrategy(best->simd));
@@ -595,9 +588,6 @@ int RunBenchmark(const int maxThreads)
 
 		mt_mismatches = RunThreadScaling(wl, *best, (std::max)(max_threads, 1));
 	}
-#else
-	std::fprintf(stdout, "\nOpenMP not enabled in this build: thread-scaling benchmark skipped.\n");
-#endif
 
 	return (mismatches > 0 || failures > 0 || mt_mismatches > 0) ? 1 : 0;
 }

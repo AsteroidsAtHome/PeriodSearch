@@ -8,7 +8,7 @@
  * Per-worker-thread state for the parallel period scan.
  *
  * The application is parallelized over independent (period, pole) fits with
- * OpenMP. Every fit needs its own mutable working state, because:
+ * native worker threads (threadpool.hpp). Every fit needs its own mutable working state, because:
  *   - the calculation strategy (CalcStrategy*) keeps per-call scratch state
  *     as member variables (tmat, dtm, incl, dbr, ...), and
  *   - the globals struct holds per-fit tables and LM scratch (Area, Dg,
@@ -23,8 +23,8 @@
  * Ncoef/Numfac/Nphpar/Phi_0/Alamda_start/Alamda_incr constants) intentionally
  * remain file-scope globals and are shared by all threads.
  *
- * Instances are created lazily, once per worker thread (OpenMP threads are
- * pooled and reused, so the state - and the memory it owns - persists across
+ * Instances are created lazily, once per worker thread (the pool threads are
+ * created once and reused, so the state - and the memory it owns - persists across
  * parallel regions and is released at program exit).
  */
 struct ThreadState
@@ -41,7 +41,7 @@ struct ThreadState
  * @brief Returns the calling thread's state, creating it on first use.
  *
  * Must only be called after the master `globals gl` has been fully set up
- * (i.e. inside the OpenMP regions of the period scan, never during setup).
+ * (i.e. inside the ParallelFor loops of the period scan, never during setup).
  */
 ThreadState& GetThreadState();
 

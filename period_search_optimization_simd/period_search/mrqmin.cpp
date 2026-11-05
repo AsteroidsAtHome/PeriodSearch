@@ -20,7 +20,7 @@
  * @param ma An integer representing the total number of parameters.
  * @param gl The per-thread globals instance; the fit state (Chisq, Ochisq, Alamda,
  *        Niter, Lastcall, Deallocate, atry, beta, da, alpha, covar) and the
- *        calculation strategy (ctx) are stored there so that each OpenMP worker
+ *        calculation strategy (ctx) are stored there so that each worker
  *        thread keeps its own LM state.
  *
  * @return An integer error code:
