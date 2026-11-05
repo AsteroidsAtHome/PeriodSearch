@@ -42,7 +42,7 @@ SRC = areanorm.cpp blmatrix.cpp bright.cpp \
 	mrqmin.cpp phasec.cpp sphfunc.cpp systeminfo.cpp \
 	trifac.cpp VersionInfo.cpp benchmark.cpp period_search_BOINC.cpp \
 	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp \
-	threadstate.cpp
+	threadstate.cpp threadpool.cpp
 
 # Define the object files
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)

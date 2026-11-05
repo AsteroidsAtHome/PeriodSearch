@@ -147,14 +147,11 @@ std::shared_ptr<CalcStrategy> CreateCalcStrategy(const SIMDEnum useOptimization)
 	{
 		case SIMDEnum::OptSVE:
 			return CreateAlignedShared<CalcStrategySve>(64);
-			break;
 		case SIMDEnum::OptASIMD:
 			return CreateAlignedShared<CalcStrategyAsimd>(64);
-			break;
-
 		case SIMDEnum::OptNONE:
+		case SIMDEnum::Undefined:
 		default:
 			return CreateAlignedShared<CalcStrategyNone>(64);
-			break;
 	}
 }
