@@ -35,14 +35,14 @@ void GetSupportedSIMDs()
 	#endif
 }
 
-void SetOptimizationStrategy(SIMDEnum useOptimization)
+std::shared_ptr<CalcStrategy> CreateCalcStrategy(const SIMDEnum useOptimization)
 {
 	switch (useOptimization)
 	{
 		case SIMDEnum::OptNONE:
+		case SIMDEnum::Undefined:
 		default:
-			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyNone>(64));
-			break;
+			return CreateAlignedShared<CalcStrategyNone>(64);
 	}
 }
 

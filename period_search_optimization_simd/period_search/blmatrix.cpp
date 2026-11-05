@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "arrayHelpers.hpp"
 #include <cmath>
 
 /**
@@ -10,12 +11,13 @@
  *
  * @param bet The beta angle (in radians).
  * @param lam The lambda angle (in radians).
+ * @param gl The per-thread globals instance; Blmat and Dblm are stored there.
  *
- * @note The rotation matrix and its derivatives are stored in the global arrays Blmat and Dblm.
+ * @note The rotation matrix and its derivatives are stored in gl.Blmat and gl.Dblm.
  *
  * @date 8.11.2006
  */
-void blmatrix(const double bet, const double lam)
+void blmatrix(const double bet, const double lam, struct globals& gl)
 {
     double cb, sb, cl, sl;
 
@@ -23,35 +25,35 @@ void blmatrix(const double bet, const double lam)
     sb = sin(bet);
     cl = cos(lam);
     sl = sin(lam);
-    Blmat[1][1] = cb * cl;
-    Blmat[1][2] = cb * sl;
-    Blmat[1][3] = -sb;
-    Blmat[2][1] = -sl;
-    Blmat[2][2] = cl;
-    Blmat[2][3] = 0;
-    Blmat[3][1] = sb * cl;
-    Blmat[3][2] = sb * sl;
-    Blmat[3][3] = cb;
+    gl.Blmat[1][1] = cb * cl;
+    gl.Blmat[1][2] = cb * sl;
+    gl.Blmat[1][3] = -sb;
+    gl.Blmat[2][1] = -sl;
+    gl.Blmat[2][2] = cl;
+    gl.Blmat[2][3] = 0;
+    gl.Blmat[3][1] = sb * cl;
+    gl.Blmat[3][2] = sb * sl;
+    gl.Blmat[3][3] = cb;
     /* Ders. of Blmat w.r.t. bet */
-    Dblm[1][1][1] = -sb * cl;
-    Dblm[1][1][2] = -sb * sl;
-    Dblm[1][1][3] = -cb;
-    Dblm[1][2][1] = 0;
-    Dblm[1][2][2] = 0;
-    Dblm[1][2][3] = 0;
-    Dblm[1][3][1] = cb * cl;
-    Dblm[1][3][2] = cb * sl;
-    Dblm[1][3][3] = -sb;
+    gl.Dblm[1][1][1] = -sb * cl;
+    gl.Dblm[1][1][2] = -sb * sl;
+    gl.Dblm[1][1][3] = -cb;
+    gl.Dblm[1][2][1] = 0;
+    gl.Dblm[1][2][2] = 0;
+    gl.Dblm[1][2][3] = 0;
+    gl.Dblm[1][3][1] = cb * cl;
+    gl.Dblm[1][3][2] = cb * sl;
+    gl.Dblm[1][3][3] = -sb;
     /* Ders. w.r.t. lam */
-    Dblm[2][1][1] = -cb * sl;
-    Dblm[2][1][2] = cb * cl;
-    Dblm[2][1][3] = 0;
-    Dblm[2][2][1] = -cl;
-    Dblm[2][2][2] = -sl;
-    Dblm[2][2][3] = 0;
-    Dblm[2][3][1] = -sb * sl;
-    Dblm[2][3][2] = sb * cl;
-    Dblm[2][3][3] = 0;
+    gl.Dblm[2][1][1] = -cb * sl;
+    gl.Dblm[2][1][2] = cb * cl;
+    gl.Dblm[2][1][3] = 0;
+    gl.Dblm[2][2][1] = -cl;
+    gl.Dblm[2][2][2] = -sl;
+    gl.Dblm[2][2][3] = 0;
+    gl.Dblm[2][3][1] = -sb * sl;
+    gl.Dblm[2][3][2] = sb * cl;
+    gl.Dblm[2][3][3] = 0;
 
 
     // For Unit tests reference only

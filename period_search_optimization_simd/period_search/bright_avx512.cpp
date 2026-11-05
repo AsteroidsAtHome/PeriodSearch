@@ -119,9 +119,9 @@ void CalcStrategyAvx512::bright(const double t, std::vector<double>& cg, const i
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);				/* computes also Scale */
+	phasec(dphp, alpha, php, gl);				/* computes also gl.Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm);
+	matrix(cg[ncoef0], t, tmat, dtm, gl);
 
 	/* Directions (and derivatives) in the rotating system */
 	for (i = 1; i <= 3; i++)
@@ -172,7 +172,7 @@ void CalcStrategyAvx512::bright(const double t, std::vector<double>& cg, const i
 	const __m512d avx_cl = _mm512_set1_pd(cl);
 	const __m512d avx_cls = _mm512_set1_pd(cls);
 	const __m512d avx_11 = _mm512_set1_pd(1.0);
-	const __m512d avx_Scale = _mm512_set1_pd(Scale);
+	const __m512d avx_Scale = _mm512_set1_pd(gl.Scale);
 	__m512d res_br = _mm512_setzero_pd();
 	__m512d avx_dyda1 = _mm512_setzero_pd();
 	__m512d avx_dyda2 = _mm512_setzero_pd();
@@ -277,13 +277,13 @@ void CalcStrategyAvx512::bright(const double t, std::vector<double>& cg, const i
 		dg_chunk(nvec - v < wchunk ? nvec - v : wchunk, Dg_row, dbr, incl_count, v, gl.dyda, avx_Scale);
 
 	/* Derivatives of brightness w.r.t. rotation parameters */
-	gl.dyda[ncoef0 - 3 + 1 - 1] = reduce_pd(avx_dyda1) * Scale;
-	gl.dyda[ncoef0 - 3 + 2 - 1] = reduce_pd(avx_dyda2) * Scale;
-	gl.dyda[ncoef0 - 3 + 3 - 1] = reduce_pd(avx_dyda3) * Scale;
+	gl.dyda[ncoef0 - 3 + 1 - 1] = reduce_pd(avx_dyda1) * gl.Scale;
+	gl.dyda[ncoef0 - 3 + 2 - 1] = reduce_pd(avx_dyda2) * gl.Scale;
+	gl.dyda[ncoef0 - 3 + 3 - 1] = reduce_pd(avx_dyda3) * gl.Scale;
 
 	/* Derivatives of br. w.r.t. cl, cls */
-	gl.dyda[ncoef - 1 - 1] = reduce_pd(avx_d) * Scale * cl;
-	gl.dyda[ncoef - 1] = reduce_pd(avx_d1) * Scale;
+	gl.dyda[ncoef - 1 - 1] = reduce_pd(avx_d) * gl.Scale * cl;
+	gl.dyda[ncoef - 1] = reduce_pd(avx_d1) * gl.Scale;
 
 	/* Derivatives of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
@@ -292,5 +292,5 @@ void CalcStrategyAvx512::bright(const double t, std::vector<double>& cg, const i
 	}
 
 	/* Scaled brightness */
-	gl.ymod *= Scale;
+	gl.ymod *= gl.Scale;
 }

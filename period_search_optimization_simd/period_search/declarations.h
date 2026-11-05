@@ -40,13 +40,13 @@ int mrqmin(std::vector<std::vector<double>>& x1, std::vector<std::vector<double>
 //	std::vector<double>& sig, double a[], int ia[], int ma,
 //	double** covar, double** alpha, globals& gl);
 
-void blmatrix(const double bet, const double lam);
+void blmatrix(const double bet, const double lam, struct globals& gl);
 
 void covsrt(double** covar, int ma, int ia[], int mfit);
 
-void phasec(double dcdp[], double alpha, double p[]);
+void phasec(double dcdp[], double alpha, double p[], struct globals& gl);
 
-void matrix(double omg, double t, double tmat[][4], double dtm[][4][4]);
+void matrix(double omg, double t, double tmat[][4], double dtm[][4][4], const struct globals& gl);
 
 //double* vector_double(int length);
 //int* vector_int(int length);
@@ -73,6 +73,6 @@ std::string GetCpuInfo();
 SIMDEnum GetBestSupportedSIMD();
 void GetSupportedSIMDs();
 SIMDEnum CheckSupportedSIMDs(SIMDEnum simd);
-void SetOptimizationStrategy(SIMDEnum useOptimization);
+std::shared_ptr<CalcStrategy> CreateCalcStrategy(SIMDEnum useOptimization);
 const std::string getSIMDEnumName(SIMDEnum simdEnum);
 //void prepareLcData(struct globals &gl, const char *filename);

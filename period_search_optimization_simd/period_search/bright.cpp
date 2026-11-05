@@ -44,9 +44,9 @@ void CalcStrategyNone::bright(const double t, std::vector<double>& cg, const int
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);				/* computes also Scale */
+	phasec(dphp, alpha, php, gl);				/* computes also gl.Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm);
+	matrix(cg[ncoef0], t, tmat, dtm, gl);
 
 	gl.ymod = 0;
 
@@ -115,22 +115,22 @@ void CalcStrategyNone::bright(const double t, std::vector<double>& cg, const int
 		{
 			tmpdyda += dbr[j] * gl.Dg[incl[j]][i - 1];
 		}
-		gl.dyda[i - 1] = Scale * tmpdyda;
+		gl.dyda[i - 1] = gl.Scale * tmpdyda;
 	}
 
 	/* Derivatives of brightness w.r.t. rotation parameters */
-	gl.dyda[ncoef0 - 3 + 1 - 1] = Scale * tmpdyda1;
-	gl.dyda[ncoef0 - 3 + 2 - 1] = Scale * tmpdyda2;
-	gl.dyda[ncoef0 - 3 + 3 - 1] = Scale * tmpdyda3;
+	gl.dyda[ncoef0 - 3 + 1 - 1] = gl.Scale * tmpdyda1;
+	gl.dyda[ncoef0 - 3 + 2 - 1] = gl.Scale * tmpdyda2;
+	gl.dyda[ncoef0 - 3 + 3 - 1] = gl.Scale * tmpdyda3;
 
 	/* Derivatives of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
 		gl.dyda[ncoef0 + i - 1] = gl.ymod * dphp[i];
 
 	/* Derivatives of br. w.r.t. cl, cls */
-	gl.dyda[ncoef - 1 - 1] = Scale * tmpdyda4 * cl;
-	gl.dyda[ncoef - 1] = Scale * tmpdyda5;
+	gl.dyda[ncoef - 1 - 1] = gl.Scale * tmpdyda4 * cl;
+	gl.dyda[ncoef - 1] = gl.Scale * tmpdyda5;
 
 	/* Scaled brightness */
-	gl.ymod *= Scale;
+	gl.ymod *= gl.Scale;
 }
