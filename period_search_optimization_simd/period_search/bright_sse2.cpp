@@ -120,9 +120,9 @@ void CalcStrategySse2::bright(const double t, std::vector<double>& cg, const int
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);				/* computes also Scale */
+	phasec(dphp, alpha, php, gl);				/* computes also gl.Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm);
+	matrix(cg[ncoef0], t, tmat, dtm, gl);
 
 	/* Directions (and derivatives) in the rotating system */
 	for (i = 1; i <= 3; i++)
@@ -168,7 +168,7 @@ void CalcStrategySse2::bright(const double t, std::vector<double>& cg, const int
 	const __m128d avx_de031 = _mm_load1_pd(&de0[3][1]);
 	const __m128d avx_de032 = _mm_load1_pd(&de0[3][2]);
 	const __m128d avx_de033 = _mm_load1_pd(&de0[3][3]);
-	const __m128d avx_Scale = _mm_load1_pd(&Scale);
+	const __m128d avx_Scale = _mm_load1_pd(&gl.Scale);
 
 	const __m128d avx_tiny = _mm_set1_pd(TINY);
 	const __m128d avx_cl = _mm_set1_pd(cl), avx_cl1 = _mm_set_pd(1, cl), avx_cls = _mm_set1_pd(cls), avx_11 = _mm_set1_pd(1.0);
@@ -303,5 +303,5 @@ void CalcStrategySse2::bright(const double t, std::vector<double>& cg, const int
 	}
 
 	/* Scaled brightness */
-	gl.ymod *= Scale;
+	gl.ymod *= gl.Scale;
 }

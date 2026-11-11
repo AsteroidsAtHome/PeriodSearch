@@ -1,5 +1,6 @@
 #include <cmath>
 #include "globals.h"
+#include "arrayHelpers.hpp"
 #include "constants.h"
 
 /**
@@ -13,13 +14,13 @@
  * @param tmat A 2D array to store the computed rotation matrix.
  * @param dtm A 3D array to store the derivatives of the rotation matrix with respect to angular velocity.
  *
- * @note The function modifies the global variables `Blmat` and `Dblm`.
+ * @note The function reads `gl.Blmat` and `gl.Dblm` (computed by blmatrix()).
  *
  * @source Converted from Mikko's Fortran code
  *
  * @date 8.11.2006
  */
-void matrix(const double omg, const double t, double tmat[][4], double dtm[][4][4])
+void matrix(const double omg, const double t, double tmat[][4], double dtm[][4][4], const struct globals& gl)
 {
     double f, cf, sf, dfm[4][4], fmat[4][4];
 
@@ -60,10 +61,10 @@ void matrix(const double omg, const double t, double tmat[][4], double dtm[][4][
             dtm[3][i][j] = 0;
             for (k = 1; k <= 3; k++)
             {
-                tmat[i][j] = tmat[i][j] + fmat[i][k] * Blmat[k][j];
-                dtm[1][i][j] = dtm[1][i][j] + fmat[i][k] * Dblm[1][k][j];
-                dtm[2][i][j] = dtm[2][i][j] + fmat[i][k] * Dblm[2][k][j];
-                dtm[3][i][j] = dtm[3][i][j] + dfm[i][k] * Blmat[k][j];
+                tmat[i][j] = tmat[i][j] + fmat[i][k] * gl.Blmat[k][j];
+                dtm[1][i][j] = dtm[1][i][j] + fmat[i][k] * gl.Dblm[1][k][j];
+                dtm[2][i][j] = dtm[2][i][j] + fmat[i][k] * gl.Dblm[2][k][j];
+                dtm[3][i][j] = dtm[3][i][j] + dfm[i][k] * gl.Blmat[k][j];
             }
         }
 

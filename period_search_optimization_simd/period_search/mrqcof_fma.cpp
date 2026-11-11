@@ -57,6 +57,8 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
     auto& alpha = isCovar ? gl.covar : gl.alpha;
 #endif
 
+    double* const dyda = gl.dyda; /* fixed-size member array */
+
     /* N.B. curv and blmatrix called outside bright
        because output same for all points */
     CalcStrategyFma::curv(a, gl);
@@ -64,7 +66,7 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
     //   #ifdef YORP
     //      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
     //   #else
-    blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
+    blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar], gl);
     //   #endif
 
     for (j = 0; j < mfit; j++)
@@ -122,180 +124,126 @@ void CalcStrategyFma::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
                 }
             }
 
-            for (l = 1; l <= ma; l++)
             {
-                gl.dytemp[jp][l] = gl.dyda[l - 1];
+                double* const dyt = gl.dytemp[jp].data();
+                for (l = 1; l <= ma; l++)
+                    dyt[l] = dyda[l - 1];
             }
             /* save lightcurves */
         } /* jp, lpoints */
 
-        if (Lastcall != 1)
+        if (gl.Lastcall != 1)
         {
-            __m256d avx_ave, avx_coef, avx_ytemp;
-            avx_ave = _mm256_set1_pd(gl.ave);
+            const __m256d avx_ave = _mm256_set1_pd(gl.ave);
             for (jp = 1; jp <= gl.Lpoints[i]; jp++)
             {
                 np1++;
                 if (gl.Inrel[i] /*== 1*/)
                 {
-                    gl.coef = sig[np1] * gl.Lpoints[i] / gl.ave;
-                    avx_coef = _mm256_set1_pd(gl.coef);
-                    avx_ytemp = _mm256_broadcast_sd(&gl.ytemp[jp]);
+                    const double coef = sig[np1] * gl.Lpoints[i] / gl.ave;
+                    const __m256d avx_coef = _mm256_set1_pd(coef);
+                    const __m256d avx_ytemp = _mm256_set1_pd(gl.ytemp[jp]);
+                    double* const dyt = gl.dytemp[jp].data();
                     for (l = 1; l <= ma; l += 4)
                     {
-						__m256d avx_dytemp = _mm256_loadu_pd(&gl.dytemp[jp][l]);
-						__m256d avx_dave = _mm256_loadu_pd(&gl.dave[l]);
+                        __m256d avx_dytemp = _mm256_loadu_pd(&dyt[l]);
+                        const __m256d avx_dave = _mm256_loadu_pd(&gl.dave[l]);
                         avx_dytemp = _mm256_sub_pd(avx_dytemp, _mm256_div_pd(_mm256_mul_pd(avx_ytemp, avx_dave), avx_ave));
                         avx_dytemp = _mm256_mul_pd(avx_dytemp, avx_coef);
-                        _mm256_storeu_pd(&gl.dytemp[jp][l], avx_dytemp);
+                        _mm256_storeu_pd(&dyt[l], avx_dytemp);
                     }
 
-                    gl.ytemp[jp] *= gl.coef;
+                    gl.ytemp[jp] *= coef;
                     /* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
-                    gl.dytemp[jp][1] = 0;
+                    dyt[1] = 0;
+                    gl.coef = coef;
                 }
             }
-            if (ia[0]) //not relative
+
+            /* The per-point scratch values (wt, dy, sig2i, ...) are kept in locals and the
+               row pointers are hoisted: as double members of gl the compiler had to assume
+               every store into alpha could change them and reload them. The arithmetic and
+               its order are unchanged, so the results are bit-identical. */
+            double* const bta = beta.data();
+            double chisq_acc = trial_chisq;
+            const bool absolute = ia[0] != 0; /* not relative */
+
+            for (jp = 1; jp <= gl.Lpoints[i]; jp++)
             {
-                for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+                const double* const dyt = gl.dytemp[jp].data();
+                for (l = 1; l <= ma; l++)
+                    dyda[l - 1] = dyt[l];
+                np2++;
+                const double sig2i = 1 / (sig[np2] * sig[np2]);
+                const double dy = y[np2] - gl.ytemp[jp];
+                const double sig2iwght = sig2i * gl.Weight[np2];
+                const double d0 = dyda[0];
+                j = 0;
+
+                if (absolute)
                 {
-                    gl.ymod = gl.ytemp[jp];
-                    for (l = 1; l <= ma; l++)
-                        gl.dyda[l - 1] = gl.dytemp[jp][l];
-                    np2++;
-                    gl.sig2i = 1 / (sig[np2] * sig[np2]);
-                    gl.wght = gl.Weight[np2];
-                    gl.dy = y[np2] - gl.ymod;
-                    j = 0;
-                    //
-                    double sig2iwght = gl.sig2i * gl.wght;
                     //l=0
-                    gl.wt = gl.dyda[0] * sig2iwght;
-
-                    alpha[j][0] += gl.wt * gl.dyda[0];
-                    beta[j] += gl.dy * gl.wt;
+                    const double wt = d0 * sig2iwght;
+                    alpha[j][0] += wt * d0;
+                    bta[j] += dy * wt;
                     j++;
-                    //
-                    for (l = 1; l <= lastone; l++)  //line of ones
-                    {
-                        gl.wt = gl.dyda[l] * sig2iwght;
-                        __m256d avx_wt = _mm256_set1_pd(gl.wt);
-                        k = 0;
-                        //m=0
+                }
 
-                        alpha[j][k] += gl.wt * gl.dyda[0];
-                        k++;
-                        for (m = 1; m <= l; m += 4)
-                        {
-                            __m256d avx_alpha = _mm256_loadu_pd(&alpha[j][k]);
-                            __m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
-                            avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                            _mm256_storeu_pd(&alpha[j][k], avx_alpha);
-                            k += 4;
-                        } /* m */
-                        beta[j] += gl.dy * gl.wt;
-                        j++;
-                    } /* l */
-                    for (; l <= lastma; l++)  //rest parameters
-                    {
-                        if (ia[l])
-                        {
-                            gl.wt = gl.dyda[l] * sig2iwght;
-                            __m256d avx_wt = _mm256_set1_pd(gl.wt);
-                            k = 0;
-                            //m=0
-                            alpha[j][k] += gl.wt * gl.dyda[0];
-                            k++;
-                            int kk = k;
-                            for (m = 1; m <= lastone; m += 4)
-                            {
-                                __m256d avx_alpha = _mm256_loadu_pd(&alpha[j][kk]);
-                            	__m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
-                                avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                                _mm256_storeu_pd(&alpha[j][kk], avx_alpha);
-                                kk += 4;
-                            } /* m */
-                            k += lastone;
-                            for (m = lastone + 1; m <= l; m++)
-                                if (ia[m])
-                                {
-                                    alpha[j][k] += gl.wt * gl.dyda[m];
-
-                                    k++;
-                                }
-                            beta[j] += gl.dy * gl.wt;
-                            j++;
-                        }
-                    } /* l */
-                    trial_chisq += gl.dy * gl.dy * sig2iwght;
-                } /* jp */
-            }
-            else //relative ia[0]==0
-            {
-                for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+                for (l = 1; l <= lastone; l++)  //line of ones
                 {
-                    gl.ymod = gl.ytemp[jp];
-                    for (l = 1; l <= ma; l++)
-                        gl.dyda[l - 1] = gl.dytemp[jp][l];
-                    np2++;
-                    gl.sig2i = 1 / (sig[np2] * sig[np2]);
-                    gl.wght = gl.Weight[np2];
-                    gl.dy = y[np2] - gl.ymod;
-                    j = 0;
-                    //
-                    double sig2iwght = gl.sig2i * gl.wght;
-                    // l=0
-                    //
-                    for (l = 1; l <= lastone; l++)  //line of ones
+                    const double wt = dyda[l] * sig2iwght;
+                    const __m256d avx_wt = _mm256_set1_pd(wt);
+                    double* const arow = alpha[j].data();
+                    if (absolute)
                     {
-                        gl.wt = gl.dyda[l] * sig2iwght;
-                        __m256d avx_wt = _mm256_set1_pd(gl.wt);
-                        k = 0;
-                        //m=0
-                        //
-                        for (m = 1; m <= l; m += 4)
-                        {
-                            __m256d avx_alpha = _mm256_load_pd(&alpha[j][k]);
-                        	__m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
-                            avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                            _mm256_store_pd(&alpha[j][k], avx_alpha);
-                            k += 4;
-                        } /* m */
-                        beta[j] += gl.dy * gl.wt;
-                        j++;
-                    } /* l */
-                    for (; l <= lastma; l++)  //rest parameters
+                        arow[0] += wt * d0; //m=0
+                        for (m = 1, k = 1; m <= l; m += 4, k += 4)
+                            _mm256_storeu_pd(&arow[k], _mm256_fmadd_pd(avx_wt, _mm256_loadu_pd(&dyda[m]), _mm256_loadu_pd(&arow[k])));
+                    }
+                    else
                     {
-                        if (ia[l])
-                        {
-                            gl.wt = gl.dyda[l] * sig2iwght;
-                            __m256d avx_wt = _mm256_set1_pd(gl.wt);
-                            //m=0
-                            //
-                            int kk = 0;
-                            for (m = 1; m <= lastone; m += 4)
-                            {
-                                __m256d avx_alpha = _mm256_load_pd(&alpha[j][kk]);
-                            	__m256d avx_dyda = _mm256_loadu_pd(&gl.dyda[m]);
-                                avx_alpha = _mm256_fmadd_pd(avx_wt, avx_dyda, avx_alpha);
-                                _mm256_store_pd(&alpha[j][kk], avx_alpha);
-                                kk += 4;
-                            } /* m */
-                            k = lastone;
-                            for (m = lastone + 1; m <= l; m++)
-                                if (ia[m])
-                                {
-                                     alpha[j][k] += gl.wt * gl.dyda[m];
-                                    k++;
-                                }
-                            beta[j] += gl.dy * gl.wt;
-                            j++;
-                        }
-                    } /* l */
+                        for (m = 1, k = 0; m <= l; m += 4, k += 4)
+                            _mm256_store_pd(&arow[k], _mm256_fmadd_pd(avx_wt, _mm256_loadu_pd(&dyda[m]), _mm256_load_pd(&arow[k])));
+                    }
+                    bta[j] += dy * wt;
+                    j++;
+                } /* l */
 
-                    trial_chisq += gl.dy * gl.dy * sig2iwght;
-                } /* jp */
-            }
+                for (; l <= lastma; l++)  //rest parameters
+                {
+                    if (ia[l])
+                    {
+                        const double wt = dyda[l] * sig2iwght;
+                        const __m256d avx_wt = _mm256_set1_pd(wt);
+                        double* const arow = alpha[j].data();
+                        if (absolute)
+                        {
+                            arow[0] += wt * d0; //m=0
+                            for (m = 1, k = 1; m <= lastone; m += 4, k += 4)
+                                _mm256_storeu_pd(&arow[k], _mm256_fmadd_pd(avx_wt, _mm256_loadu_pd(&dyda[m]), _mm256_loadu_pd(&arow[k])));
+                            k = 1 + lastone;
+                        }
+                        else
+                        {
+                            for (m = 1, k = 0; m <= lastone; m += 4, k += 4)
+                                _mm256_store_pd(&arow[k], _mm256_fmadd_pd(avx_wt, _mm256_loadu_pd(&dyda[m]), _mm256_load_pd(&arow[k])));
+                            k = lastone;
+                        }
+                        for (m = lastone + 1; m <= l; m++)
+                            if (ia[m])
+                            {
+                                arow[k] += wt * dyda[m];
+                                k++;
+                            }
+                        bta[j] += dy * wt;
+                        j++;
+                    }
+                } /* l */
+
+                chisq_acc += dy * dy * sig2iwght;
+            } /* jp */
+
+            trial_chisq = chisq_acc;
         } /* Lastcall != 1 */
     } /* i,  lcurves */
 

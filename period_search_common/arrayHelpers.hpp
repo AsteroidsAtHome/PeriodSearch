@@ -9,6 +9,11 @@
 #include <cstdlib>
 #include <iostream>
 
+// CalcContext (CalcStrategy holder) is a member of the globals struct below.
+// CalcStrategy.hpp forward-declares `struct globals`, so this include is
+// cycle-safe.
+#include "CalcStrategy.hpp"
+
 #if defined __GNUC__ || (defined(_MSC_VER) && _MSC_VER >= 1900)
 #include <vector>
 #include <cstdlib>
@@ -331,6 +336,29 @@ extern struct globals
     std::vector<double> ytemp;
     std::vector<double> Weight;
     std::vector<std::vector<double>> dytemp;
+
+    /* ------------------------------------------------------------------ */
+    /* Per-fit mutable state (one instance per worker thread).             */
+    /* These used to be file-scope globals; they are now members so that   */
+    /* each OpenMP thread works on its own copy (see threadstate.hpp).     */
+    /* Shared read-only tables (Fc, Fs, Tc, Ts, Pleg, Dsph) and constants  */
+    /* (Lmax, Mmax, Ncoef, Numfac, Nphpar, Phi_0, Alamda_start,            */
+    /*  Alamda_incr) intentionally remain file-scope globals.              */
+    /* ------------------------------------------------------------------ */
+    double Blmat[4][4];                    /* rotation matrix (blmatrix)   */
+    double Dblm[3][4][4];                  /* d(Blmat)/d(bet,lam,omg)      */
+    double Scale = 1.0;                    /* phase function value (phasec)*/
+    double Chisq = 0.0;                    /* current chi^2 (mrqmin)       */
+    double Ochisq = 0.0;                   /* previous chi^2 (mrqmin)      */
+    double Alamda = 0.0;                   /* Levenberg-Marquardt damping  */
+    int Niter = 0;                         /* iteration counter            */
+    int Lastcall = 0;                      /* last-call flag               */
+    int Deallocate = 0;                    /* deallocate/no-op flag (mrqmin) */
+    std::vector<double> atry;              /* trial parameters (mrqmin)    */
+    std::vector<double> beta;              /* rhs vector (mrqmin)          */
+    std::vector<double> da;                /* parameter step (mrqmin)      */
+    CalcContext ctx;                       /* per-thread calc strategy     */
+
     // std::vector<std::vector<double>> covar;
     // std::vector<std::vector<double>> alpha;
 

@@ -260,9 +260,9 @@ void CalcStrategySve::bright(const double t, std::vector<double>& cg, const int 
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);		/* computes also Scale */
+	phasec(dphp, alpha, php, gl);		/* computes also gl.Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm);
+	matrix(cg[ncoef0], t, tmat, dtm, gl);
 
 	/* Directions (and derivatives) in the rotating system */
 	for (i = 1; i <= 3; i++)
@@ -377,14 +377,14 @@ void CalcStrategySve::bright(const double t, std::vector<double>& cg, const int 
 #if defined(DG_HAVE_NEON)
 	if (cnt == 2)
 	{
-		const float64x2_t avx_Scale = vdupq_n_f64(Scale);
+		const float64x2_t avx_Scale = vdupq_n_f64(gl.Scale);
 		for (int v = 0; v < nvec; v += wchunk)
 			dg_chunk_neon(nvec - v < wchunk ? nvec - v : wchunk, &gl.Dg[0][0], Dg_idx, dbr, incl_count, v, gl.dyda, avx_Scale);
 	}
 	else
 #endif
 	{
-		const svfloat64_t avx_Scale = svdup_n_f64(Scale);
+		const svfloat64_t avx_Scale = svdup_n_f64(gl.Scale);
 		for (int v = 0; v < nvec; v += wchunk)
 		{
 			const int w = nvec - v < wchunk ? nvec - v : wchunk;
@@ -401,17 +401,17 @@ void CalcStrategySve::bright(const double t, std::vector<double>& cg, const int 
 		double sum = 0.0;
 		for (k = 1; k <= 3; k++)
 			sum += de[k][j] * ts[k] + de0[k][j] * us[k];
-		gl.dyda[ncoef0 - 3 + j - 1] = sum * Scale;
+		gl.dyda[ncoef0 - 3 + j - 1] = sum * gl.Scale;
 	}
 
 	/* Derivatives of br. w.r.t. cl, cls */
-	gl.dyda[ncoef - 1 - 1] = d * Scale * cl;
-	gl.dyda[ncoef - 1] = d1 * Scale;
+	gl.dyda[ncoef - 1 - 1] = d * gl.Scale * cl;
+	gl.dyda[ncoef - 1] = d1 * gl.Scale;
 
 	/* Derivatives of br. w.r.t. phase function params. */
 	for (i = 1; i <= Nphpar; i++)
 		gl.dyda[ncoef0 + i - 1] = gl.ymod * dphp[i];
 
 	/* Scaled brightness */
-	gl.ymod *= Scale;
+	gl.ymod *= gl.Scale;
 }

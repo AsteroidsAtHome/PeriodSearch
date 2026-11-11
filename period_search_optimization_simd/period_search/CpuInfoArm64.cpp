@@ -141,20 +141,17 @@ SIMDEnum GetBestSupportedSIMD()
 	}
 }
 
-void SetOptimizationStrategy(SIMDEnum useOptimization)
+std::shared_ptr<CalcStrategy> CreateCalcStrategy(const SIMDEnum useOptimization)
 {
 	switch (useOptimization)
 	{
 		case SIMDEnum::OptSVE:
-			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategySve>(64));
-			break;
+			return CreateAlignedShared<CalcStrategySve>(64);
 		case SIMDEnum::OptASIMD:
-			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyAsimd>(64));
-			break;
-	
+			return CreateAlignedShared<CalcStrategyAsimd>(64);
 		case SIMDEnum::OptNONE:
+		case SIMDEnum::Undefined:
 		default:
-			calcCtx.SetStrategy(CreateAlignedShared<CalcStrategyNone>(64));
-			break;
+			return CreateAlignedShared<CalcStrategyNone>(64);
 	}
 }

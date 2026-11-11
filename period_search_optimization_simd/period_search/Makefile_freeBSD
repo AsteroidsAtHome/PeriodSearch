@@ -12,7 +12,7 @@ PS_COMMON_LIB_DIR = $(PS_COMMON_DIR)/build
 
 # Define compiler and flags
 CXX = g++
-CXXFLAGS = -march=x86-64 -O3 -std=c++2a -w -s\
+CXXFLAGS = -march=x86-64 -O3 -std=c++2a -w -s -pthread \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
 	-I$(BOINC_API_DIR) \
@@ -34,7 +34,8 @@ SRC = areanorm.cpp blmatrix.cpp bright.cpp bright_avx.cpp bright_avx512.cpp brig
 	mrqcof.cpp mrqcof_avx.cpp mrqcof_avx512.cpp mrqcof_fma.cpp mrqcof_sse2.cpp \
 	mrqcof_sse3.cpp mrqmin.cpp phasec.cpp sphfunc.cpp systeminfo.cpp \
 	trifac.cpp VersionInfo.cpp benchmark.cpp period_search_BOINC.cpp \
-	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp
+	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp \
+	threadstate.cpp threadpool.cpp
 
 # Define the object files
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)

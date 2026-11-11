@@ -121,9 +121,9 @@ void CalcStrategyFma::bright(const double t, std::vector<double>& cg, const int 
 	for (i = 1; i <= Nphpar; i++)
 		php[i] = cg[ncoef0 + i];
 
-	phasec(dphp, alpha, php);				/* computes also Scale */
+	phasec(dphp, alpha, php, gl);				/* computes also gl.Scale */
 
-	matrix(cg[ncoef0], t, tmat, dtm);
+	matrix(cg[ncoef0], t, tmat, dtm, gl);
 
     /* Directions (and derivatives) in the rotating system */
 	for (i = 1; i <= 3; i++)
@@ -154,7 +154,7 @@ void CalcStrategyFma::bright(const double t, std::vector<double>& cg, const int 
 
 	const __m256d avx_tiny = _mm256_set1_pd(TINY);
 	const __m256d avx_cl = _mm256_set1_pd(cl), avx_cl1 = _mm256_set_pd(0, 0, 1, cl), avx_cls = _mm256_set1_pd(cls), avx_11 = _mm256_set1_pd(1.0);
-	const __m256d avx_Scale = _mm256_broadcast_sd(&Scale);
+	const __m256d avx_Scale = _mm256_broadcast_sd(&gl.Scale);
 	__m256d res_br = _mm256_setzero_pd();
 	__m256d avx_dyda1 = _mm256_setzero_pd();
 	__m256d avx_dyda2 = _mm256_setzero_pd();
@@ -278,5 +278,5 @@ void CalcStrategyFma::bright(const double t, std::vector<double>& cg, const int 
 	}
 
     /* Scaled brightness */
-	gl.ymod *= Scale;
+	gl.ymod *= gl.Scale;
 }

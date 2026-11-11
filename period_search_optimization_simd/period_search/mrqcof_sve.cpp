@@ -67,7 +67,7 @@ void CalcStrategySve::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
 	//   #ifdef YORP
 	//      blmatrix(a[ma-5-Nphpar],a[ma-4-Nphpar]);
 	//   #else
-	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar]);
+	blmatrix(a[ma - 4 - Nphpar], a[ma - 3 - Nphpar], gl);
 	//   #endif
 
 	for (j = 0; j < mfit; j++)
@@ -130,198 +130,123 @@ void CalcStrategySve::mrqcof(std::vector<std::vector<double>>& x1, std::vector<s
 
 		} /* jp, lpoints */
 
-		if (Lastcall != 1)
+		if (gl.Lastcall != 1)
 		{
-			svfloat64_t avx_ave = svdup_n_f64(gl.ave);
+			const svfloat64_t avx_ave = svdup_n_f64(gl.ave);
 
 			for (jp = 1; jp <= gl.Lpoints[i]; jp++)
 			{
 				np1++;
 				if (gl.Inrel[i] == 1)
 				{
-					gl.coef = sig[np1] * gl.Lpoints[i] / gl.ave;
-
-					svfloat64_t avx_coef = svdup_n_f64(gl.coef);
-					svfloat64_t avx_ytemp = svdup_n_f64(gl.ytemp[jp]);
+					const double coef = sig[np1] * gl.Lpoints[i] / gl.ave;
+					const svfloat64_t avx_coef = svdup_n_f64(coef);
+					const svfloat64_t avx_ytemp = svdup_n_f64(gl.ytemp[jp]);
+					double* const dyt = gl.dytemp[jp].data();
 
 					for (l = 1; l <= ma; l += cnt)
 					{
 						const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(l), static_cast<int64_t>(ma + 1));
-						svfloat64_t avx_dytemp = svld1_f64(pg, &gl.dytemp[jp][l]);
-						svfloat64_t avx_dave = svld1_f64(pg, &gl.dave[l]);
+						svfloat64_t avx_dytemp = svld1_f64(pg, &dyt[l]);
+						const svfloat64_t avx_dave = svld1_f64(pg, &gl.dave[l]);
 
-						svfloat64_t avx_intermediate = svdiv_f64_x(pg, svmul_f64_x(pg, avx_ytemp, avx_dave), avx_ave);
-						avx_dytemp = svmul_f64_x(pg, svsub_f64_x(pg, avx_dytemp, avx_intermediate), avx_coef);
+						avx_dytemp = svsub_f64_x(pg, avx_dytemp, svdiv_f64_x(pg, svmul_f64_x(pg, avx_ytemp, avx_dave), avx_ave));
+						avx_dytemp = svmul_f64_x(pg, avx_dytemp, avx_coef);
 
-						svst1_f64(pg, &gl.dytemp[jp][l], avx_dytemp);
+						svst1_f64(pg, &dyt[l], avx_dytemp);
 					}
 
-					gl.ytemp[jp] *= gl.coef;
+					gl.ytemp[jp] *= coef;
 					/* Set the size scale coeff. deriv. explicitly zero for relative lcurves */
-					gl.dytemp[jp][1] = 0;
+					dyt[1] = 0;
+					gl.coef = coef;
 				}
 			}
 
-			if (ia[0]) //not relative
+			/* The per-point scratch values (wt, dy, sig2i, ...) are kept in locals and the
+			   row pointers are hoisted: as double members of gl the compiler had to assume
+			   every store into alpha could change them and reload them. The arithmetic and
+			   its order are unchanged, so the results are bit-identical. */
+			double* const dyda = gl.dyda; /* fixed-size member array */
+			double* const bta = beta.data();
+			double chisq_acc = trial_chisq;
+			const bool absolute = ia[0] != 0; /* not relative */
+
+			for (jp = 1; jp <= gl.Lpoints[i]; jp++)
 			{
-				for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+				const double* const dyt = gl.dytemp[jp].data();
+				for (l = 1; l <= ma; l++)
+					dyda[l - 1] = dyt[l];
+				np2++;
+				const double sig2i = 1 / (sig[np2] * sig[np2]);
+				const double dy = y[np2] - gl.ytemp[jp];
+				const double sig2iwght = sig2i * gl.Weight[np2];
+				const double d0 = dyda[0];
+				j = 0;
+
+				if (absolute)
 				{
-					gl.ymod = gl.ytemp[jp];
-					for (l = 1; l <= ma; l++)
-						gl.dyda[l - 1] = gl.dytemp[jp][l];
-					np2++;
-					gl.sig2i = 1 / (sig[np2] * sig[np2]);
-					gl.wght = gl.Weight[np2];
-					gl.dy = y[np2] - gl.ymod;
-					j = 0;
-					//
-					double sig2iwght = gl.sig2i * gl.wght;
 					//l=0
-					gl.wt = gl.dyda[0] * sig2iwght;
-					alpha[j][0] += gl.wt * gl.dyda[0];
-					beta[j] += gl.dy * gl.wt;
+					const double wt = d0 * sig2iwght;
+					alpha[j][0] += wt * d0;
+					bta[j] += dy * wt;
 					j++;
-					//
-					for (l = 1; l <= lastone; l++)  //line of ones
-					{
-						gl.wt = gl.dyda[l] * sig2iwght;
-						svfloat64_t avx_wt = svdup_n_f64(gl.wt);
-						k = 0;
-						//m=0
-						alpha[j][k] += gl.wt * gl.dyda[0];
-						k++;
+				}
 
-						for (m = 1; m <= l; m += cnt)
-						{
-							const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(l + 1));
-							svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][k]);
-							svfloat64_t avx_dyda = svld1_f64(pg, &gl.dyda[m]);
-
-							svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
-
-							svst1_f64(pg, &alpha[j][k], avx_result);
-
-							k += cnt;
-						} /* m */
-						beta[j] += gl.dy * gl.wt;
-						j++;
-					} /* l */
-					for (; l <= lastma; l++)  //rest parameters
-					{
-						if (ia[l])
-						{
-							gl.wt = gl.dyda[l] * sig2iwght;
-							svfloat64_t avx_wt = svdup_n_f64(gl.wt);
-							k = 0;
-							//m=0
-							alpha[j][k] += gl.wt * gl.dyda[0];
-							k++;
-							int kk = k;
-							for (m = 1; m <= lastone; m += cnt)
-							{
-								const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(lastone + 1));
-								svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][kk]);
-								svfloat64_t avx_dyda = svld1_f64(pg, &gl.dyda[m]);
-
-								svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
-
-								svst1_f64(pg, &alpha[j][kk], avx_result);
-
-								kk += cnt;
-							} /* m */
-
-							k += lastone;
-							for (m = lastone + 1; m <= l; m++)
-							{
-								if (ia[m])
-								{
-									alpha[j][k] += gl.wt * gl.dyda[m];
-									k++;
-								}
-							} /* m */
-							beta[j] += gl.dy * gl.wt;
-							j++;
-						}
-					} /* l */
-					trial_chisq += gl.dy * gl.dy * sig2iwght;
-				} /* jp */
-			}
-			else //relative ia[0]==0
-			{
-				for (jp = 1; jp <= gl.Lpoints[i]; jp++)
+				for (l = 1; l <= lastone; l++)  //line of ones
 				{
-					gl.ymod = gl.ytemp[jp];
-					for (l = 1; l <= ma; l++)
-						gl.dyda[l - 1] = gl.dytemp[jp][l];
-					np2++;
-					gl.sig2i = 1 / (sig[np2] * sig[np2]);
-					gl.wght = gl.Weight[np2];
-					gl.dy = y[np2] - gl.ymod;
-					j = 0;
-					//
-					double sig2iwght = gl.sig2i * gl.wght;
-					// l=0
-					//
-					for (l = 1; l <= lastone; l++)  //line of ones
+					const double wt = dyda[l] * sig2iwght;
+					const svfloat64_t avx_wt = svdup_n_f64(wt);
+					double* const arow = alpha[j].data();
+					k = 0;
+					if (absolute)
 					{
-						gl.wt = gl.dyda[l] * sig2iwght;
-						svfloat64_t avx_wt = svdup_n_f64(gl.wt);
-						k = 0;
-						//m=0
-						//
-						for (m = 1; m <= l; m += cnt)
-						{
-							const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(l + 1));
-							svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][k]);
-							svfloat64_t avx_dyda = svld1_f64(pg, &gl.dyda[m]);
-
-							svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
-
-							svst1_f64(pg, &alpha[j][k], avx_result);
-
-							k += cnt;
-						} /* m */
-
-						beta[j] += gl.dy * gl.wt;
-						j++;
-					} /* l */
-					for (; l <= lastma; l++)  //rest parameters
+						arow[0] += wt * d0; //m=0
+						k = 1;
+					}
+					for (m = 1; m <= l; m += cnt, k += cnt)
 					{
-						if (ia[l])
+						const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(l + 1));
+						svst1_f64(pg, &arow[k], svmla_f64_x(pg, svld1_f64(pg, &arow[k]), avx_wt, svld1_f64(pg, &dyda[m])));
+					} /* m */
+					bta[j] += dy * wt;
+					j++;
+				} /* l */
+
+				for (; l <= lastma; l++)  //rest parameters
+				{
+					if (ia[l])
+					{
+						const double wt = dyda[l] * sig2iwght;
+						const svfloat64_t avx_wt = svdup_n_f64(wt);
+						double* const arow = alpha[j].data();
+						int k0 = 0;
+						if (absolute)
 						{
-							gl.wt = gl.dyda[l] * sig2iwght;
-							svfloat64_t avx_wt = svdup_n_f64(gl.wt);
-							//m=0
-							//
-							int kk = 0;
-							for (m = 1; m <= lastone; m += cnt)
-							{
-								const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(lastone + 1));
-								svfloat64_t avx_alpha = svld1_f64(pg, &alpha[j][kk]);
-								svfloat64_t avx_dyda = svld1_f64(pg, &gl.dyda[m]);
-
-								svfloat64_t avx_result = svmla_f64_x(pg, avx_alpha, avx_wt, avx_dyda);
-
-								svst1_f64(pg, &alpha[j][kk], avx_result);
-
-								kk += cnt;
-							} /* m */
-							k = lastone;
-							for (m = lastone + 1; m <= l; m++)
-							{
-								if (ia[m])
-								{
-									alpha[j][k] += gl.wt * gl.dyda[m];
-									k++;
-								}
-							} /* m */
-							beta[j] += gl.dy * gl.wt;
-							j++;
+							arow[0] += wt * d0; //m=0
+							k0 = 1;
 						}
-					} /* l */
-					trial_chisq += gl.dy * gl.dy * sig2iwght;
-				} /* jp */
-			}
+						for (m = 1, k = k0; m <= lastone; m += cnt, k += cnt)
+						{
+							const svbool_t pg = svwhilelt_b64(static_cast<int64_t>(m), static_cast<int64_t>(lastone + 1));
+							svst1_f64(pg, &arow[k], svmla_f64_x(pg, svld1_f64(pg, &arow[k]), avx_wt, svld1_f64(pg, &dyda[m])));
+						} /* m */
+						k = k0 + lastone;
+						for (m = lastone + 1; m <= l; m++)
+							if (ia[m])
+							{
+								arow[k] += wt * dyda[m];
+								k++;
+							}
+						bta[j] += dy * wt;
+						j++;
+					}
+				} /* l */
+
+				chisq_acc += dy * dy * sig2iwght;
+			} /* jp */
+
+			trial_chisq = chisq_acc;
 		} /* Lastcall != 1 */
 	} /* i,  lcurves */
 

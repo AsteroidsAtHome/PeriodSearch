@@ -157,6 +157,9 @@
     <ClCompile Include="period_search\CpuInfoArm64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="period_search\threadstate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="period_search\declarations.h">
@@ -198,7 +201,7 @@
     <ClInclude Include="period_search\VersionInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="period_search\SIMDHelpers.h">
+    <ClInclude Include="period_search\threadstate.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

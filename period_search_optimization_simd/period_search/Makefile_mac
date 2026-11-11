@@ -14,7 +14,7 @@ BOINC_CONFIG_DIR =  $(BOINC_DIR)/clientgui/mac
 FRAMEWORKS_DIR = /System/Library/Frameworks
 
 CXX = /Library/Developer/CommandLineTools/usr/bin/g++
-CXXFLAGS = -O3 -std=c++2a -w -s -arch x86_64 -mmacosx-version-min=10.14 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -fvisibility=hidden -fvisibility-inlines-hidden \
+CXXFLAGS = -O3 -std=c++2a -w -s -pthread -arch x86_64 -mmacosx-version-min=10.14 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -fvisibility=hidden -fvisibility-inlines-hidden \
     -I$(BOINC_CONFIG_DIR) \
 	-I$(BOINC_DIR) \
 	-I$(BOINC_LIB_DIR) \
@@ -38,7 +38,8 @@ SRC = areanorm.cpp blmatrix.cpp bright.cpp bright_avx.cpp bright_avx512.cpp brig
 	mrqcof.cpp mrqcof_avx.cpp mrqcof_avx512.cpp mrqcof_fma.cpp mrqcof_sse2.cpp \
 	mrqcof_sse3.cpp mrqmin.cpp phasec.cpp sphfunc.cpp systeminfo.cpp \
 	trifac.cpp VersionInfo.cpp benchmark.cpp period_search_BOINC.cpp \
-	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp
+	bright_sve.cpp conv_sve.cpp curv_sve.cpp gauss_errc_sve.cpp mrqcof_sve.cpp \
+	threadstate.cpp threadpool.cpp
 
 # Define the object files
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
@@ -52,7 +53,7 @@ $(BUILD_DIR):
 
 # Rule to build the static library
 $(TARGET): $(OBJ) $(BOINC_LIB_DIR)/libboinc.a $(BOINC_API_DIR)/libboinc_api.a $(PS_COMMON_LIB_DIR)/libps_common.a
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) -pthread \
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) \
 	$(PS_COMMON_LIB_DIR)/libps_common.a \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a \
