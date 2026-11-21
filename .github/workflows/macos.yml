@@ -45,7 +45,7 @@ jobs:
       - name: Prepare toolchain
         run: |
           brew update
-          brew install autoconf automake libtool gnu-sed llvm
+          brew install autoconf automake libtool gnu-sed llvm fmt
 
       - name: Print clang version
         run: |
