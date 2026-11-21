@@ -35,6 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfmt-dev
+
       - name: Prepare android toolchain
         run: |
           wget https://dl.google.com/android/repository/android-ndk-r29-linux.zip
